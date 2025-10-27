@@ -1,5 +1,16 @@
 {
   "extends": "@react-native/typescript-config",
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/node_modules", "**/Pods"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "src/store/themeStore.ts",
+    "src/screens/authscreens/LoginScreen.tsx",
+    "src/screens/authscreens/ResetPasswordScreen.tsx",
+    "src/screens/authscreens/ForgotPasswordScreen.tsx"
+  ],
+  "exclude": ["**/node_modules", "**/Pods"],
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "strict": true
+  }
 }
