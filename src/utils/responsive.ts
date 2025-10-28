@@ -16,7 +16,8 @@ export const p = (size: number) => {
   const isTablet = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) >= 600;
   // if (isTablet) scaledSize *= 0.92;
   if (isTablet) {
-  const maxScale = 4; // was 1.25
+  // const maxScale = 4; // was 1.25
+  const maxScale = 100; // was 1.25
   scaledSize = Math.min(maxScale * size, scaledSize);
 } else {
   const minScale = 0.85;

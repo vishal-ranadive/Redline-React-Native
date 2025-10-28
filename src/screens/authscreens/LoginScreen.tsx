@@ -77,7 +77,7 @@ const LoginScreen = () => {
       style={[styles.container, { backgroundColor: paperTheme.colors.background }]}
     >
       {/* Optional test scaling block */}
-      <ScalingPreviewScreen />
+      {/* <ScalingPreviewScreen /> */}
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -160,14 +160,14 @@ const LoginScreen = () => {
           </Button>
 
           {/* Toggle Theme */}
-          <Button
+          {/* <Button
             onPress={toggleTheme}
             textColor={paperTheme.colors.primary}
             style={{ marginTop: p(16) }}
             labelStyle={{ fontSize: p(14) }}
           >
             Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode
-          </Button>
+          </Button> */}
 
           {/* Footer */}
           <Text style={[styles.footer, { color: paperTheme.colors.outline }]}>

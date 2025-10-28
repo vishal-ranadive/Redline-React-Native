@@ -1,44 +1,38 @@
-// src/navigation/AppNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from '../screens/authscreens/LoginScreen';
 import ForgotPasswordScreen from '../screens/authscreens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/authscreens/ResetPasswordScreen';
-import LeadScreen from '../screens/leadscreens/LeadScreen'
+import LeadScreen from '../screens/leadscreens/LeadScreen';
 import SettingsScreen from '../screens/settingsscreens/Settings';
+import LeadDetailScreen from '../screens/leadscreens/LeadDetailScreen';
+import { withMainLayout } from '../layout/withMainLayout';
+
 export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
   LeadScreen: undefined;
   Settings: undefined;
+  LeadDetail: { lead: any };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{ headerShown: false }}
-        initialRouteName="Login"
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        
-        <Stack.Screen
-          name="LeadScreen"
-          component={LeadScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
+      {/* Auth Screens */}
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+
+      {/* App Screens */}
+      <Stack.Screen name="LeadScreen" component={withMainLayout(LeadScreen)} />
+      <Stack.Screen name="Settings" component={withMainLayout(SettingsScreen)} />
+
+      {/* Detail Screen (no bottom nav) */}
+      <Stack.Screen name="LeadDetail" component={withMainLayout(LeadDetailScreen)} />
+    </Stack.Navigator>
   );
 }

@@ -1,0 +1,395 @@
+// src/screens/leadscreens/LeadDetailScreen.tsx
+import React from 'react';
+import { View, StyleSheet, ScrollView, Image } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import {
+  Text,
+  Card,
+  Button,
+  Icon,
+  useTheme,
+  Divider,
+  Badge,
+} from 'react-native-paper';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { p } from '../../utils/responsive';
+
+const LeadDetailScreen = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { colors } = useTheme();
+  const { top } = useSafeAreaInsets();
+  const { lead } = route.params as any;
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* 🧭 Header */}
+      <View
+        style={[
+          styles.header,
+          {
+            marginTop: top + p(4),
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.outline,
+          },
+        ]}
+      >
+        <Button
+          mode="text"
+          compact
+          onPress={() => navigation.goBack()}
+          contentStyle={{ flexDirection: 'row' }}
+          style={{ marginLeft: p(-8) }}
+        >
+          <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
+        </Button>
+
+        <Text style={[styles.headerTitle, { color: colors.onSurface, fontSize: p(22) }]}>
+          Lead #{lead.id}
+        </Text>
+
+        {/* Status Badge */}
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                lead.status === 'Completed'
+                  ? '#16a34a'
+                  : lead.status === 'Rescheduled'
+                  ? '#eab308'
+                  : lead.status === 'Ongoing'
+                  ? '#2563eb'
+                  : '#dc2626',
+            },
+          ]}
+        >
+          {lead.status}
+        </View>
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* 🏠 Station Banner */}
+        <View style={styles.banner}>
+          <Image
+            source={{
+              uri:
+                'https://media.gettyimages.com/id/182819377/photo/fire-truck.jpg?s=612x612&w=gi&k=20&c=K9QvVmf9qrRmfjjBmxC5yTO1ka4ilSv9ri5Imbs_o3A=',
+            }}
+            style={styles.bannerImage}
+          />
+          <View style={styles.bannerOverlay}>
+            <Text style={[styles.stationName, { color: '#fff', fontSize: p(40) }]}>
+              {lead.station}
+            </Text>
+            <Button
+              mode="contained"
+              buttonColor={colors.primary}
+              textColor="#fff"
+              style={styles.leadTypeBtn}
+              contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(4) }}
+            >
+              {lead.leadType}
+            </Button>
+          </View>
+        </View>
+
+        {/* 📋 Contact & Scheduling */}
+        {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Card.Content>
+            <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+              Contact & Scheduling
+            </Text>
+            <Divider style={{ marginVertical: p(6) }} />
+
+            <View style={styles.detailRow}>
+              <Icon source="calendar" size={p(16)} color={colors.primary} />
+              <Text style={[styles.detailText]}> {lead.appointmentDate}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="account" size={p(16)} color={colors.primary} />
+              <Text style={[styles.detailText]}> {lead.name}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="phone" size={p(16)} color={colors.primary} />
+              <Text style={[styles.detailText]}> {lead.phone}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="email" size={p(16)} color={colors.primary} />
+              <Text style={[styles.detailText]}> {lead.email}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="office-building" size={p(16)} color={colors.primary} />
+              <Text style={[styles.detailText]}> {lead.department}</Text>
+            </View>
+          </Card.Content>
+        </Card> */}
+
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+  <Card.Content>
+    <Text
+      style={[
+        styles.sectionTitle,
+        { color: colors.onSurface, fontSize: p(22), marginBottom: p(10) },
+      ]}
+    >
+      Contact & Scheduling
+    </Text>
+    <Divider style={{ marginBottom: p(10) }} />
+
+    <View style={styles.tableContainer}>
+      {[
+        { icon: 'calendar', label: 'Appointment Date', value: lead.appointmentDate },
+        { icon: 'account', label: 'Name', value: lead.name },
+        { icon: 'phone', label: 'Phone', value: lead.phone },
+        { icon: 'email', label: 'Email', value: lead.email },
+        { icon: 'office-building', label: 'Department', value: lead.department },
+      ].map((item, index) => (
+        <View key={index} style={styles.tableRow}>
+          <View style={styles.tableCellLeft}>
+            <Icon source={item.icon} size={p(20)} color={colors.primary} />
+            <Text
+              style={[
+                styles.tableLabel,
+                { color: colors.onSurface },
+              ]}
+              numberOfLines={1}
+            >
+              {item.label}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.tableValue,
+              { color: colors.onSurface },
+            ]}
+            numberOfLines={1}
+          >
+            {item.value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  </Card.Content>
+</Card>
+
+
+        {/* 🧑‍🔧 Technician Info */}
+        {lead.technicianDetails?.length > 0 && (
+          <Card
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+            ]}
+          >
+            <Card.Content>
+              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+                Technician Assigned
+              </Text>
+              <Divider style={{ marginVertical: p(6) }} />
+
+              {lead.technicianDetails.map((tech: any, index: number) => (
+                <View
+                  key={index}
+                  style={[styles.techCard, { borderColor: colors.outline }]}
+                >
+                  <Icon source="account-wrench" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.techText]}>
+                    {tech.name} (ID: {tech.id})
+                  </Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* 📝 Remarks */}
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Card.Content>
+            <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+              Remarks
+            </Text>
+            <Divider style={{ marginVertical: p(6) }} />
+            <View style={styles.remarksBox}>
+              <Icon source="clipboard-text" size={p(18)} color={colors.primary} />
+              <Text style={[styles.remarksText, { color: colors.onSurface }]}>
+                {lead.remarks || 'No remarks available.'}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      </ScrollView>
+
+      {/* ⚙️ Footer Action Bar */}
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.outline,
+          },
+        ]}
+      >
+        {[
+          { label: 'Scan Gear', icon: 'barcode-scan' },
+          { label: 'Search Gear', icon: 'magnify' },
+          { label: 'Add Gear', icon: 'plus-circle-outline' },
+          { label: 'View Repairs', icon: 'wrench' },
+        ].map((action, i) => (
+          <Button
+            key={i}
+            mode="text"
+            textColor={colors.primary}
+            labelStyle={{
+              fontSize: p(20),
+              fontWeight: '600',
+            }}
+            style={{ flex: 1, }}
+            icon={action.icon}
+            contentStyle={{ flexDirection: 'row', paddingVertical: p(4) }}
+          >
+           <Text>{action.label}</Text>
+          </Button>
+        ))}
+        
+      </View>
+    </SafeAreaView>
+  );
+};
+
+export default LeadDetailScreen;
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(26),
+    paddingVertical: p(8),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerTitle: {
+    fontSize: p(16),
+    fontWeight: '700',
+  },
+  statusBadge: {
+    alignSelf: 'center',
+    fontSize: p(20),
+    fontWeight: '700',
+    paddingHorizontal: p(6),
+    // paddingVertical: p(2),
+  },
+  banner: {
+    marginBottom: p(12),
+    position: 'relative',
+  },
+  bannerImage: {
+    width: '100%',
+    height: p(180),
+    borderBottomLeftRadius: p(12),
+    borderBottomRightRadius: p(12),
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    bottom: p(12),
+    left: p(16),
+  },
+  stationName: {
+    fontSize: p(22),
+    fontWeight: '800',
+  },
+  leadTypeBtn: {
+    marginTop: p(6),
+    borderRadius: p(8),
+    alignSelf: 'flex-start',
+  },
+  card: {
+    marginHorizontal: p(14),
+    borderRadius: p(10),
+    marginBottom: p(12),
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: p(15),
+    fontWeight: '700',
+    marginBottom: p(4),
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(6),
+  },
+  detailText: {
+    fontSize: p(13),
+    marginLeft: p(6),
+  },
+
+  tableContainer: {
+  width: '100%',
+  flexDirection: 'column',
+  gap: p(6),
+},
+
+tableRow: {
+  flexDirection: 'row',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  paddingVertical: p(4),
+  borderBottomWidth: 0.4,
+  borderColor: 'rgba(0,0,0,0.08)', // subtle line for separation (optional)
+},
+
+tableCellLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+},
+
+tableLabel: {
+  fontSize: p(20),
+  fontWeight: '600',
+  marginLeft: p(8),
+},
+
+tableValue: {
+  flex: 1,
+  fontSize: p(20),
+  fontWeight: '500',
+  textAlign: 'left',
+},
+
+  techCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: p(8),
+    padding: p(8),
+    marginBottom: p(6),
+  },
+  techText: {
+    fontSize: p(13),
+    marginLeft: p(8),
+  },
+  remarksBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  remarksText: {
+    fontSize: p(13),
+    marginLeft: p(8),
+    flex: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    paddingVertical: p(12),
+    marginBottom:p(26)
+  },
+});
