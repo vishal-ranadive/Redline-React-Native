@@ -1,5 +1,5 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -14,6 +14,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 
+
+type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
+
 const LeadDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -21,6 +24,19 @@ const LeadDetailScreen = () => {
   const { top } = useSafeAreaInsets();
   const { lead } = route.params as any;
 
+  console.log("leadleadleadlead", lead)
+
+
+  const getStatusColor = useCallback((status: LeadStatus): string => {
+    switch (status) {
+      case 'Ongoing': return '#FFC107';
+      case 'Completed': return '#34A853';
+      case 'Canceled': return '#EA4335';
+      case 'Rescheduled': return '#1E88E5';
+      case 'Scheduled': return '#FB8C00';
+      default: return '#9E9E9E';
+    }
+  }, []);
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 🧭 Header */}
@@ -39,7 +55,7 @@ const LeadDetailScreen = () => {
           compact
           onPress={() => navigation.goBack()}
           contentStyle={{ flexDirection: 'row' }}
-          style={{ marginLeft: p(-8) }}
+          style={{ marginLeft: p(-8),  }}
         >
           <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
         </Button>
@@ -49,23 +65,21 @@ const LeadDetailScreen = () => {
         </Text>
 
         {/* Status Badge */}
-        <View
+        <Button
           style={[
             styles.statusBadge,
-            {
-              backgroundColor:
-                lead.status === 'Completed'
-                  ? '#16a34a'
-                  : lead.status === 'Rescheduled'
-                  ? '#eab308'
-                  : lead.status === 'Ongoing'
-                  ? '#2563eb'
-                  : '#dc2626',
-            },
+
+            { backgroundColor: getStatusColor(lead.status),}
           ]}
+          labelStyle={{
+              fontSize: p(14),
+              fontWeight: '600',
+              
+              color: colors.surface,
+            }}
         >
           {lead.status}
-        </View>
+        </Button>
       </View>
 
       {/* Scrollable Content */}
@@ -79,6 +93,7 @@ const LeadDetailScreen = () => {
             }}
             style={styles.bannerImage}
           />
+           <View style={styles.bannerOverlayFull} />
           <View style={styles.bannerOverlay}>
             <Text style={[styles.stationName, { color: '#fff', fontSize: p(40) }]}>
               {lead.station}
@@ -87,76 +102,51 @@ const LeadDetailScreen = () => {
               mode="contained"
               buttonColor={colors.primary}
               textColor="#fff"
-              style={styles.leadTypeBtn}
+              style={[styles.leadTypeBtn,]}
               contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(4) }}
+              labelStyle={{
+                fontSize: p(16),
+                fontWeight: '600',
+                color: colors.surface,
+              }}
             >
               {lead.leadType}
             </Button>
           </View>
         </View>
 
-        {/* 📋 Contact & Scheduling */}
-        {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-              Contact & Scheduling
-            </Text>
-            <Divider style={{ marginVertical: p(6) }} />
 
-            <View style={styles.detailRow}>
-              <Icon source="calendar" size={p(16)} color={colors.primary} />
-              <Text style={[styles.detailText]}> {lead.appointmentDate}</Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon source="account" size={p(16)} color={colors.primary} />
-              <Text style={[styles.detailText]}> {lead.name}</Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon source="phone" size={p(16)} color={colors.primary} />
-              <Text style={[styles.detailText]}> {lead.phone}</Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon source="email" size={p(16)} color={colors.primary} />
-              <Text style={[styles.detailText]}> {lead.email}</Text>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon source="office-building" size={p(16)} color={colors.primary} />
-              <Text style={[styles.detailText]}> {lead.department}</Text>
-            </View>
-          </Card.Content>
-        </Card> */}
 
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
   <Card.Content>
     <Text
       style={[
         styles.sectionTitle,
-        { color: colors.onSurface, fontSize: p(22), marginBottom: p(10) },
+        { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
       ]}
     >
-      Contact & Scheduling
+      Details
     </Text>
     <Divider style={{ marginBottom: p(10) }} />
 
     <View style={styles.tableContainer}>
+      {/* item.leadType === 'Repair' ? 'wrench' : 'magnify */}
       {[
         { icon: 'calendar', label: 'Appointment Date', value: lead.appointmentDate },
+        { icon: 'office-building', label: 'Department', value: lead.department },
+        { icon: lead.leadType === 'Repair' ? 'wrench' : 'magnify', label: 'Lead Type', value: lead.leadType },
+        { icon: 'check-circle', label: 'Lead Status', value: lead.status },
         { icon: 'account', label: 'Name', value: lead.name },
         { icon: 'phone', label: 'Phone', value: lead.phone },
         { icon: 'email', label: 'Email', value: lead.email },
-        { icon: 'office-building', label: 'Department', value: lead.department },
       ].map((item, index) => (
         <View key={index} style={styles.tableRow}>
           <View style={styles.tableCellLeft}>
-            <Icon source={item.icon} size={p(20)} color={colors.primary} />
+            <Icon source={item.icon} size={p(16)} color={colors.primary} />
             <Text
               style={[
                 styles.tableLabel,
-                { color: colors.onSurface },
+                { color: colors.onSurface, fontSize: p(18)},
               ]}
               numberOfLines={1}
             >
@@ -166,7 +156,7 @@ const LeadDetailScreen = () => {
           <Text
             style={[
               styles.tableValue,
-              { color: colors.onSurface },
+              { color: colors.onSurface, fontSize: p(18) },
             ]}
             numberOfLines={1}
           >
@@ -188,7 +178,7 @@ const LeadDetailScreen = () => {
             ]}
           >
             <Card.Content>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
                 Technician Assigned
               </Text>
               <Divider style={{ marginVertical: p(6) }} />
@@ -199,7 +189,7 @@ const LeadDetailScreen = () => {
                   style={[styles.techCard, { borderColor: colors.outline }]}
                 >
                   <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                  <Text style={[styles.techText]}>
+                  <Text style={[styles.techText, {fontSize: p(18)}]}>
                     {tech.name} (ID: {tech.id})
                   </Text>
                 </View>
@@ -211,22 +201,20 @@ const LeadDetailScreen = () => {
         {/* 📝 Remarks */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
-            <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
               Remarks
             </Text>
             <Divider style={{ marginVertical: p(6) }} />
             <View style={styles.remarksBox}>
               <Icon source="clipboard-text" size={p(18)} color={colors.primary} />
-              <Text style={[styles.remarksText, { color: colors.onSurface }]}>
+              <Text style={[styles.remarksText, { color: colors.onSurface, fontSize: p(18) }]}>
                 {lead.remarks || 'No remarks available.'}
               </Text>
             </View>
           </Card.Content>
         </Card>
-      </ScrollView>
 
-      {/* ⚙️ Footer Action Bar */}
-      <View
+        <View
         style={[
           styles.footer,
           {
@@ -239,25 +227,36 @@ const LeadDetailScreen = () => {
           { label: 'Scan Gear', icon: 'barcode-scan' },
           { label: 'Search Gear', icon: 'magnify' },
           { label: 'Add Gear', icon: 'plus-circle-outline' },
-          { label: 'View Repairs', icon: 'wrench' },
+          {
+            label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',
+            icon: lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline',
+          },
         ].map((action, i) => (
           <Button
             key={i}
-            mode="text"
-            textColor={colors.primary}
+            // mode="text"
+                  mode="outlined" // You can change to "contained" or "outlined"
+
+      buttonColor={colors.primary}
+            
+            textColor={colors.surface}
             labelStyle={{
-              fontSize: p(20),
+              fontSize: p(14),
               fontWeight: '600',
             }}
-            style={{ flex: 1, }}
+            style={{  borderColor: colors.outline, borderRadius: p(10), elevation: 12, }}
             icon={action.icon}
-            contentStyle={{ flexDirection: 'row', paddingVertical: p(4) }}
+            // contentStyle={{ flexDirection: 'row', paddingVertical: p(2) , paddingHorizontal: p(0)}}
           >
-           <Text>{action.label}</Text>
+           <>{action.label}</>
           </Button>
         ))}
         
       </View>
+      </ScrollView>
+
+      {/* ⚙️ Footer Action Bar */}
+
     </SafeAreaView>
   );
 };
@@ -294,6 +293,10 @@ const styles = StyleSheet.create({
     height: p(180),
     borderBottomLeftRadius: p(12),
     borderBottomRightRadius: p(12),
+  },
+  bannerOverlayFull: {
+  ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)', // dark semi-transparent overlay
   },
   bannerOverlay: {
     position: 'absolute',
@@ -388,8 +391,8 @@ tableValue: {
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    borderTopWidth: 1,
+    // borderTopWidth: 1,
     paddingVertical: p(12),
-    marginBottom:p(26)
+    // marginBottom:p(26)
   },
 });
