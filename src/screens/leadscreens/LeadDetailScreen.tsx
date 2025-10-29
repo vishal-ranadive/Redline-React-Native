@@ -237,14 +237,19 @@ const LeadDetailScreen = () => {
       >
         {[
           { label: 'Scan Gear', icon: 'barcode-scan' },
-          { label: 'Search Gear', icon: 'magnify' },
-          { label: 'Add Gear', icon: 'plus-circle-outline' },
-          { label: 'View Repairs', icon: 'wrench' },
+          { label: 'Search Gear', icon: 'magnify',nav:'GearSearch' },
+          { label: 'Add Gear', icon: 'plus-circle-outline',nav:'AddGear' },
+          { label: 'View Repairs', icon: 'wrench',nav:'Inspections' },
         ].map((action, i) => (
           <Button
             key={i}
             mode="text"
             textColor={colors.primary}
+            onPress={() => {
+              if(action.nav){
+              navigation.navigate(action.nav as never)
+              }
+            }}
             labelStyle={{
               fontSize: p(20),
               fontWeight: '600',
