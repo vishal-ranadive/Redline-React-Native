@@ -2,6 +2,8 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 import {
   Text,
   Card,
@@ -14,11 +16,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 
-
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan'>;
 type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
 
 const LeadDetailScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
   const { top } = useSafeAreaInsets();
@@ -224,7 +226,7 @@ const LeadDetailScreen = () => {
         ]}
       >
         {[
-          { label: 'Scan Gear', icon: 'barcode-scan' },
+          { label: 'Scan Gear', icon: 'barcode-scan' , action: () => navigation.navigate('GearScan')},
           { label: 'Search Gear', icon: 'magnify' },
           { label: 'Add Gear', icon: 'plus-circle-outline' },
           {
@@ -236,7 +238,7 @@ const LeadDetailScreen = () => {
             key={i}
             // mode="text"
                   mode="outlined" // You can change to "contained" or "outlined"
-
+      onPress={() => action.action && action.action()}
       buttonColor={colors.primary}
             
             textColor={colors.surface}

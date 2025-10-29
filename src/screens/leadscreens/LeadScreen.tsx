@@ -15,16 +15,6 @@ import BottomNavBar from '../../navigation/BottomNavBar';
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '../../navigation/AppNavigator'; // adjust path
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// Type for the mock data structure
-// interface LeadItem {
-//   id: string;
-//   name: string;
-//   phone: string;
-//   email: string;
-//   station: string;
-//   status: 'Ongoing' | 'Completed' | 'Canceled';
-//   orderType: 'Repair' | 'Inspection';
-// }
 
 
 interface Technician {
@@ -51,72 +41,6 @@ interface LeadItem {
 // Placeholder for responsive utility
 const p = (size: number): number => size; 
 
-// Mock JSON Data (Typed)
-// const leadsData: LeadItem[] = [
-//   {
-//     id: '123456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Ongoing',
-//     orderType: 'Repair',
-//   },
-//   {
-//     id: '223456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Completed',
-//     orderType: 'Inspection',
-//   },
-//   {
-//     id: '323456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Canceled',
-//     orderType: 'Repair',
-//   },
-//   {
-//     id: '423456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Ongoing',
-//     orderType: 'Repair',
-//   },
-//   {
-//     id: '523456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Completed',
-//     orderType: 'Inspection',
-//   },
-//   {
-//     id: '524456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Completed',
-//     orderType: 'Inspection',
-//   },
-//   {
-//     id: '623456',
-//     name: 'Liam Carter',
-//     phone: '555-123-4567',
-//     email: 'liam.carter@gmail.com',
-//     station: 'Fire Station 12',
-//     status: 'Canceled',
-//     orderType: 'Repair',
-//   },
-// ];
 
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
