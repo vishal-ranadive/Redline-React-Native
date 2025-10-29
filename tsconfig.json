@@ -7,7 +7,7 @@
     "src/screens/authscreens/LoginScreen.tsx",
     "src/screens/authscreens/ResetPasswordScreen.tsx",
     "src/screens/authscreens/ForgotPasswordScreen.tsx"
-  ],
+, "src/components/common/RosterModal.tsx"  ],
   "exclude": ["**/node_modules", "**/Pods"],
   "compilerOptions": {
     "esModuleInterop": true,
