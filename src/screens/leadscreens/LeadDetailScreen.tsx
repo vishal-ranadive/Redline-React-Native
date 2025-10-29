@@ -227,11 +227,12 @@ const LeadDetailScreen = () => {
       >
         {[
           { label: 'Scan Gear', icon: 'barcode-scan' , action: () => navigation.navigate('GearScan')},
-          { label: 'Search Gear', icon: 'magnify' },
-          { label: 'Add Gear', icon: 'plus-circle-outline' },
+          { label: 'Search Gear', icon: 'magnify',action: () => navigation.navigate('GearSearch') },
+          { label: 'Add Gear', icon: 'plus-circle-outline',action: () => navigation.navigate('GearScan') },
           {
             label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',
             icon: lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline',
+            action: () => navigation.navigate('Inspections'),
           },
         ].map((action, i) => (
           <Button
