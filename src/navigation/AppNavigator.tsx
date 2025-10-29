@@ -8,10 +8,13 @@ import SettingsScreen from '../screens/settingsscreens/Settings';
 import LeadDetailScreen from '../screens/leadscreens/LeadDetailScreen';
 import { withMainLayout } from '../layout/withMainLayout';
 import GearSearchScreen from '../screens/gearscreens/GearSearchScreen';
-import ViewInspectionsScreen from '../screens/inspectionscreens/ViewInspectionsScreen';
+
 
 import GearScanScreen from '../screens/gearscreens/GearScanScreen';
 import GearDetailScreen from '../screens/gearscreens/GearDetailScreen';
+import ViewGroupInspectionsScreen from '../screens/inspectionscreens/ViewGroupInspectionsScreen';
+import ViewNestedInspectionScreen from '../screens/inspectionscreens/ViewNestedInspectionScreen';
+import UpdateInspectionStatusScreen from '../screens/inspectionscreens/UpdateInspectionScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -23,7 +26,9 @@ export type RootStackParamList = {
   GearScan: undefined;
   GearDetail: undefined
   GearSearch: undefined;
-  Inspections: undefined;
+  GroupInspections: undefined;
+  NestedInspections: { type?: string };
+  UpadateInspection: undefined;
 
 };
 
@@ -41,7 +46,9 @@ export default function AppNavigator() {
       <Stack.Screen name="LeadScreen" component={withMainLayout(LeadScreen)} />
       <Stack.Screen name="Settings" component={withMainLayout(SettingsScreen)} />
       <Stack.Screen name="GearSearch" component={withMainLayout(GearSearchScreen)} />
-      <Stack.Screen name="Inspections" component={withMainLayout(ViewInspectionsScreen)} />
+      <Stack.Screen name="GroupInspections" component={withMainLayout(ViewGroupInspectionsScreen)} />
+      <Stack.Screen name="NestedInspections" component={withMainLayout(ViewNestedInspectionScreen)} />
+      <Stack.Screen name="UpadateInspection" component={withMainLayout(UpdateInspectionStatusScreen)} />
 
       {/* Detail Screen (no bottom nav) */}
       <Stack.Screen name="LeadDetail" component={withMainLayout(LeadDetailScreen)} />

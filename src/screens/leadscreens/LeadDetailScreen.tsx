@@ -232,7 +232,7 @@ const LeadDetailScreen = () => {
           {
             label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',
             icon: lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline',
-            action: () => navigation.navigate('Inspections'),
+            action: () => navigation.navigate('GroupInspections'),
           },
         ].map((action, i) => (
           <Button

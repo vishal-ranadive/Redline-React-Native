@@ -2,12 +2,13 @@
 import React from 'react';
 import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Card, Text, useTheme, Chip, Avatar } from 'react-native-paper';
-import { InspectionItem } from '../types/Inspection';
+import { GroupInspectionItem } from '../types/Inspection';
+
 
 const p = (v: number) => v;
 
 type Props = {
-  item: InspectionItem;
+  item: GroupInspectionItem;
   onPress?: () => void;
 };
 

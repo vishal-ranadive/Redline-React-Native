@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
-import { Text, TextInput, Button, useTheme } from 'react-native-paper';
+import { Text, TextInput, Button, useTheme, Icon } from 'react-native-paper';
 import useDebounce from '../../hooks/useDebounce';
 import GearCard from '../../components/GearCard';
 import { GearItem } from '../../types/gears';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { useNavigation } from '@react-navigation/native';
 
 const p = (v: number) => v;
 
@@ -28,7 +29,7 @@ export default function GearSearchScreen() {
   const debouncedSearch = useDebounce(search, 300);
   const [category, setCategory] = useState<typeof CATEGORIES[number]>('All');
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
-
+  const navigation = useNavigation<NavigationProp>();
   const filtered = useMemo(() => {
     return MOCK_GEARS.filter((g) => {
       const matchesSearch = g.name.toLowerCase().includes(debouncedSearch.trim().toLowerCase()) || g.id.includes(debouncedSearch.trim());
@@ -40,7 +41,23 @@ export default function GearSearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text variant="headlineSmall" style={[styles.header, { color: colors.primary }]}>Gear Search</Text>
+    <View style={[styles.header]}>
+        <Button
+          mode="text"
+          onPress={() => navigation.goBack()}
+          contentStyle={{ flexDirection: 'row' }}
+        >
+          <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
+        </Button>
+        <Text style={[styles.title, { color: colors.onSurface }]}>Search Gear</Text>
+        <Button
+          mode="text"
+          onPress={() => {}}
+        >
+          <Icon source="plus-circle" size={p(22)} color={colors.primary} />
+        </Button>
+      </View>
+     
 
       <TextInput
         mode="outlined"
@@ -92,8 +109,15 @@ export default function GearSearchScreen() {
 };
 
 const styles = StyleSheet.create({
+  title: { fontSize: p(18), fontWeight: 'bold' },
   container: { flex: 1, padding: p(12) },
-  header: { textAlign: 'center', marginVertical: p(12) },
+  header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: p(12),
+      paddingTop: p(10),
+    },
   search: { marginBottom: p(8) },
   filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: p(8) },
   catButton: { marginRight: p(8), borderRadius: p(16) },
