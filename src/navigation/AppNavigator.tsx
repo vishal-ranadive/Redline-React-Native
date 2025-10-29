@@ -7,6 +7,8 @@ import LeadScreen from '../screens/leadscreens/LeadScreen';
 import SettingsScreen from '../screens/settingsscreens/Settings';
 import LeadDetailScreen from '../screens/leadscreens/LeadDetailScreen';
 import { withMainLayout } from '../layout/withMainLayout';
+import GearSearchScreen from '../screens/gearscreens/GearSearchScreen';
+import ViewInspectionsScreen from '../screens/inspectionscreens/ViewInspectionsScreen';
 
 import GearScanScreen from '../screens/gearscreens/GearScanScreen';
 import GearDetailScreen from '../screens/gearscreens/GearDetailScreen';
@@ -20,6 +22,9 @@ export type RootStackParamList = {
   LeadDetail: { lead: any };
   GearScan: undefined;
   GearDetail: undefined
+  GearSearch: undefined;
+  Inspections: undefined;
+
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +40,8 @@ export default function AppNavigator() {
       {/* App Screens */}
       <Stack.Screen name="LeadScreen" component={withMainLayout(LeadScreen)} />
       <Stack.Screen name="Settings" component={withMainLayout(SettingsScreen)} />
+      <Stack.Screen name="GearSearch" component={withMainLayout(GearSearchScreen)} />
+      <Stack.Screen name="Inspections" component={withMainLayout(ViewInspectionsScreen)} />
 
       {/* Detail Screen (no bottom nav) */}
       <Stack.Screen name="LeadDetail" component={withMainLayout(LeadDetailScreen)} />
