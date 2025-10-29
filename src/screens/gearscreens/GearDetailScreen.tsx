@@ -376,7 +376,7 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => {/* Start inspection logic */}}
+          onPress={() => navigation.navigate('GroupInspections')}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
