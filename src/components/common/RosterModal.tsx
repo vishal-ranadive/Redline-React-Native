@@ -71,12 +71,12 @@ const fetchRostersFromAPI = async (): Promise<ApiResponse> => {
             roster_id: 1,
             firestation: {
               firestation_id: 2,
-              fire_station_name: "Midtown Central Fire Station"
+              fire_station_name: "Community Volunteer Fire Department"
             },
-            first_name: "Johnyy",
-            middle_name: "A.",
-            last_name: "Don",
-            email: "john.don233@example.com",
+            first_name: "Guardado",
+            middle_name: "",
+            last_name: "F",
+            email: "Guardado.f@example.com",
             phone: "1234567810",
             active_status: true,
             is_deleted: false,
@@ -84,7 +84,7 @@ const fetchRostersFromAPI = async (): Promise<ApiResponse> => {
             updated_at: "2025-10-24T15:39:44.434618Z",
             created_by: null,
             updated_by: null,
-            roster_name: "Johnyy A. Don"
+            roster_name: "Guardado A. F."
           },
           {
             roster_id: 3,

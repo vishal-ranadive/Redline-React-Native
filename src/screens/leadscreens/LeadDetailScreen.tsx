@@ -227,7 +227,7 @@ const LeadDetailScreen = () => {
       >
         {[
           { label: 'Scan Gear', icon: 'barcode-scan' , action: () => navigation.navigate('GearScan')},
-          { label: 'Search Gear', icon: 'magnify' },
+          { label: 'Search Gear', icon: 'magnify', },
           { label: 'Add Gear', icon: 'plus-circle-outline' },
           {
             label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',

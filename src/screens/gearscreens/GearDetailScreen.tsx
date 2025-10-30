@@ -37,17 +37,17 @@ const GearDetailScreen = ({ navigation }: any) => {
 
   // Mock data
   const manufacturer = {
-    name: 'MSA Safety',
+    name: 'Honeywell/Morning Pride',
     country: 'USA',
-    website: 'https://www.msasafety.com',
+    website: 'https://automation.honeywell.com/us/en/products/personal-protective-equipment/first-responder-gear/structural-turnout-gear/morning-pride-tails-structural-turnout-gear',
   };
 
   const gear = {
     id: 'GEAR-001',
     type: 'Jacket',
-    name: 'Jacket Bunker Coat',
-    serial: 'JCKT-4567, HLMNT-4666',
-    model: 'Bunker Coat Pro',
+    name: 'Jacket Shell',
+    serial: 'D30508592',
+    model: 'Jacket Shell',
     year: 2023,
     status: 'In Service',
     notes: 'Tear near right elbow, reflective tape needs cleaning.',
@@ -376,7 +376,18 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => {/* Start inspection logic */}}
+          onPress={() => navigation.navigate('LeadDetail', {lead:    {
+    id: '423457',
+    name: 'Denvar Scott',
+    phone: '555-444-4567',
+    email: 'denvar.scott@gmail.com',
+    station: 'Fire Station 11',
+    status: 'Scheduled',
+    leadType: 'Inspection',
+    technicianDetails: [{ name: 'Mike Ross', id: 'T006' }],
+    department: 'Station 9',
+    appointmentDate: '12 Nov 2025',
+  }})}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
