@@ -376,18 +376,7 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('LeadDetail', {lead:    {
-    id: '423457',
-    name: 'Denvar Scott',
-    phone: '555-444-4567',
-    email: 'denvar.scott@gmail.com',
-    station: 'Fire Station 11',
-    status: 'Scheduled',
-    leadType: 'Inspection',
-    technicianDetails: [{ name: 'Mike Ross', id: 'T006' }],
-    department: 'Station 9',
-    appointmentDate: '12 Nov 2025',
-  }})}
+          onPress={() => navigation.navigate('GroupInspections')}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
