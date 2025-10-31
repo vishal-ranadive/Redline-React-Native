@@ -101,7 +101,10 @@ export default function GearSearchScreen() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.grid}
-        renderItem={({ item }) => <GearCard gear={item} />}
+        renderItem={({ item }) => <GearCard gear={item}
+        onPress={() => navigation.navigate('GearDetail')}
+        />}
+        
         showsVerticalScrollIndicator={false}
       />
     </View>

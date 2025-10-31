@@ -52,7 +52,21 @@ export default function UpdateInspectionScreen() {
   const saveChanges = () => {
     // TODO: persist changes to backend / store
     console.log('Save', { status, hydroPerformed, hydroResult, startDate, endDate, condition, repairNeeded, cost, remarks });
-    navigation.goBack();
+    let item = {        
+    id: '423456',
+    name: 'Emma Scott',
+    phone: '555-444-4567',
+    email: 'emma.scott@gmail.com',
+    station: 'Community Volunteer Fire Department',
+    status: 'Scheduled',
+    leadType: 'Inspection',
+    technicianDetails: [{ name: 'Mike Ross', id: 'T004' }],
+    department: 'Community Volunteer Fire Department',
+    appointmentDate: '12 Nov 2025',
+  
+    }
+    
+    navigation.navigate('LeadDetail', { lead: item });
   };
 
   return (

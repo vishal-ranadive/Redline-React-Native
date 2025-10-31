@@ -376,7 +376,7 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('GroupInspections')}
+          onPress={() => navigation.navigate('UpadateInspection')}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
@@ -384,7 +384,7 @@ const GearDetailScreen = ({ navigation }: any) => {
           labelStyle={{ fontWeight: '700', fontSize: p(16) }}
           contentStyle={{ paddingVertical: p(8) }}
         >
-          START INSPECTION
+          START GEAR INSPECTION
         </Button>
       </ScrollView>
 
