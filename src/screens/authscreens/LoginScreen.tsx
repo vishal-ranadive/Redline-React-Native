@@ -14,6 +14,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useThemeStore } from '../../store/themeStore';
 import { p } from '../../utils/responsive'; // scaling helper
+import { IconButton } from 'react-native-paper';
+
 
 
 const baseSizes = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 42, 44, 46, 48];
@@ -78,6 +80,16 @@ const LoginScreen = () => {
     >
       {/* Optional test scaling block */}
       {/* <ScalingPreviewScreen /> */}
+
+          {/* 🔆 Theme Toggle Button - Top Right */}
+    <View style={styles.topRightButton}>
+      <IconButton
+        icon={theme === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'}
+        size={p(22)}
+        iconColor={paperTheme.colors.primary}
+        onPress={toggleTheme}
+      />
+    </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -160,14 +172,7 @@ const LoginScreen = () => {
           </Button>
 
           {/* Toggle Theme */}
-          {/* <Button
-            onPress={toggleTheme}
-            textColor={paperTheme.colors.primary}
-            style={{ marginTop: p(16) }}
-            labelStyle={{ fontSize: p(14) }}
-          >
-            Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode
-          </Button> */}
+
 
           {/* Footer */}
           <Text style={[styles.footer, { color: paperTheme.colors.outline }]}>
@@ -182,6 +187,13 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  topRightButton: {
+    position: 'absolute',
+    top: p(40),
+    right: p(20),
+    zIndex: 10,
   },
   scrollContainer: {
     flexGrow: 1,

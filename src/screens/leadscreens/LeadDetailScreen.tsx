@@ -12,6 +12,7 @@ import {
   useTheme,
   Divider,
   Badge,
+  Dialog, Portal
 } from 'react-native-paper';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
@@ -25,8 +26,18 @@ const LeadDetailScreen = () => {
   const { colors } = useTheme();
   const { top } = useSafeAreaInsets();
   const { lead } = route.params as any;
+  const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
+  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(lead.status);
 
   console.log("leadleadleadlead", lead)
+
+
+  const handleStatusUpdate = (newStatus: LeadStatus) => {
+  setCurrentStatus(newStatus);
+  setStatusDialogVisible(false);
+  // Optionally: trigger API call here to persist update
+  // updateLeadStatus(lead.id, newStatus)
+};
 
 
   const getStatusColor = useCallback((status: LeadStatus): string => {
@@ -67,21 +78,32 @@ const LeadDetailScreen = () => {
         </Text>
 
         {/* Status Badge */}
-        <Button
-          style={[
-            styles.statusBadge,
-
-            { backgroundColor: getStatusColor(lead.status),}
-          ]}
-          labelStyle={{
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
+          <Button
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(currentStatus) },
+            ]}
+            labelStyle={{
               fontSize: p(14),
               fontWeight: '600',
-              
               color: colors.surface,
             }}
-        >
-          {lead.status}
-        </Button>
+          >
+            {currentStatus}
+          </Button>
+
+          <Button
+            compact
+            mode="text"
+            onPress={() => setStatusDialogVisible(true)}
+            contentStyle={{ paddingHorizontal: 0 }}
+          >
+            <Icon source="pencil" size={p(20)} color={colors.primary} />
+          </Button>
+        </View>
+
+        
       </View>
 
       {/* Scrollable Content */}
@@ -119,56 +141,110 @@ const LeadDetailScreen = () => {
 
 
 
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-  <Card.Content>
-    <Text
-      style={[
-        styles.sectionTitle,
-        { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
-      ]}
-    >
-      Details
-    </Text>
-    <Divider style={{ marginBottom: p(10) }} />
+        <Card style={[styles.card, 
+            { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
 
-    <View style={styles.tableContainer}>
-      {/* item.leadType === 'Repair' ? 'wrench' : 'magnify */}
-      {[
-        { icon: 'calendar', label: 'Appointment Date', value: lead.appointmentDate },
-        { icon: 'office-building', label: 'Department', value: lead.department },
-        { icon: lead.leadType === 'Repair' ? 'wrench' : 'magnify', label: 'Lead Type', value: lead.leadType },
-        { icon: 'check-circle', label: 'Lead Status', value: lead.status },
-        { icon: 'account', label: 'Name', value: lead.name },
-        { icon: 'phone', label: 'Phone', value: lead.phone },
-        { icon: 'email', label: 'Email', value: lead.email },
-      ].map((item, index) => (
-        <View key={index} style={styles.tableRow}>
-          <View style={styles.tableCellLeft}>
-            <Icon source={item.icon} size={p(16)} color={colors.primary} />
+          ]}>
+          <Card.Content>
             <Text
               style={[
-                styles.tableLabel,
-                { color: colors.onSurface, fontSize: p(18)},
+                styles.sectionTitle,
+                { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
               ]}
-              numberOfLines={1}
             >
-              {item.label}
+              Details
             </Text>
-          </View>
-          <Text
-            style={[
-              styles.tableValue,
-              { color: colors.onSurface, fontSize: p(18) },
-            ]}
-            numberOfLines={1}
-          >
-            {item.value}
-          </Text>
-        </View>
-      ))}
-    </View>
-  </Card.Content>
-</Card>
+            <Divider style={{ marginBottom: p(10) }} />
+
+            <View style={styles.tableContainer}>
+              {/* item.leadType === 'Repair' ? 'wrench' : 'magnify */}
+              {[
+                { icon: 'calendar', label: 'Appointment Date', value: lead.appointmentDate },
+                { icon: 'office-building', label: 'Department', value: lead.department },
+                { icon: lead.leadType === 'Repair' ? 'wrench' : 'magnify', label: 'Lead Type', value: lead.leadType },
+                { icon: 'check-circle', label: 'Lead Status', value: currentStatus },
+                // { icon: 'account', label: 'Name', value: lead.name },
+                // { icon: 'phone', label: 'Phone', value: lead.phone },
+                // { icon: 'email', label: 'Email', value: lead.email },
+              ].map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <View style={styles.tableCellLeft}>
+                    <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                    <Text
+                      style={[
+                        styles.tableLabel,
+                        { color: colors.onSurface, fontSize: p(18)},
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.tableValue,
+                      { color: colors.onSurface, fontSize: p(18) },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Card.Content>
+        </Card>
+
+
+        <Card style={[
+          styles.card, 
+              { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+
+          ]}>
+          <Card.Content>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
+              ]}
+            >
+              Generated By
+            </Text>
+            <Divider style={{ marginBottom: p(10) }} />
+
+            <View style={styles.tableContainer}>
+              {[
+                { icon: 'account', label: 'Name', value: lead.name },
+                { icon: 'phone', label: 'Phone', value: lead.phone },
+                { icon: 'email', label: 'Email', value: lead.email },
+              ].map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <View style={styles.tableCellLeft}>
+                    <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                    <Text
+                      style={[
+                        styles.tableLabel,
+                        { color: colors.onSurface, fontSize: p(18)},
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.tableValue,
+                      { color: colors.onSurface, fontSize: p(18) },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Card.Content>
+        </Card>
 
 
         {/* 🧑‍🔧 Technician Info */}
@@ -201,7 +277,7 @@ const LeadDetailScreen = () => {
         )}
 
         {/* 📝 Remarks */}
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+        <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
               Remarks
@@ -259,6 +335,52 @@ const LeadDetailScreen = () => {
       </ScrollView>
 
       {/* ⚙️ Footer Action Bar */}
+
+
+      <Portal>
+        <Dialog
+          visible={statusDialogVisible}
+          onDismiss={() => setStatusDialogVisible(false)}
+        >
+          <Dialog.Title>Update Lead Status</Dialog.Title>
+          <Dialog.Content>
+            {[
+              { status: 'Ongoing', icon: 'progress-clock' },
+              { status: 'Completed', icon: 'check-circle' },
+              { status: 'Canceled', icon: 'close-circle' },
+              { status: 'Rescheduled', icon: 'calendar-refresh' },
+              { status: 'Scheduled', icon: 'calendar-check' },
+            ].map(({ status, icon }) => (
+              <Button
+                key={status}
+                icon={icon}
+                mode={currentStatus === status ? 'contained-tonal' : 'text'}
+                onPress={() => handleStatusUpdate(status as LeadStatus)}
+                style={{
+                  marginVertical: p(4),
+                  alignSelf: 'flex-start', // ✅ only as wide as content
+                }}
+                contentStyle={{
+                  flexDirection: 'row',
+                  justifyContent: 'flex-start', // ✅ align icon + label left
+                }}
+                labelStyle={{
+                  fontSize: p(16),
+                  textAlign: 'left',
+                }}
+              >
+                {status}
+              </Button>
+            ))}
+          </Dialog.Content>
+
+
+          <Dialog.Actions>
+            <Button onPress={() => setStatusDialogVisible(false)}>Cancel</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
 
     </SafeAreaView>
   );

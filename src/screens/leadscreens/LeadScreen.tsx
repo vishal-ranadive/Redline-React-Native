@@ -45,52 +45,30 @@ const p = (size: number): number => size;
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
 const leadsData: LeadItem[] = [
-  {
-    id: '123456',
-    name: 'Liam Carter',
-    phone: '555-123-4567',
-    email: 'liam.carter@gmail.com',
-    station: 'Fire Station 12',
-    status: 'Ongoing',
-    leadType: 'Repair',
-    technicianDetails: [{ name: 'John Doe', id: 'T001' }],
-    department: 'Station 12',
-    appointmentDate: '10 Nov 2025',
-  },
+
   {
     id: '223456',
     name: 'Sophia Turner',
     phone: '555-222-4567',
     email: 'sophia.turner@gmail.com',
-    station: 'Fire Station 15',
+    station: 'Community Volunteer Fire Department',
     status: 'Completed',
     leadType: 'Inspection',
     technicianDetails: [{ name: 'Alex Kim', id: 'T002' }],
-    department: 'Station 15',
+    department: 'Community Volunteer Fire Department',
     appointmentDate: '09 Nov 2025',
   },
-  {
-    id: '323456',
-    name: 'Ethan Blake',
-    phone: '555-333-4567',
-    email: 'ethan.blake@gmail.com',
-    station: 'Fire Station 7',
-    status: 'Rescheduled',
-    leadType: 'Repair',
-    technicianDetails: [{ name: 'Sarah Lee', id: 'T003' }],
-    department: 'Station 7',
-    appointmentDate: '15 Nov 2025',
-  },
+
   {
     id: '423456',
     name: 'Emma Scott',
     phone: '555-444-4567',
     email: 'emma.scott@gmail.com',
-    station: 'Fire Station 9',
+    station: 'Community Volunteer Fire Department',
     status: 'Scheduled',
     leadType: 'Inspection',
     technicianDetails: [{ name: 'Mike Ross', id: 'T004' }],
-    department: 'Station 9',
+    department: 'Community Volunteer Fire Department',
     appointmentDate: '12 Nov 2025',
   },
 
@@ -99,11 +77,11 @@ const leadsData: LeadItem[] = [
     name: 'Sophia Turner',
     phone: '555-444-4567',
     email: 'sophia.turner@gmail.com',
-    station: 'Fire Station 10',
+    station: 'Community Volunteer Fire Department',
     status: 'Canceled',
     leadType: 'Inspection',
     technicianDetails: [{ name: 'Mike Ross', id: 'T005' }],
-    department: 'Station 9',
+    department: 'Community Volunteer Fire Department',
     appointmentDate: '12 Nov 2025',
   },
     {
@@ -111,12 +89,38 @@ const leadsData: LeadItem[] = [
     name: 'Denvar Scott',
     phone: '555-444-4567',
     email: 'denvar.scott@gmail.com',
-    station: 'Fire Station 11',
-    status: 'Scheduled',
+    station: 'Community Volunteer Fire Department',
+    status: 'Rescheduled',
     leadType: 'Inspection',
     technicianDetails: [{ name: 'Mike Ross', id: 'T006' }],
-    department: 'Station 9',
+    department: 'Community Volunteer Fire Department',
     appointmentDate: '12 Nov 2025',
+  },
+
+    {
+    id: '123456',
+    name: 'Liam Carter',
+    phone: '555-123-4567',
+    email: 'liam.carter@gmail.com',
+    station: 'Community Volunteer Fire Department',
+    status: 'Ongoing',
+    leadType: 'Repair',
+    technicianDetails: [{ name: 'John Doe', id: 'T001' }],
+    department: 'Community Volunteer Fire Department',
+    appointmentDate: '10 Nov 2025',
+  },
+
+    {
+    id: '323456',
+    name: 'Ethan Blake',
+    phone: '555-333-4567',
+    email: 'ethan.blake@gmail.com',
+    station: 'Community Volunteer Fire Department',
+    status: 'Rescheduled',
+    leadType: 'Repair',
+    technicianDetails: [{ name: 'Sarah Lee', id: 'T003' }],
+    department: 'Community Volunteer Fire Department',
+    appointmentDate: '15 Nov 2025',
   },
 ];
 
@@ -134,6 +138,7 @@ const LeadScreen = () => {
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
+  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
 
   // Effect for handling orientation change
   useEffect(() => {
@@ -154,15 +159,17 @@ const LeadScreen = () => {
   const filtered: LeadItem[] = useMemo(() => {
     return leadsData.filter((lead) => {
       const matchSearch = lead.id.includes(search);
-      const matchStatus = statusFilter ? lead.status === statusFilter : true;
+      const matchStatus =
+        statusFilters.length > 0 ? statusFilters.includes(lead.status) : true;
       const matchType = orderTypeFilter ? lead.leadType === orderTypeFilter : true;
       return matchSearch && matchStatus && matchType;
     });
-  }, [search, statusFilter, orderTypeFilter]);
+  }, [search, statusFilters, orderTypeFilter]);
 
   const clearFilters = useCallback(() => {
-    setStatusFilter(null);
+    setStatusFilters([]);
     setOrderTypeFilter(null);
+    setSearch('');
   }, []);
 
   // Status Color Helper (Moved inside or defined outside with explicit types)
@@ -188,11 +195,11 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
        activeOpacity={0.8}
        onPress={() => navigation.navigate('LeadDetail', { lead: item })} // ✅ navigate with full object
        style={[styles.card, styles.shadow,     {
-      backgroundColor: colors.surface,   // theme-based background
+        // theme-based background
       borderColor: colors.outline,       // subtle border
     },]}
      > 
-    <Card >
+    <Card style={{backgroundColor: colors.surface,}}>
 
 
       <Card.Content>
@@ -215,36 +222,67 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
-          <View>
-            <Text>{item.name}</Text>
-            <Text>{item.phone} - {item.email}</Text>
-            <Text>{item.station}</Text>            
-          </View>
-          <View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
+                    <View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <Icon source="account" size={18} color="#555" />
+                        <Text style={{ marginLeft: 6 }}>{item.name}</Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                        <Icon source="phone" size={18} color="#555" />
+                        <Text style={{ marginLeft: 6 }}>{item.phone}</Text>
+
+
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                        <Icon source="email-outline" size={18} color="#555"  />
+                        <Text style={{ marginLeft: 6 }}>{item.email}</Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon source="fire-station" size={18} color="#555" />
+                        <Text style={{ marginLeft: 6 }}   ellipsizeMode="tail"> 
+                          {item.station?.length > 28
+                          ? item.station.slice(0, 28) + '...'
+                          : item.station}
+                          </Text>
+                      </View>
+                    </View>
+                    <View>
                     {/* Order Type Pill */}
-              <View
-                style={[
-                  styles.orderTypePill,
-                  {
-                    borderColor: colors.outline,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-              >
-                <Icon
-                  source={item.leadType === 'Repair' ? 'wrench' : 'magnify'}
-                  color={colors.primary}
-                  size={p(14)}
-                />
-                <Text style={{ marginLeft: p(4), color: colors.onSurface }}>
-                  {item.leadType}
-                </Text>
-              </View>
+
+                                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems:"flex-end" }}>
+                    <View
+                    style={[
+                      styles.orderTypePill,
+                      {
+                        borderColor: colors.outline,
+
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <Icon
+                      source={item.leadType === 'Repair' ? 'wrench' : 'magnify'}
+                      color={colors.primary}
+                      size={p(14)}
+                    />
+                    <Text style={{ marginLeft: p(4), color: colors.onSurface }}>
+                      {item.leadType}
+                    </Text>
+                  </View>
+
+                </View>
+
           </View>
 
 
         </View>
+
+
+
 
 
 
@@ -310,49 +348,54 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
         </Button>
 
         {/* Status Dropdown */}
-        <Menu
-          visible={statusMenuVisible}
-          onDismiss={() => setStatusMenuVisible(false)}
-          anchor={
-            <Button
-              mode="outlined"
-              onPress={() => setStatusMenuVisible(true)}
-              style={styles.filterButton}
-              labelStyle={styles.filterLabel}
-              textColor={statusFilter ? colors.primary : colors.onSurface}
-              icon={statusFilter ? 'filter-check-outline' : 'filter-variant'}
-            >
-              {statusFilter || 'Status'}
-            </Button>
-          }
-        >
+      <Menu
+        visible={statusMenuVisible}
+        onDismiss={() => setStatusMenuVisible(false)}
+        anchor={
+          <Button
+            mode="outlined"
+            onPress={() => setStatusMenuVisible(true)}
+            style={styles.filterButton}
+            labelStyle={styles.filterLabel}
+            textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+            icon={statusFilters.length > 0 ? 'filter-check-outline' : 'filter-variant'}
+          >
+            {statusFilters.length > 0 ? `${statusFilters.length} Selected` : 'Status'}
+          </Button>
+        }
+      >
         {[
-            { status: 'Ongoing', icon: 'progress-clock' },
-            { status: 'Completed', icon: 'check-circle' },
-            { status: 'Canceled', icon: 'close-circle' },
-            { status: 'Rescheduled', icon: 'calendar-refresh' },
-            { status: 'Scheduled', icon: 'calendar-check' },
-          ].map(({ status, icon }) => (
+          { status: 'Ongoing', icon: 'progress-clock' },
+          { status: 'Completed', icon: 'check-circle' },
+          { status: 'Canceled', icon: 'close-circle' },
+          { status: 'Rescheduled', icon: 'calendar-refresh' },
+          { status: 'Scheduled', icon: 'calendar-check' },
+        ].map(({ status, icon }) => {
+          const selected = statusFilters.includes(status as LeadStatus);
+          return (
             <Menu.Item
               key={status}
               onPress={() => {
-                setStatusFilter(status as LeadStatus);
-                setStatusMenuVisible(false);
+                setStatusFilters((prev) =>
+                  selected
+                    ? prev.filter((s) => s !== status)
+                    : [...prev, status as LeadStatus]
+                );
               }}
               title={status}
               leadingIcon={icon}
+              trailingIcon={selected ? 'check' : undefined}
             />
-          ))}
-          <Divider />
-          <Menu.Item
-            onPress={() => {
-              setStatusFilter(null);
-              setStatusMenuVisible(false);
-            }}
-            title="Clear Status"
-            leadingIcon="close"
-          />
-        </Menu>
+          );
+        })}
+        <Divider />
+        <Menu.Item
+          onPress={() => setStatusFilters([])}
+          title="Clear All"
+          leadingIcon="close"
+        />
+      </Menu>
+
 
         {/* <Button
           mode="text"
@@ -378,8 +421,7 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
           >
             Clear
           </Button>
-
-          {(statusFilter || orderTypeFilter || search) && (
+          {(statusFilters.length > 0 || orderTypeFilter || search) && (
             <Badge
               visible
               size={16}
@@ -392,15 +434,40 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
               }}
             >
               {[
-                statusFilter ? 1 : 0,
+                statusFilters.length > 0 ? 1 : 0,
                 orderTypeFilter ? 1 : 0,
                 search ? 1 : 0,
               ].reduce((a, b) => a + b, 0)}
             </Badge>
           )}
+
         </View>
 
+
+        
+
       </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+        {statusFilters.map((status) => (
+          <Button
+            key={status}
+            mode="outlined"
+            icon="close"
+            onPress={() =>
+              setStatusFilters((prev) => prev.filter((s) => s !== status))
+            }
+            style={{
+              marginRight: 6,
+              marginBottom: 6,
+              borderColor: getStatusColor(status),
+            }}
+            textColor={getStatusColor(status)}
+          >
+            {status}
+          </Button>
+        ))}
+      </View>
+
 
       {/* Grid of Leads */}
       <FlatList<LeadItem> // Explicitly typed FlatList
@@ -420,7 +487,7 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: p(10) },
   header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
-  search: { marginBottom: p(10), width: '40%' },
+  search: { marginBottom: p(10), width: '100%' },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
