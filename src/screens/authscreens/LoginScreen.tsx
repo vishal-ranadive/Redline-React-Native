@@ -169,7 +169,7 @@ const LoginScreen = () => {
               labelStyle={{ fontSize: p(17) }}
               
             >
-              Forgot password?
+              Forgot password ?
             </Button>
 
           
