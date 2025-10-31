@@ -163,13 +163,17 @@ const LoginScreen = () => {
           </Button>
 
           {/* Forgot Password */}
-          <Button
-            onPress={() => navigation.navigate('ForgotPassword')}
-            textColor={paperTheme.colors.primary}
-            labelStyle={{ fontSize: p(20) }}
-          >
-            Forgot password?
-          </Button>
+            <Button
+              onPress={() => navigation.navigate('ForgotPassword')}
+              textColor={paperTheme.colors.primary}
+              labelStyle={{ fontSize: p(17) }}
+              
+            >
+              Forgot password?
+            </Button>
+
+          
+
 
           {/* Toggle Theme */}
 

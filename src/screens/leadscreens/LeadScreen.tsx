@@ -210,15 +210,16 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
           {/* Status Dot */}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
-          <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-            {item.status}
-          </Text>
           <View
             style={[
               styles.statusDot,
               { backgroundColor: getStatusColor(item.status) },
             ]}
           />
+          <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
+            {item.status}
+          </Text>
+
           </View>
         </View>
 
@@ -242,7 +243,7 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
                       </View>
 
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon source="fire-station" size={18} color="#555" />
+                        <Icon source='office-building' size={18} color="#555" />
                         <Text style={{ marginLeft: 6 }}   ellipsizeMode="tail"> 
                           {item.station?.length > 28
                           ? item.station.slice(0, 28) + '...'

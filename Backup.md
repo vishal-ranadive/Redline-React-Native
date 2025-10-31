@@ -19,3 +19,16 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan'>;
 
 
   () => navigation.navigate('GearScan')
+
+
+  <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={styles.grid}
+        renderItem={({ item }) => <GearCard gear={item}
+        onPress={() => navigation.navigate('GearDetail')}
+        />}
+       
+        showsVerticalScrollIndicator={false}
+      />

@@ -218,6 +218,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: p(20),
+    paddingBottom:p(50)
   },
   overlay: {
     position: 'absolute',
