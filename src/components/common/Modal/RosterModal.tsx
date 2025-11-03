@@ -17,7 +17,7 @@ import {
   Divider,
   ActivityIndicator,
 } from 'react-native-paper';
-import { p } from '../../utils/responsive';
+import { p } from '../../../utils/responsive';
 
 interface Firestation {
   firestation_id: number;

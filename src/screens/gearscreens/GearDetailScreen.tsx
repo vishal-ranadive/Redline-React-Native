@@ -12,7 +12,7 @@ import {
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
-import RosterModal from '../../components/common/RosterModal';
+import RosterModal from '../../components/common/Modal/RosterModal';
 
 interface Roster {
   roster_id: number;

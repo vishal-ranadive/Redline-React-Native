@@ -15,6 +15,7 @@ import GearDetailScreen from '../screens/gearscreens/GearDetailScreen';
 import ViewGroupInspectionsScreen from '../screens/inspectionscreens/ViewGroupInspectionsScreen';
 import ViewNestedInspectionScreen from '../screens/inspectionscreens/ViewNestedInspectionScreen';
 import UpdateInspectionStatusScreen from '../screens/inspectionscreens/UpdateInspectionScreen';
+import AddGearScreen from '../screens/gearscreens/AddGearScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -25,6 +26,7 @@ export type RootStackParamList = {
   LeadDetail: { lead: any };
   GearScan: undefined;
   GearDetail: undefined
+  AddGear: undefined
   GearSearch: undefined;
   GroupInspections: undefined;
   NestedInspections: { type?: string };
@@ -54,6 +56,7 @@ export default function AppNavigator() {
       <Stack.Screen name="LeadDetail" component={withMainLayout(LeadDetailScreen)} />
       <Stack.Screen name="GearScan" component={withMainLayout(GearScanScreen)} options={{ headerShown: false }}/>
       <Stack.Screen name="GearDetail" component={withMainLayout(GearDetailScreen)} options={{ headerShown: false }}/>
+      <Stack.Screen name="AddGear" component={withMainLayout(AddGearScreen)} options={{ headerShown: false }}/>
     </Stack.Navigator>
   );
 }

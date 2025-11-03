@@ -304,7 +304,7 @@ const LeadDetailScreen = () => {
         {[
           { label: 'Scan Gear', icon: 'barcode-scan' , action: () => navigation.navigate('GearScan')},
           { label: 'Search Gear', icon: 'magnify',action: () => navigation.navigate('GearSearch') },
-          { label: 'Add Gear', icon: 'plus-circle-outline',action: () => navigation.navigate('GearScan') },
+          { label: 'Add Gear', icon: 'plus-circle-outline',action: () => navigation.navigate('AddGear') },
           {
             label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',
             icon: lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline',
