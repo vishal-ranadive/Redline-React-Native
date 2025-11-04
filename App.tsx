@@ -5,6 +5,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { PaperProvider, adaptNavigationTheme, MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
 import { useThemeStore } from './src/store/themeStore';
 import AppNavigator from './src/navigation/AppNavigator'; // ✅ use only this
+import Toast from 'react-native-toast-message'; // ✅ Import here
+
 
 import {
   DefaultTheme as NavigationDefaultTheme,
@@ -53,6 +55,7 @@ function App() {
         <NavigationContainer theme={paperTheme as any}>
           <AppNavigator /> {/* ✅ your single source of navigation */}
         </NavigationContainer>
+        <Toast />
       </SafeAreaProvider>
     </PaperProvider>
   );

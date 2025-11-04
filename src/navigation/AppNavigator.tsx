@@ -1,3 +1,4 @@
+// src\navigation\AppNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/authscreens/LoginScreen';
@@ -16,6 +17,7 @@ import ViewGroupInspectionsScreen from '../screens/inspectionscreens/ViewGroupIn
 import ViewNestedInspectionScreen from '../screens/inspectionscreens/ViewNestedInspectionScreen';
 import UpdateInspectionStatusScreen from '../screens/inspectionscreens/UpdateInspectionScreen';
 import AddGearScreen from '../screens/gearscreens/AddGearScreen';
+import UpdateProfileScreen from '../screens/settingsscreens/UpdateProfileScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -31,6 +33,9 @@ export type RootStackParamList = {
   GroupInspections: undefined;
   NestedInspections: { type?: string };
   UpadateInspection: undefined;
+
+  //Profile
+   UpdateProfile: undefined;
 
 };
 
@@ -57,6 +62,10 @@ export default function AppNavigator() {
       <Stack.Screen name="GearScan" component={withMainLayout(GearScanScreen)} options={{ headerShown: false }}/>
       <Stack.Screen name="GearDetail" component={withMainLayout(GearDetailScreen)} options={{ headerShown: false }}/>
       <Stack.Screen name="AddGear" component={withMainLayout(AddGearScreen)} options={{ headerShown: false }}/>
+
+      {/* Profile Screen */}
+      <Stack.Screen name="UpdateProfile" component={withMainLayout(UpdateProfileScreen)} />
+
     </Stack.Navigator>
   );
 }

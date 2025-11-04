@@ -6,11 +6,14 @@
     "src/store/themeStore.ts",
     "src/screens/authscreens/LoginScreen.tsx",
     "src/screens/authscreens/ResetPasswordScreen.tsx",
-    "src/screens/authscreens/ForgotPasswordScreen.tsx"
-, "src/components/common/RosterModal.tsx"  ],
+    "src/screens/authscreens/ForgotPasswordScreen.tsx",
+    "src/components/common/RosterModal.tsx",
+    "env.d.ts"
+  ],
   "exclude": ["**/node_modules", "**/Pods"],
   "compilerOptions": {
     "esModuleInterop": true,
-    "strict": true
+    "strict": true,
+    "typeRoots": ["./node_modules/@types", "./"]
   }
 }

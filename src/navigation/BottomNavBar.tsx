@@ -1,19 +1,77 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Icon, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { p } from '../utils/responsive'; // scaling helper
+import { p } from '../utils/responsive';
+import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 
 export default function BottomNavBar() {
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
+  const { logout } = useAuthStore();
+  // const { resetTheme } = useThemeStore(); // Optional: Add resetTheme to themeStore if needed
 
   const items = [
     { label: 'Home', icon: 'home', screen: 'LeadScreen' },
     { label: 'Settings', icon: 'cog', screen: 'Settings' },
     { label: 'Logout', icon: 'logout', screen: 'Login' },
   ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: performLogout,
+        },
+      ]
+    );
+  };
+
+  const performLogout = () => {
+    try {
+      console.log('🚪 Starting logout process...');
+      
+      // Clear auth store
+      logout();
+      
+      // Clear theme store if you have reset functionality
+      // resetTheme();
+      
+      console.log('✅ All stores cleared, navigating to login');
+      
+      // Navigate to login screen and reset navigation stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Fallback navigation if something goes wrong
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
+  };
+
+  const handleNavigation = (item: any) => {
+    if (item.label === 'Logout') {
+      handleLogout();
+    } else {
+      navigation.navigate(item.screen);
+    }
+  };
 
   return (
     <View
@@ -28,16 +86,7 @@ export default function BottomNavBar() {
           <TouchableOpacity
             key={item.label}
             style={styles.navItem}
-            onPress={() => {
-              if (item.label === 'Logout') {
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Login' }],
-                });
-              } else {
-                navigation.navigate(item.screen);
-              }
-            }}
+            onPress={() => handleNavigation(item)}
           >
             <View
               style={[

@@ -1,95 +1,94 @@
-// src/screens/LoginScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useThemeStore } from '../../store/themeStore';
-import { p } from '../../utils/responsive'; // scaling helper
+import { useAuthStore } from '../../store/authStore';
+import { p } from '../../utils/responsive';
 import { IconButton } from 'react-native-paper';
-
-
-
-const baseSizes = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 42, 44, 46, 48];
-
-function ScalingPreviewScreen() {
-  return (
-    <ScrollView contentContainerStyle={styless.container}>
-      <Text style={styless.header}>📏 Text Scaling Preview</Text>
-
-      {baseSizes.map((size) => {
-        const scaled = p(size).toFixed(2);
-        return (
-          <View key={size} style={styless.row}>
-            <Text style={[styless.label, { fontSize: p(14) }]}>
-              Base {size}px → Scaled {scaled}px
-            </Text>
-            <Text style={{ fontSize: p(size), color: '#ff5f1f' }}>
-              The quick brown fox jumps over the lazy dog.
-            </Text>
-          </View>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
-const styless = StyleSheet.create({
-  container: {
-    padding: p(16),
-    backgroundColor: '#4a4d4dff',
-  },
-  header: {
-    fontSize: p(24),
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: p(20),
-  },
-  row: {
-    marginBottom: p(16),
-  },
-  label: {
-    color: '#666',
-    marginBottom: p(6),
-  },
-});
+import Toast from 'react-native-toast-message';
 
 
 const LoginScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
   const { theme, toggleTheme } = useThemeStore();
   const paperTheme = useTheme();
+  const { login, isLoading, error, clearError } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Clear error when component unmounts or when inputs change
+  useEffect(() => {
+    return () => clearError();
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Login Error', error);
+    }
+  }, [error]);
+
+  const handleLogin = async () => {
+    console.log('🎯 Login button pressed');
+    //   if (!email || !password) {
+    //     Toast.show({
+    //       type: 'error',
+    //       text1: 'Missing fields',
+    //       text2: 'Please enter both email and password',
+    //     });
+    //     return;
+    //   }
+    
+    // if (!email || !password) {
+    //   Alert.alert('Error', 'Please enter both email and password');
+    //   return;
+    // }
+
+    try {
+      // await login(email, password);
+      // console.log('✅ Login successful, navigating to LeadScreen');
+      Toast.show({
+        type: 'success',
+        text1: 'Login successful 👏',
+        text2: 'Welcome back to RedLine Gear',
+      });
+      navigation.navigate('LeadScreen');
+    } catch (error) {
+      console.error('❌ Login error caught in component:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Login failed',
+        text2: 'Invalid credentials or server issue',
+      });
+      // Error is already handled in the store and will show via Alert due to useEffect
+    }
+  };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: paperTheme.colors.background }]}
     >
-      {/* Optional test scaling block */}
-      {/* <ScalingPreviewScreen /> */}
-
-          {/* 🔆 Theme Toggle Button - Top Right */}
-    <View style={styles.topRightButton}>
-      <IconButton
-        icon={theme === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'}
-        size={p(22)}
-        iconColor={paperTheme.colors.primary}
-        onPress={toggleTheme}
-      />
-    </View>
+      {/* Theme Toggle Button */}
+      <View style={styles.topRightButton}>
+        <IconButton
+          icon={theme === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'}
+          size={p(22)}
+          iconColor={paperTheme.colors.primary}
+          onPress={toggleTheme}
+        />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -97,47 +96,40 @@ const LoginScreen = () => {
       >
         <View style={styles.formContainer}>
           {/* App Title */}
-          <Text
-            style={[
-              styles.title,
-              { color: paperTheme.colors.primary },
-            ]}
-          >
+          <Text style={[styles.title, { color: paperTheme.colors.primary }]}>
             RedLine Gear
           </Text>
 
-          <Text
-            style={[
-              styles.subtitle,
-              { color: paperTheme.colors.onBackground },
-            ]}
-          >
+          <Text style={[styles.subtitle, { color: paperTheme.colors.onBackground }]}>
             First Responder Gear Cleaning & Inspecting
           </Text>
 
           {/* Email Input */}
           <TextInput
-            label={<Text style={{ fontSize: p(14) }}>Email</Text>}
+            label="Email"
             mode="outlined"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              clearError();
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             style={styles.input}
-            theme={{
-              fonts: {
-                bodyLarge: { fontSize: p(14) },
-              },
-            }}
+            theme={{ fonts: { bodyLarge: { fontSize: p(14) } } }}
+            disabled={isLoading}
           />
 
           {/* Password Input */}
           <TextInput
-            label={<Text style={{ fontSize: p(14) }}>Password</Text>}
+            label="Password"
             mode="outlined"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              clearError();
+            }}
             right={
               <TextInput.Icon
                 icon={showPassword ? 'eye-off' : 'eye'}
@@ -145,38 +137,31 @@ const LoginScreen = () => {
               />
             }
             style={styles.input}
-            theme={{
-              fonts: {
-                bodyLarge: { fontSize: p(14) },
-              },
-            }}
+            theme={{ fonts: { bodyLarge: { fontSize: p(14) } } }}
+            disabled={isLoading}
           />
 
           {/* Login Button */}
           <Button
             mode="contained"
-            onPress={() => navigation.navigate('LeadScreen')}
+            onPress={handleLogin}
             style={styles.button}
             labelStyle={{ fontSize: p(16), fontWeight: '600' }}
+            loading={isLoading}
+            disabled={isLoading}
           >
-            Login
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
 
           {/* Forgot Password */}
-            <Button
-              onPress={() => navigation.navigate('ForgotPassword')}
-              textColor={paperTheme.colors.primary}
-              labelStyle={{ fontSize: p(17) }}
-              
-            >
-              Forgot password ?
-            </Button>
-
-          
-
-
-          {/* Toggle Theme */}
-
+          <Button
+            onPress={() => navigation.navigate('ForgotPassword')}
+            textColor={paperTheme.colors.primary}
+            labelStyle={{ fontSize: p(17) }}
+            disabled={isLoading}
+          >
+            Forgot password?
+          </Button>
 
           {/* Footer */}
           <Text style={[styles.footer, { color: paperTheme.colors.outline }]}>
@@ -192,7 +177,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-
   topRightButton: {
     position: 'absolute',
     top: p(40),
@@ -207,7 +191,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '90%',
-    maxWidth: p(500), // scale limit for tablets
+    maxWidth: p(500),
   },
   title: {
     fontSize: p(32),
@@ -232,13 +216,6 @@ const styles = StyleSheet.create({
     fontSize: p(12),
     textAlign: 'center',
     marginTop: p(24),
-  },
-  testContainer: {
-    alignItems: 'center',
-    marginTop: p(10),
-  },
-  testText: {
-    marginVertical: p(4),
   },
 });
 

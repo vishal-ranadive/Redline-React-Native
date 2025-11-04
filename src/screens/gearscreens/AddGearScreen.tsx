@@ -29,7 +29,7 @@ import CommonDatePicker from '../../components/common/DatePicker';
 import RosterModal from '../../components/common/Modal/RosterModal';
 import ManufacturerModal from '../../components/common/Modal/ManufacturerModal';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddGear'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddGear', 'GearSearch'>;
 
 interface RosterItem {
   roster_id: number;
@@ -56,11 +56,11 @@ interface ManufacturerItem {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'Pre', label: 'Pre', color: '#F9A825' }, // amber
-  { value: 'Post', label: 'Post', color: '#6A1B9A' }, // purple
-  { value: 'Complete', label: 'Complete', color: '#1E88E5' }, // blue
-  { value: 'Pass', label: 'Pass', color: '#34A853' }, // green
-  { value: 'Fail', label: 'Fail', color: '#EA4335' }, // red
+  { value: 'PASS', label: 'PASS', color: '#34A853'  }, // amber
+  { value: 'REPAIR', label: 'REPAIR', color: '#1E88E5'  }, // purple
+  // { value: 'Complete', label: 'Complete', color: '#6A1B9A' }, // blue
+  { value: 'RECOMMEND OOS', label: 'RECOMMEND OOS', color: '#EA4335' }, // green
+  { value: 'EXPIRED', label: 'EXPIRED', color: '#F9A825'  }, // red
 ];
 
 const AddGearScreen = () => {
@@ -129,6 +129,8 @@ const AddGearScreen = () => {
     };
     console.log('Save payload', payload);
     // TODO: API call
+
+    navigation.navigate('AddGear')
   };
 
   // helpers
@@ -301,7 +303,7 @@ const renderSelectedManufacturerCard = () => {
 
         <View style={styles.headerActions}>
           <Button mode="text" compact onPress={() => navigation.goBack()} textColor={colors.onSurface}>Cancel</Button>
-          <Button mode="contained" compact onPress={handleSave} buttonColor={colors.primary} style={styles.saveBtn} textColor={colors.surface}>Save</Button>
+          <Button mode="contained" compact onPress={handleSave} buttonColor={colors.primary} style={styles.saveBtn}  textColor={colors.surface}>Save</Button>
         </View>
       </View>
 
@@ -404,7 +406,7 @@ const renderSelectedManufacturerCard = () => {
         <View style={isLandscape ? styles.landscapeContainer : undefined}>
           {/* Left column */}
           <View style={isLandscape ? styles.leftColumn : undefined}>
-            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+            {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
               <Card.Content>
                 <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Manufacturer</Text>
                 <Divider style={{ marginVertical: p(8) }} />
@@ -425,7 +427,7 @@ const renderSelectedManufacturerCard = () => {
                   <Text style={{ color: colors.onSurfaceVariant, marginTop: p(6) }}>No manufacturer selected</Text>
                 )}
               </Card.Content>
-            </Card>
+            </Card> */}
 
             {/* Images */}
             {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
