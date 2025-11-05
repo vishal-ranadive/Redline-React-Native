@@ -30,6 +30,12 @@
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSCameraUsageDescription</key>
+		<string>We need access to your camera to scan barcodes.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>We need access to your microphone to record video.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>We need access to save photos.</string>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>

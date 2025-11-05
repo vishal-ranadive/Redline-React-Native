@@ -349,53 +349,71 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
         </Button>
 
         {/* Status Dropdown */}
-      <Menu
-        visible={statusMenuVisible}
-        onDismiss={() => setStatusMenuVisible(false)}
-        anchor={
-          <Button
-            mode="outlined"
-            onPress={() => setStatusMenuVisible(true)}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
-            icon={statusFilters.length > 0 ? 'filter-check-outline' : 'filter-variant'}
-          >
-            {statusFilters.length > 0 ? `${statusFilters.length} Selected` : 'Status'}
-          </Button>
-        }
-      >
-        {[
-          { status: 'Ongoing', icon: 'progress-clock' },
-          { status: 'Completed', icon: 'check-circle' },
-          { status: 'Canceled', icon: 'close-circle' },
-          { status: 'Rescheduled', icon: 'calendar-refresh' },
-          { status: 'Scheduled', icon: 'calendar-check' },
-        ].map(({ status, icon }) => {
-          const selected = statusFilters.includes(status as LeadStatus);
-          return (
-            <Menu.Item
-              key={status}
-              onPress={() => {
-                setStatusFilters((prev) =>
-                  selected
-                    ? prev.filter((s) => s !== status)
-                    : [...prev, status as LeadStatus]
-                );
-              }}
-              title={status}
-              leadingIcon={icon}
-              trailingIcon={selected ? 'check' : undefined}
-            />
-          );
-        })}
-        <Divider />
-        <Menu.Item
-          onPress={() => setStatusFilters([])}
-          title="Clear All"
-          leadingIcon="close"
-        />
-      </Menu>
+
+
+      <View collapsable={false}>
+        <Menu
+          visible={statusMenuVisible}
+          onDismiss={() => {
+            console.log('Menu dismissed');
+            setStatusMenuVisible(false);
+          }}
+          anchor={
+            <View>
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  console.log('Status button clicked');
+                  console.log('Before toggle, visible =', statusMenuVisible);
+                  setStatusMenuVisible((prev) => !prev);
+                  console.log('After toggle, visible =', !statusMenuVisible);
+                }}
+                style={styles.filterButton}
+                labelStyle={styles.filterLabel}
+                textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+                icon={statusFilters.length > 0 ? 'filter-check-outline' : 'filter-variant'}
+              >
+                {statusFilters.length > 0 ? `${statusFilters.length} Selected` : 'Status'}
+              </Button>
+            </View>
+          }
+        >
+          {[
+            { status: 'Ongoing', icon: 'progress-clock' },
+            { status: 'Completed', icon: 'check-circle' },
+            { status: 'Canceled', icon: 'close-circle' },
+            { status: 'Rescheduled', icon: 'calendar-refresh' },
+            { status: 'Scheduled', icon: 'calendar-check' },
+          ].map(({ status, icon }) => {
+            const selected = statusFilters.includes(status as LeadStatus);
+            return (
+              <Menu.Item
+                key={status}
+                onPress={() => {
+                  console.log(`Toggling status: ${status} | Selected: ${!selected}`);
+                  setStatusFilters((prev) =>
+                    selected ? prev.filter((s) => s !== status) : [...prev, status as LeadStatus]
+                  );
+                }}
+                title={status}
+                leadingIcon={icon}
+                trailingIcon={selected ? 'check' : undefined}
+              />
+            );
+          })}
+
+          <Divider />
+          <Menu.Item
+            onPress={() => {
+              console.log('Clear all clicked');
+              setStatusFilters([]);
+            }}
+            title="Clear All"
+            leadingIcon="close"
+          />
+        </Menu>
+      </View>
+
 
 
         {/* <Button

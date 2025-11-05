@@ -1,122 +1,156 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Image,
-  StyleSheet,
-  Animated,
-  Dimensions,
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, PermissionsAndroid, Platform, ActivityIndicator } from 'react-native';
 import { Text, Button, Icon, Card, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { Camera } from 'react-native-camera-kit';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail', 'AddGear'>;
 
 const GearScanScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute();
   const { colors } = useTheme();
 
-  const [scanned, setScanned] = useState(false);
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
-  const scanAnim = useRef(new Animated.Value(0)).current;
+  const [scannedData, setScannedData] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [gearDetails, setGearDetails] = useState<any>(null);
 
-  // Detect orientation dynamically
+  // Request Camera Permission (Android)
   useEffect(() => {
-    const updateOrientation = () => {
-      const { width, height } = Dimensions.get('window');
-      setOrientation(width > height ? 'landscape' : 'portrait');
+    const requestPermission = async () => {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA
+        );
+        setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
+      } else {
+        setHasPermission(true);
+      }
     };
-    const sub = Dimensions.addEventListener('change', updateOrientation);
-    updateOrientation();
-    return () => sub.remove();
+    requestPermission();
   }, []);
 
-  // Animate the scan line
+  // Handle API call when barcode is scanned
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
+    if (!scannedData) return;
 
-  // Simulate scan success after 3s
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setScanned(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchGearDetails = async () => {
+      setIsLoading(true);
+      try {
+        // Simulate API delay
+        await new Promise((res:any) => setTimeout(res, 2000));
 
-  // Calculate scan frame size based on orientation
-  const frameSize = orientation === 'portrait' ? '70%' : '40%';
-  const translateY = scanAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 200], // animation height inside frame
-  });
+        // Simulated API response based on scanned barcode
+        setGearDetails({
+          item: 'Jacket Shell',
+          sn: scannedData,
+          status: 'PASS ✅',
+        });
+      } catch (err) {
+        console.log('API error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGearDetails();
+  }, [scannedData]);
+
+  if (!hasPermission) {
+    return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <Text style={{ fontSize: p(16), textAlign: 'center' }}>
+          Please allow camera access to scan gear.
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header]}>
-        <Button
-          mode="text"
-          onPress={() => navigation.goBack()}
-          contentStyle={{ flexDirection: 'row' }}
-        >
+      <View style={styles.header}>
+        <Button mode="text" onPress={() => navigation.goBack()}>
           <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
         </Button>
         <Text style={[styles.title, { color: colors.onSurface }]}>Scan Gear</Text>
-        <Button mode="text" onPress={() => {}}>
-          <Icon source="flash" size={p(22)} color={colors.primary} />
+        <Button mode="text" onPress={() => setFlashOn(!flashOn)}>
+          <Icon
+            source={flashOn ? 'flash' : 'flash-off'}
+            size={p(22)}
+            color={flashOn ? colors.primary : colors.onSurface}
+          />
         </Button>
       </View>
 
-      {/* Fake Camera View */}
-      <View style={styles.cameraContainer}>
-        <Image
-          source={require('../../assets/jacketScanning.png')}
-          style={styles.cameraImage}
+      {/* Camera View */}
+      {!scannedData && !isLoading && (
+        <Camera
+          style={styles.camera}
+          scanBarcode={true}
+          showFrame={true}
+          laserColor={colors.primary}
+          frameColor={colors.primary}
+          torchMode={flashOn ? 'on' : 'off'}
+          onReadCode={(event: any) => {
+            const value = event?.nativeEvent?.codeStringValue;
+            if (value) setScannedData(value);
+          }}
         />
-        <View
-          style={[
-            styles.scanFrame,
-            { borderColor: colors.primary, width: frameSize },
-          ]}
-        >
-          {/* Animated Sci-Fi Scan Line */}
-          <Animated.View
-            style={[
-              styles.scanLine,
-              {
-                backgroundColor: colors.primary,
-                transform: [{ translateY }],
-              },
-            ]}
-          />
+      )}
+
+      {/* Loader */}
+      {isLoading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: p(12), fontSize: p(16) }}>Fetching gear details...</Text>
         </View>
-        <Text style={[styles.instruction, { color: colors.onSurface }]}>
-          Position barcode/QR inside the frame
-        </Text>
-      </View>
+      )}
+
+      {/* Gear Detail Popup */}
+      {gearDetails && !isLoading && (
+        <View style={styles.resultContainer}>
+          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Card.Content>
+              <Text style={{ fontSize: p(18), fontWeight: 'bold' }}>🎉 Scan Successful!</Text>
+              <Text style={{ fontSize: p(14), marginVertical: p(8) }}>
+                Item: {gearDetails.item}
+              </Text>
+              <Text style={{ fontSize: p(14), marginBottom: p(8) }}>SN: {gearDetails.sn}</Text>
+              <Text style={{ fontSize: p(14), marginBottom: p(8) }}>Status: {gearDetails.status}</Text>
+
+              <View style={styles.buttonsRow}>
+                <Button
+                  mode="contained"
+                  buttonColor={colors.primary}
+                  onPress={() => navigation.navigate('GearDetail')}
+                >
+                  Open Gear
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => {
+                    setScannedData(null);
+                    setGearDetails(null);
+                  }}
+                >
+                  Scan Again
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        </View>
+      )}
 
       {/* Bottom Buttons */}
       <View style={styles.bottomButtons}>
         {[
-          { label: 'Manual Entry', icon: 'pencil', action: () => {} },
+          { label: 'Manual Add Gear', icon: 'pencil', action: () => navigation.navigate('AddGear') },
           { label: 'Gallery', icon: 'image', action: () => {} },
           { label: 'Close', icon: 'close', action: () => navigation.goBack() },
         ].map((btn, i) => (
@@ -134,54 +168,18 @@ const GearScanScreen = () => {
           </Button>
         ))}
       </View>
-
-      {/* Scan Successful Overlay */}
-      {scanned && (
-        <Card style={[styles.overlay, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text style={{ fontSize: p(18), fontWeight: 'bold' }}>🎉 Scan Successful!</Text>
-            <Text style={{ fontSize: p(14), fontWeight: 'bold' }}>Item: Jacket Shell</Text>
-            <Text style={{ fontSize: p(14), fontWeight: 'bold' }}>SN: D39508998</Text>
-            <Text style={{ fontSize: p(14), fontWeight: 'bold' }}>Status: PASS ✅</Text>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginTop: p(12),
-              }}
-            >
-              <Button
-                mode="contained"
-                buttonColor={colors.primary}
-                onPress={() => navigation.navigate('GearDetail')}
-                labelStyle={{
-                  fontSize: p(14),
-                  fontWeight: '600',
-                }}
-              >
-                Open Gear
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={() => setScanned(false)}
-                labelStyle={{
-                  fontSize: p(14),
-                  fontWeight: '600',
-                }}
-              >
-                Cancel
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
-      )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  permissionContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: p(20),
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,45 +188,36 @@ const styles = StyleSheet.create({
     paddingTop: p(10),
   },
   title: { fontSize: p(18), fontWeight: 'bold' },
-  cameraContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  cameraImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    resizeMode: 'cover',
-    opacity: 0.6,
-  },
-  scanFrame: {
-    aspectRatio: 1,
-    borderWidth: p(3),
-    borderRadius: p(10),
+  camera: { flex: 1, width: '100%' },
+  loaderContainer: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  scanLine: {
-    position: 'absolute',
-    width: '100%',
-    height: p(3),
-    borderRadius: p(2),
-    opacity: 0.8,
+  resultContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: p(20),
   },
-  instruction: { marginTop: p(16), fontSize: p(16) },
+  card: {
+    width: '90%',
+    padding: p(16),
+    borderRadius: p(10),
+    elevation: 5,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: p(12),
+  },
   bottomButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: p(20),
-    paddingBottom:p(50)
-  },
-  overlay: {
-    position: 'absolute',
-    top: '35%',
-    left: '10%',
-    right: '10%',
-    padding: p(16),
-    borderRadius: p(10),
-    elevation: 10,
+    paddingBottom: p(40),
   },
 });
 
 export default GearScanScreen;
+
