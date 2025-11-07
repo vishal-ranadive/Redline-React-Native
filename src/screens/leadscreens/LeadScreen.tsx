@@ -15,6 +15,7 @@ import BottomNavBar from '../../navigation/BottomNavBar';
 import { useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '../../navigation/AppNavigator'; // adjust path
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 interface Technician {
@@ -296,7 +297,8 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
   ), [colors, getStatusColor]); // Depend on colors and getStatusColor
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View >
       <Text
         variant="headlineMedium"
         style={[styles.header, { color: colors.primary }]}
@@ -500,6 +502,7 @@ const getStatusColor = useCallback((status: LeadStatus): string => {
       />
 
     </View>
+    </SafeAreaView>
   );
 };
 

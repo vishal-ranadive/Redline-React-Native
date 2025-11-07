@@ -3,6 +3,7 @@ import { View, StyleSheet, FlatList, Image, Pressable } from 'react-native';
 import { Text, Card, useTheme, Button, Icon, Divider, Chip } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Gear = {
   id: string;
@@ -58,7 +59,7 @@ export default function ViewNestedInspectionScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: '#F4F5F7' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F4F5F7' }]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -158,7 +159,7 @@ export default function ViewNestedInspectionScreen() {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

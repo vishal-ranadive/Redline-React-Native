@@ -8,6 +8,7 @@ import { GroupInspectionItem } from '../../types/Inspection';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 const p = (v: number) => v;
@@ -58,7 +59,7 @@ export default function ViewGroupInspectionsScreen() {
   }, [debounced]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header]}>
         <Button
           mode="text"
@@ -107,7 +108,7 @@ export default function ViewGroupInspectionsScreen() {
         )}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -17,7 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow'>;
 type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
 
 const LeadDetailScreen = () => {
@@ -57,7 +57,7 @@ const LeadDetailScreen = () => {
         style={[
           styles.header,
           {
-            marginTop: top + p(4),
+            // marginTop: top + p(4),
             backgroundColor: colors.surface,
             borderBottomColor: colors.outline,
           },
@@ -308,7 +308,9 @@ const LeadDetailScreen = () => {
           {
             label: lead.leadType === 'Repair' ? 'View Repairs' : 'View Inspections',
             icon: lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline',
-            action: () => navigation.navigate('GroupInspections'),
+            // action: () => navigation.navigate('GroupInspections'),
+            // action: () => navigation.navigate('NestedInspectionFlow'),
+            action: () => navigation.navigate('LoadsScreen'),
           },
         ].map((action, i) => (
           <Button

@@ -18,6 +18,10 @@ import ViewNestedInspectionScreen from '../screens/inspectionscreens/ViewNestedI
 import UpdateInspectionStatusScreen from '../screens/inspectionscreens/UpdateInspectionScreen';
 import AddGearScreen from '../screens/gearscreens/AddGearScreen';
 import UpdateProfileScreen from '../screens/settingsscreens/UpdateProfileScreen';
+import NestedInspectionFlowScreen from '../screens/inspectionscreens/NestedInspectionFlowScreen';
+import BinsScreen from '../screens/inspectionscreens/BinsScreen';
+import LoadsScreen from '../screens/inspectionscreens/LoadsScreen';
+import GearsScreen from '../screens/inspectionscreens/GearsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -30,12 +34,18 @@ export type RootStackParamList = {
   GearDetail: undefined
   AddGear: undefined
   GearSearch: undefined;
+  NestedInspectionFlow: undefined;
   GroupInspections: undefined;
   NestedInspections: { type?: string };
   UpadateInspection: undefined;
 
   //Profile
    UpdateProfile: undefined;
+
+  //Load Bin flow
+  LoadsScreen:undefined;
+  BinsScreen:{ load: any };
+  GearScreen:{load:any, bin:any}
 
 };
 
@@ -65,6 +75,14 @@ export default function AppNavigator() {
 
       {/* Profile Screen */}
       <Stack.Screen name="UpdateProfile" component={withMainLayout(UpdateProfileScreen)} />
+      <Stack.Screen 
+        name="NestedInspectionFlow" 
+        component={withMainLayout(NestedInspectionFlowScreen)} 
+      />
+
+      <Stack.Screen name="LoadsScreen" component={withMainLayout(LoadsScreen) } />
+<Stack.Screen name="BinsScreen" component={withMainLayout(BinsScreen)} />
+<Stack.Screen name="GearScreen" component={withMainLayout(GearsScreen)} />
 
     </Stack.Navigator>
   );

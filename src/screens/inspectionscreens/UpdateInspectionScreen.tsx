@@ -12,6 +12,8 @@ import {
 } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Header from '../../components/common/Header';
 
 type Gear = {
   id: string;
@@ -70,9 +72,10 @@ export default function UpdateInspectionScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView>
       {/* Header */}
-      <View style={[styles.header]}>
+      {/* <View style={[styles.header]}>
         <Button
           mode="text"
           onPress={() => navigation.goBack()}
@@ -86,7 +89,15 @@ export default function UpdateInspectionScreen() {
                 >
                   X
             </Button>
-      </View>
+      </View> */}
+      <Header 
+        title="Update Gear Status"
+        // statusBadge="Active"
+        // statusColor="#4CAF50"
+        
+      />
+
+
       {/* Top summary */}
       <View style={[styles.topCard, { backgroundColor: colors.surface }]}>
         <View style={styles.topLeft}>
@@ -254,7 +265,8 @@ export default function UpdateInspectionScreen() {
           Save Changes
         </Button>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
