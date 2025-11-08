@@ -24,8 +24,8 @@ const LoginScreen = () => {
   const paperTheme = useTheme();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('steve@maildrop.cc');
+  const [password, setPassword] = useState('Admin@12');
   const [showPassword, setShowPassword] = useState(false);
 
   // Clear error when component unmounts or when inputs change
@@ -41,23 +41,23 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     console.log('🎯 Login button pressed');
-    //   if (!email || !password) {
-    //     Toast.show({
-    //       type: 'error',
-    //       text1: 'Missing fields',
-    //       text2: 'Please enter both email and password',
-    //     });
-    //     return;
-    //   }
+      if (!email || !password) {
+        Toast.show({
+          type: 'error',
+          text1: 'Missing fields',
+          text2: 'Please enter both email and password',
+        });
+        return;
+      }
     
-    // if (!email || !password) {
-    //   Alert.alert('Error', 'Please enter both email and password');
-    //   return;
-    // }
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
 
     try {
-      // await login(email, password);
-      // console.log('✅ Login successful, navigating to LeadScreen');
+      await login(email, password);
+      console.log('✅ Login successful, navigating to LeadScreen');
       Toast.show({
         type: 'success',
         text1: 'Login successful 👏',

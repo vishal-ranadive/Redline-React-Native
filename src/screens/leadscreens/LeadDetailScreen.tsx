@@ -125,13 +125,12 @@ const LeadDetailScreen = () => {
             <Button
               mode="contained"
               buttonColor={colors.primary}
-              textColor="#fff"
               style={[styles.leadTypeBtn,]}
               contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(4) }}
               labelStyle={{
                 fontSize: p(16),
                 fontWeight: '600',
-                color: colors.surface,
+                color: '#fff',
               }}
             >
               {lead.leadType}
@@ -316,14 +315,14 @@ const LeadDetailScreen = () => {
           <Button
             key={i}
             // mode="text"
-                  mode="outlined" // You can change to "contained" or "outlined"
-      onPress={() => action.action && action.action()}
-      buttonColor={colors.primary}
-            
-            textColor={colors.surface}
+            mode="outlined" // You can change to "contained" or "outlined"
+            onPress={() => action.action && action.action()}
+            buttonColor={colors.primary}
+            textColor={colors.onSurface}
             labelStyle={{
               fontSize: p(14),
               fontWeight: '600',
+              color: '#fff',
             }}
             style={{  borderColor: colors.outline, borderRadius: p(10), elevation: 12, }}
             icon={action.icon}
@@ -519,7 +518,10 @@ tableValue: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     // borderTopWidth: 1,
+    flexWrap:'wrap',
     paddingVertical: p(12),
+    marginHorizontal: p(14),
+    borderRadius:p(12),
     marginBottom:p(26)
   },
 });

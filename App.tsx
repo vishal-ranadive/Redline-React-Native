@@ -37,10 +37,23 @@ const CustomDarkTheme: MD3Theme = {
     ...MD3DarkTheme.colors,
     ...NavDarkTheme.colors,
     primary: '#ef1313ff',
-    background: '#121212',
-    surface: '#1E1E1E',
-    onSurface: '#FFFFFF',
-    outline: '#444444',
+    onPrimary: '#FFFFFF', 
+    background: '#18181bff',
+    surface: '#222425',
+    surfaceVariant: '#2C2E30',
+    onSurface: '#F2F2F2',
+    outline: '#55585A',
+    secondary: '#9E9E9E',
+
+    // ✅ Required by MD3 to avoid TypeScript errors
+    elevation: {
+      level0: 'transparent',
+      level1: '#242628',
+      level2: '#2A2C2E',
+      level3: '#2F3133',
+      level4: '#343637',
+      level5: '#383A3C',
+    },
   },
 };
 

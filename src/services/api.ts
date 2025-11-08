@@ -1,10 +1,10 @@
-// src\services\api.ts
 import axios from 'axios';
 import { Platform } from 'react-native';
+import { BASE_URL } from '@env';
 
 // Create axios instance
-const api = axios.create({
-  baseURL: 'https://your-api-base-url.com/api', // Replace with your API URL
+export const axiosInstance = axios.create({
+  baseURL: `${BASE_URL}`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ export const setAuthStore = (store: any) => {
 };
 
 // Request interceptor to add auth token
-api.interceptors.request.use(
+axiosInstance.interceptors.request.use(
   (config) => {
     if (authStore && authStore.getState().accessToken) {
       config.headers.Authorization = `Bearer ${authStore.getState().accessToken}`;
@@ -36,7 +36,7 @@ api.interceptors.request.use(
 );
 
 // Response interceptor for logging and token refresh
-api.interceptors.response.use(
+axiosInstance.interceptors.response.use(
   (response) => {
     console.log(`✅ API Response: ${response.status} ${response.config.url}`, response.data);
     return response;
@@ -59,4 +59,5 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+// Export the axios instance as default as well for backward compatibility
+export default axiosInstance;
