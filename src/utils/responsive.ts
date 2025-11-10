@@ -34,17 +34,17 @@ export const p = (size: number) => {
     return Platform.select({ ios: 0.33, android: 0.5, default: 1 });
   }
 
-  console.log(`
-  🧭 Responsive Debug
-  ---------------------------
-  Device Size: ${SCREEN_WIDTH} x ${SCREEN_HEIGHT}
-  Base Size: ${BASE_WIDTH} x ${BASE_HEIGHT}
-  Ratios: width=${widthRatio.toFixed(2)}, height=${heightRatio.toFixed(2)}
-  Combined Ratio: ${ratio.toFixed(2)}
-  isTablet: ${isTablet}
-  Original Size: ${size}
-  Scaled Size: ${scaledSize.toFixed(2)}
-  `);
+  // console.log(`
+  // 🧭 Responsive Debug
+  // ---------------------------
+  // Device Size: ${SCREEN_WIDTH} x ${SCREEN_HEIGHT}
+  // Base Size: ${BASE_WIDTH} x ${BASE_HEIGHT}
+  // Ratios: width=${widthRatio.toFixed(2)}, height=${heightRatio.toFixed(2)}
+  // Combined Ratio: ${ratio.toFixed(2)}
+  // isTablet: ${isTablet}
+  // Original Size: ${size}
+  // Scaled Size: ${scaledSize.toFixed(2)}
+  // `);
 
   return Math.round(scaledSize);
 };

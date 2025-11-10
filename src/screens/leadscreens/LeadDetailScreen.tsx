@@ -126,12 +126,13 @@ const LeadDetailScreen = () => {
               mode="contained"
               buttonColor={colors.primary}
               style={[styles.leadTypeBtn,]}
-              contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(4) }}
+              contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(2) }}
               labelStyle={{
                 fontSize: p(16),
                 fontWeight: '600',
                 color: '#fff',
               }}
+              icon={lead.leadType === 'Repair' ? 'wrench' : 'clipboard-check-outline'}
             >
               {lead.leadType}
             </Button>
@@ -326,6 +327,7 @@ const LeadDetailScreen = () => {
             }}
             style={{  borderColor: colors.outline, borderRadius: p(10), elevation: 12, }}
             icon={action.icon}
+            elevation={4}
             // contentStyle={{ flexDirection: 'row', paddingVertical: p(2) , paddingHorizontal: p(0)}}
           >
            <>{action.label}</>
@@ -518,9 +520,10 @@ tableValue: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     // borderTopWidth: 1,
+    alignItems:'center',
     flexWrap:'wrap',
     paddingVertical: p(12),
-    marginHorizontal: p(14),
+    marginHorizontal: p(10),
     borderRadius:p(12),
     marginBottom:p(26)
   },

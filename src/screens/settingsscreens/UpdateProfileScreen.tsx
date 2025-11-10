@@ -24,6 +24,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuthStore } from '../../store/authStore';
 import { p } from '../../utils/responsive';
 import Toast from 'react-native-toast-message';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpdateProfile'>;
 
@@ -99,12 +100,19 @@ export default function UpdateProfileScreen() {
     //   await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Update in store (we'll implement this in authStore)
-      // await updateProfile(formData);
+
+      const formPayload = {
+        first_name: formData.firstName ,
+        last_name : formData.lastName, 
+        email : formData.email, 
+        phone : formData.contactPhone 
+      }
+      await updateProfile(formPayload);
       
-            Toast.show({
-              type: 'success',
-              text1: 'Profile updated successfully!',
-            });
+      Toast.show({
+        type: 'success',
+        text1: 'Profile updated successfully!',
+      });
       navigation.goBack();
     } catch (error: any) {
       console.error('Profile update error:', error);
@@ -143,6 +151,7 @@ export default function UpdateProfileScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+    <SafeAreaView>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
@@ -203,6 +212,9 @@ export default function UpdateProfileScreen() {
                 />
               </View>
 
+              <View style={styles.nameRow}>
+
+
               <TextInput
                 label="Email"
                 value={formData.email}
@@ -225,6 +237,8 @@ export default function UpdateProfileScreen() {
                 theme={{ fonts: { bodyLarge: { fontSize: p(14) } } }}
                 disabled={isLoading}
               />
+              </View>
+
 
               {/* Read-only Fields */}
               <View style={styles.readOnlySection}>
@@ -275,6 +289,7 @@ export default function UpdateProfileScreen() {
           </Button>
         </View>
       </ScrollView>
+    </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
@@ -285,7 +300,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: p(12),
-    paddingTop: p(40),
+    // paddingTop: p(40),
   },
   header: {
     flexDirection: 'row',

@@ -265,7 +265,7 @@ const LeadScreen = () => {
         {/* Search */}
         <TextInput
           mode="outlined"
-          placeholder="Search by Lead ID or Name"
+          placeholder="Search by lead id"
           value={search}
           onChangeText={setSearch}
           style={styles.search}

@@ -22,6 +22,7 @@ import NestedInspectionFlowScreen from '../screens/inspectionscreens/NestedInspe
 import BinsScreen from '../screens/inspectionscreens/BinsScreen';
 import LoadsScreen from '../screens/inspectionscreens/LoadsScreen';
 import GearsScreen from '../screens/inspectionscreens/GearsScreen';
+import ProfileScreen from '../screens/settingsscreens/Profile';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -41,6 +42,7 @@ export type RootStackParamList = {
 
   //Profile
    UpdateProfile: undefined;
+   Profile:undefined;
 
   //Load Bin flow
   LoadsScreen:undefined;
@@ -75,6 +77,7 @@ export default function AppNavigator() {
 
       {/* Profile Screen */}
       <Stack.Screen name="UpdateProfile" component={withMainLayout(UpdateProfileScreen)} />
+      <Stack.Screen name="Profile" component={withMainLayout(ProfileScreen)} />
       <Stack.Screen 
         name="NestedInspectionFlow" 
         component={withMainLayout(NestedInspectionFlowScreen)} 
