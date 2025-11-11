@@ -43,6 +43,7 @@ interface LeadItem {
   technicianDetails: Technician[];
   department: string;
   appointmentDate: string;
+  scheduledDate: string;
 }
 
 // Placeholder for responsive utility
@@ -106,7 +107,7 @@ const LeadScreen = () => {
         if (search) {
           params.search = search;
         }
-
+        console.log("fetching reslults for", params)
         await fetchLeads(params);
       } catch (err) {
         console.error('Error fetching leads:', err);
@@ -138,6 +139,7 @@ const LeadScreen = () => {
       leadType: lead.type === 'REPAIR' ? 'Repair' : 'Inspection',
       technicianDetails: [],
       department: lead.firestation?.name || 'Unknown Department',
+      phWater : 5,
       appointmentDate: lead.scheduledDate 
         ? new Date(lead.scheduledDate).toLocaleDateString('en-US', {
             day: '2-digit',
@@ -166,10 +168,20 @@ const LeadScreen = () => {
       default: return '#9E9E9E';
     }
   }, []);
+    const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
 
   // Typed Render Function for FlatList
-  const renderLead = useCallback(({ item }: { item: LeadItem }) => (
+  const renderLead = useCallback(({ item }: { item: LeadItem }) => 
+    
+    
+    (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('LeadDetail', { lead: item })}
@@ -179,7 +191,7 @@ const LeadScreen = () => {
         <Card.Content>
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-              Lead #{item.id}
+              Job #{item.id}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
               <View
@@ -209,6 +221,15 @@ const LeadScreen = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="email-outline" size={18} color="#555"  />
                 <Text style={{ marginLeft: 6 }}>{item.email}</Text>
+              </View>
+                              {/* { icon: 'calendar', label: 'Appointment Date', value: formatDate(lead.scheduledDate) }, */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                <Icon source="calendar" size={18} color="#555"  />
+                <Text style={{ marginLeft: 6 }}>{item?.appointmentDate}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                <Icon source="clock" size={18} color="#555"  />
+                <Text style={{ marginLeft: 6 }}>{"10:30 PM"}</Text>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -265,7 +286,7 @@ const LeadScreen = () => {
         {/* Search */}
         <TextInput
           mode="outlined"
-          placeholder="Search by lead id"
+          placeholder="Search by job id"
           value={search}
           onChangeText={setSearch}
           style={styles.search}
@@ -457,7 +478,7 @@ const LeadScreen = () => {
       </View>
                   {/* Pagination */}
             {pagination && pagination.total > 0 && (
-              <View style={styles.paginationContainer}>
+              <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
                 <DataTable.Pagination
                   page={page - 1} // DataTable.Pagination uses 0-based index
                   numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
@@ -468,6 +489,13 @@ const LeadScreen = () => {
                   numberOfItemsPerPage={numberOfItemsPerPage}
                   onItemsPerPageChange={setNumberOfItemsPerPage}
                   selectPageDropdownLabel={'Rows per page'}
+                  theme={{
+                    colors: {
+                      primary: colors.primary,
+                      onSurface: colors.onSurface,
+                      surface: colors.surface,
+                    },
+                  }}
                 />
               </View>
             )}
@@ -477,6 +505,10 @@ const LeadScreen = () => {
   );
 };
 
+
+            // selectPageDropdownLabel="Rows per page"
+         
+            // }}
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: p(10) },
   header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
@@ -547,7 +579,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         marginInline:'auto',
-        marginBottom:p(64),
+        marginBottom:p(65),
         backgroundColor: '#f5f5f5',
         borderTopWidth: 1,
         borderTopColor: '#e0e0e0',

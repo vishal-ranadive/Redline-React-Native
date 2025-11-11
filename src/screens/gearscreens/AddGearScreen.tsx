@@ -61,6 +61,7 @@ const STATUS_OPTIONS = [
   // { value: 'Complete', label: 'Complete', color: '#6A1B9A' }, // blue
   { value: 'RECOMMEND OOS', label: 'RECOMMEND OOS', color: '#EA4335' }, // green
   { value: 'EXPIRED', label: 'EXPIRED', color: '#F9A825'  }, // red
+  { value: 'CORRECTIVE ACTION REQUIRED', label: 'CORRECTIVE ACTION REQUIRED', color: '#9a25f9ff'  }, // red
 ];
 
 const AddGearScreen = () => {
@@ -159,7 +160,7 @@ const renderSelectedRosterCard = () => {
           icon="account-plus"
           style={[styles.smallBtn, { borderColor: colors.outline }]}
         >
-          Assign Roster
+          Assign Fire Fighter
         </Button>
       </View>
     );
@@ -183,7 +184,7 @@ const renderSelectedRosterCard = () => {
           </View>
         </View>
 
-        {/* Roster Menu */}
+        {/* Fire Fighter Menu */}
         <Menu
           visible={rosterMenuVisible}
           onDismiss={() => setRosterMenuVisible(false)}
@@ -202,7 +203,7 @@ const renderSelectedRosterCard = () => {
               setRosterMenuVisible(false);
               setRosterModalVisible(true);
             }}
-            title="Update Roster"
+            title="Update Fire Fighter"
             leadingIcon="account-edit"
           />
 
@@ -211,7 +212,7 @@ const renderSelectedRosterCard = () => {
               setRosterMenuVisible(false);
               setAssignedRoster(null);
             }}
-            title="Remove Roster"
+            title="Remove Fire Fighter"
             leadingIcon="account-remove"
           />
         </Menu>
@@ -347,16 +348,16 @@ const renderSelectedManufacturerCard = () => {
               </View>
             </View>
 
-            {/* Roster & Manufacturer side-by-side in landscape, stacked in portrait */}
+            {/* Fire Fighter & Manufacturer side-by-side in landscape, stacked in portrait */}
             <View style={[styles.inputRow, { marginTop: p(8), alignItems: 'flex-start', gap:p(6) }]}>
               <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Roster</Text>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter</Text>
                 {renderSelectedRosterCard()}
                 {!assignedRoster && (
                   <TextInput
                     mode="outlined"
                     value=""
-                    placeholder="Search roster..."
+                    placeholder="Search fire fighter..."
                     onFocus={() => setRosterModalVisible(true)}
                     style={[styles.input, { marginTop: p(6) }]}
                     right={<TextInput.Icon icon="magnify" />}
@@ -604,7 +605,7 @@ const renderSelectedManufacturerCard = () => {
         visible={rosterModalVisible}
         onClose={() => setRosterModalVisible(false)}
         onRosterSelect={(r: any) => { onRosterSelect(r as RosterItem); setRosterModalVisible(false); }}
-        onAddRosterManual={() => { setRosterModalVisible(false); /* navigate to add roster */ }}
+        onAddRosterManual={() => { setRosterModalVisible(false); /* navigate to add fire fighter */ }}
       />
 
       <ManufacturerModal

@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -20,6 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { p } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
+import PhScale from './components/PhScale';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow'>;
 type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
@@ -73,6 +74,25 @@ const LeadDetailScreen = () => {
   const [loading, setLoading] = React.useState(false);
   const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead.status);
 
+  //ph value 
+  const [showPhSlider, setShowPhSlider] = useState(false);
+  const [phValue, setPhValue] = useState(7); // default neutral
+
+
+  const getPhLabel = (value: number) => {
+    if (value < 7) return 'Acidic';
+    if (value === 7) return 'Neutral';
+    return 'Alkaline';
+  };
+
+  const getPhColor = (value: number) => {
+    if (value < 4) return '#ff3b30'; // red
+    if (value < 7) return '#ff9500'; // yellow/orange
+    if (value === 7) return '#00cc66'; // green (neutral)
+    if (value <= 9) return '#007aff'; // blue
+    return '#4b0082'; // deep violet
+  };
+
   // Fetch latest lead data when screen focuses
   useEffect(() => {
     fetchLeadDetail();
@@ -107,7 +127,7 @@ const LeadDetailScreen = () => {
         status: newStatus
       }));
       
-      Alert.alert('Success', 'Lead status updated successfully');
+      Alert.alert('Success', 'Job status updated successfully');
     } catch (error) {
       console.error('Error updating lead status:', error);
       Alert.alert('Error', 'Failed to update lead status');
@@ -219,7 +239,7 @@ const LeadDetailScreen = () => {
         </Button>
 
         <Text style={[styles.headerTitle, { color: colors.onSurface, fontSize: p(22) }]}>
-          Lead #{lead.id}
+          Job #{lead.id}
         </Text>
 
         {/* Status Badge */}
@@ -281,7 +301,7 @@ const LeadDetailScreen = () => {
           </View>
         </View>
 
-        {/* Lead Details Card */}
+        {/* Job Details Card */}
         <Card style={[styles.card, 
           { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
         ]}>
@@ -300,8 +320,8 @@ const LeadDetailScreen = () => {
               {[
                 { icon: 'calendar', label: 'Appointment Date', value: formatDate(lead.scheduledDate) },
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
-                { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Lead Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
-                { icon: 'check-circle', label: 'Lead Status', value: currentStatus },
+                { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
+                { icon: 'check-circle', label: 'Job Status', value: currentStatus },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -350,7 +370,7 @@ const LeadDetailScreen = () => {
             <View style={styles.tableContainer}>
               {[
                 { icon: 'account', label: 'Sales Person', value: lead?.odoo?.salePersonName },
-                { icon: 'identifier', label: 'MEU', value: lead?.odoo?.meu },
+                { icon: 'truck', label: 'MEU', value: lead?.odoo?.meu },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -445,6 +465,58 @@ const LeadDetailScreen = () => {
         </Card>
 
         {/* 📝 Remarks */}
+{/* 🌊 pH of Water Section */}
+<Card
+  style={[
+    styles.card,
+    { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+  ]}
+>
+  <Card.Content>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
+        PH of Water
+      </Text>
+
+      {/* Tap area to expand slider */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setShowPhSlider(!showPhSlider);
+        }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: p(6),
+        }}
+      >
+        <Text style={{ color: getPhColor(phValue), fontWeight: '700', fontSize: p(18) }}>
+          {phValue} ({getPhLabel(phValue)})
+        </Text>
+        <Icon
+          source={showPhSlider ? 'chevron-up' : 'chevron-down'}
+          size={p(22)}
+          color={colors.primary}
+        />
+      </TouchableOpacity>
+    </View>
+
+    {/* Expandable gradient slider */}
+    {showPhSlider && (
+      <View style={{ marginTop: p(10) }}>
+        <PhScale
+          initialValue={phValue}
+          onChange={(val) => {
+            setPhValue(val);
+            console.log('✅ Selected pH:', val);
+          }}
+        />
+      </View>
+    )}
+  </Card.Content>
+</Card>
+
         <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
@@ -507,7 +579,7 @@ const LeadDetailScreen = () => {
           visible={statusDialogVisible}
           onDismiss={() => setStatusDialogVisible(false)}
         >
-          <Dialog.Title>Update Lead Status</Dialog.Title>
+          <Dialog.Title>Update Job Status</Dialog.Title>
           <Dialog.Content>
             {[
               { status: 'Ongoing', icon: 'progress-clock' },

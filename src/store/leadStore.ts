@@ -26,11 +26,11 @@ export const useLeadStore = create<LeadState>()(
       pagination: null,
 
       // Actions
-      fetchLeads: async (page = 1, pageSize = 20) => {
+      fetchLeads: async (params: any = {}) => {
         set({ loading: true, error: null });
         
         try {
-          const response = await leadApi.getLeads(page, pageSize);
+          const response = await leadApi.getLeads(params);
           
           console.log('📦 Lead API Response:', response);
           

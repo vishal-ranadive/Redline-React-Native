@@ -3,7 +3,10 @@ import { axiosInstance } from './api';
 
 export const leadApi = {
   getLeads: async (params?: any): Promise<any> => {
+
+    console.log('➡️ API CALL /leads/ with', params);
     const response = await axiosInstance.get(`/leads/`, { params });
+    console.log('✅ API Response /leads/ with', response.data);
     return response.data;
   },
 

@@ -8,7 +8,7 @@ import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-type GearStatus = 'Pass' | 'Repair' | 'Expired' | 'RECOMMEND OOS';
+type GearStatus = 'PASS' | 'REPAIR' | 'EXPIRED' | 'RECOMMEND OOS' | 'CORRECTIVE ACTION REQUIRED';
 
 type Gear = {
   id: string;
@@ -47,7 +47,7 @@ const MOCK_GEARS: Gear[] = [
   {
     id: 'G1',
     name: 'Helmet A',
-    status: 'Pass',
+    status: 'PASS',
     lastInspection: '2025-11-01',
     imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
     serialNumber: 'SER-00121',
@@ -58,7 +58,7 @@ const MOCK_GEARS: Gear[] = [
   {
     id: 'G2',
     name: 'Helmet B',
-    status: 'Repair',
+    status: 'REPAIR',
     lastInspection: '2025-11-01',
     imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
     serialNumber: 'SER-00122',
@@ -69,7 +69,7 @@ const MOCK_GEARS: Gear[] = [
   {
     id: 'G3',
     name: 'Helmet C',
-    status: 'Expired',
+    status: 'EXPIRED',
     lastInspection: '2025-10-15',
     imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
     serialNumber: 'SER-00123',
@@ -91,7 +91,18 @@ const MOCK_GEARS: Gear[] = [
   {
     id: 'G5',
     name: 'Helmet E',
-    status: 'Pass',
+    status: 'PASS',
+    lastInspection: '2025-11-02',
+    imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+    serialNumber: 'SER-00125',
+    condition: 'Excellent',
+    remarks: 'Like new condition',
+    rosterName:"John Doe"
+  },
+  {
+    id: 'G6',
+    name: 'Helmet E',
+    status: 'CORRECTIVE ACTION REQUIRED',
     lastInspection: '2025-11-02',
     imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
     serialNumber: 'SER-00125',
@@ -113,7 +124,7 @@ export default function GearsScreen() {
   const [gearToDelete, setGearToDelete] = useState<string | null>(null);
   
   const [newGearName, setNewGearName] = useState('');
-  const [newGearStatus, setNewGearStatus] = useState<GearStatus>('Pass');
+  const [newGearStatus, setNewGearStatus] = useState<GearStatus>('PASS');
 
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,20 +156,22 @@ const currentGears = filteredGears.slice(from, to);
 
   const getGearStatusColor = (status: GearStatus) => {
     switch (status) {
-      case 'Pass': return '#4CAF50';
-      case 'Repair': return '#FF9800';
-      case 'Expired': return '#E53935';
-      case 'RECOMMEND OOS': return '#9C27B0';
+      case 'PASS': return '#34A853';
+      case 'REPAIR': return '#1E88E5';
+      case 'EXPIRED': return '#E53935';
+      case 'RECOMMEND OOS': return '#F9A825';
+      case 'CORRECTIVE ACTION REQUIRED': return '#9C27B0';
       default: return '#9E9E9E';
     }
   };
 
   const getStatusIcon = (status: GearStatus) => {
     switch (status) {
-      case 'Pass': return 'check-circle';
-      case 'Repair': return 'wrench';
-      case 'Expired': return 'clock-alert';
+      case 'PASS': return 'check-circle';
+      case 'REPAIR': return 'wrench';
+      case 'EXPIRED': return 'clock-alert';
       case 'RECOMMEND OOS': return 'alert-circle';
+      case 'CORRECTIVE ACTION REQUIRED': return 'alert-trangle';
       default: return 'help-circle';
     }
   };
@@ -173,12 +186,12 @@ const currentGears = filteredGears.slice(from, to);
       lastInspection: new Date().toISOString().split('T')[0],
       imageUrl: getDefaultImage(bin.gearType),
       serialNumber: `SER-00${gears.length + 100}`,
-      condition: newGearStatus === 'Pass' ? 'Good' : 'Needs Attention'
+      condition: newGearStatus === 'PASS' ? 'Good' : 'Needs Attention'
     };
 
     setGears(prev => [...prev, newGear]);
     setNewGearName('');
-    setNewGearStatus('Pass');
+    setNewGearStatus('PASS');
     setAddGearDialog(false);
   };
 
@@ -372,7 +385,7 @@ const currentGears = filteredGears.slice(from, to);
       {/* Right: Status Chip */}
       <Chip
         mode="outlined"
-        icon={getStatusIcon(bin.status as any)}
+        icon={getStatusIcon(bin.status as GearStatus)}
         style={{ marginLeft: p(8) }}
         compact
       >
@@ -398,7 +411,7 @@ const currentGears = filteredGears.slice(from, to);
   />
 
   <View style={styles.filterChips}>
-    {(['All', 'Pass', 'Repair', 'Expired', 'RECOMMEND OOS'] as (GearStatus | 'All')[]).map(status => (
+    {(['All', 'PASS', 'REPAIR', 'EXPIRED', 'RECOMMEND OOS', 'CORRECTIVE ACTION REQUIRED'] as (GearStatus | 'All')[]).map(status => (
       <Chip
         key={status}
         selected={statusFilter === status}
@@ -493,7 +506,7 @@ const currentGears = filteredGears.slice(from, to);
               Initial Status
             </Text>
             <View style={styles.statusOptions}>
-              {(['Pass', 'Repair', 'Expired', 'RECOMMEND OOS'] as GearStatus[]).map(status => (
+              {(['Pass', 'Repair', 'Expired', 'RECOMMEND OOS', 'CORRECTIVE ACTION REQUIRED'] as GearStatus[]).map(status => (
                 <Chip
                   key={status}
                   selected={newGearStatus === status}

@@ -209,7 +209,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
         {/* Header */}
         <View style={[styles.modalHeader, { backgroundColor: colors.surface }]}>
           <Text style={[styles.modalTitle, { color: colors.onSurface, fontSize: p(20) }]}>
-            Select Roster
+            Select Fire Fighter
           </Text>
           <Button mode="text" onPress={onClose}>
             <Icon source="close" size={p(22)} color={colors.onSurface} />
@@ -228,7 +228,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
           />
         </View>
 
-        {/* Roster List */}
+        {/* Fire Fighter List */}
         <View style={styles.listContainer}>
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -269,7 +269,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
             icon="account-plus"
             labelStyle={{ fontSize: p(16), fontWeight: '600' }}
           >
-            Add Roster Manually
+            Add Fire Fighter Manually
           </Button>
         </View>
       </View>

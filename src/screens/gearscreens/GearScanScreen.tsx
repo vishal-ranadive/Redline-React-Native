@@ -160,9 +160,10 @@ const GearScanScreen = () => {
             icon={btn.icon}
             onPress={btn.action}
             buttonColor={colors.primary}
-            textColor={colors.surface}
-            labelStyle={{ fontSize: p(14), fontWeight: '600' }}
-            style={{ marginHorizontal: p(4), borderRadius: p(10) }}
+            // textColor={colors.surface}
+            labelStyle={{ fontSize: p(14), fontWeight: '600', color:'#fff' }}
+            style={{ borderColor: colors.outline, borderRadius: p(10),marginHorizontal: p(4) ,elevation: 12 }}
+             elevation={4}
           >
             {btn.label}
           </Button>
