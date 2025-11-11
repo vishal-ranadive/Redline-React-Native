@@ -221,7 +221,7 @@ chip: {
 
     gridContainer: {
   flex: 1,
-  paddingHorizontal: p(8),
+  paddingHorizontal: p(4),
   // marginTop: p(4),
 },
 grid: {

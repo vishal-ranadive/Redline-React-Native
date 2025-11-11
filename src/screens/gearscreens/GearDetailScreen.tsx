@@ -203,9 +203,9 @@ const GearDetailScreen = ({ navigation }: any) => {
                       textColor={colors.surface}
                       style={styles.assignButton}
                       icon="account-plus"
-                      labelStyle={{ fontSize: p(14), fontWeight: '600' }}
+                      labelStyle={{ fontSize: p(14), fontWeight: '600',color:"#fff" }}
                     >
-                      Assign Roster
+                      Assign Fire Fighter
                     </Button>
                   </View>
                 )}
@@ -381,7 +381,7 @@ const GearDetailScreen = ({ navigation }: any) => {
           textColor={colors.surface}
           style={styles.ctaButton}
           icon="clipboard-check"
-          labelStyle={{ fontWeight: '700', fontSize: p(16) }}
+          labelStyle={{ fontWeight: '700', fontSize: p(16), color:"#fff" }}
           contentStyle={{ paddingVertical: p(8) }}
         >
           START GEAR INSPECTION

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
+import { Button, useTheme } from 'react-native-paper';
 import DatePicker from 'react-native-date-picker';
 import { p } from '../../utils/responsive';
+import { useThemeStore } from '../../store/themeStore'; // ✅ If you're storing theme manually
 
 interface CommonDatePickerProps {
   label?: string;
@@ -20,6 +21,8 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
   placeholder = 'Select date'
 }) => {
   const { colors } = useTheme();
+  const appTheme = useThemeStore(state => state.theme); // 'light' | 'dark'
+  
   const [visible, setVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : new Date());
 
@@ -38,29 +41,38 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
 
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return placeholder;
-    
-    if (mode === 'time') {
-      return dateString;
-    }
-    
     const date = new Date(dateString);
-    return mode === 'date' 
-      ? date.toLocaleDateString()
-      : date.toLocaleString();
+    return mode === 'time'
+      ? date.toLocaleTimeString()
+      : mode === 'datetime'
+      ? date.toLocaleString()
+      : date.toLocaleDateString();
   };
 
   return (
     <View style={styles.container}>
-      {/* <Text style={[styles.label, { color: colors.onSurface }]}>{label}</Text> */}
-      
+      {label ? (
+        <Button
+          mode="text"
+          disabled
+          labelStyle={[styles.label, { color: colors.onSurface }]}
+        >
+          {label}
+        </Button>
+      ) : null}
+
       <Button
         mode="outlined"
         onPress={() => setVisible(true)}
-        style={[styles.button, { borderColor: colors.outline }]}
+        style={[
+          styles.button,
+          { backgroundColor: colors.surface, borderColor: colors.outline },
+        ]}
         contentStyle={styles.buttonContent}
-        labelStyle={[styles.buttonLabel, { 
-          color: value ? colors.onSurface : colors.outline 
-        }]}
+        labelStyle={[
+          styles.buttonLabel,
+          { color: value ? colors.onSurface : colors.outline },
+        ]}
         icon="calendar"
       >
         {formatDisplayDate(value)}
@@ -73,7 +85,7 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         mode={mode}
-        // theme={colors.mode === 'dark' ? 'dark' : 'light'}
+        theme={appTheme === 'dark' ? 'dark' : 'light'} // ✅ adds dark mode support
       />
     </View>
   );
@@ -86,10 +98,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: p(14),
     fontWeight: '600',
-    marginBottom: p(6),
   },
   button: {
-    backgroundColor: 'white',
+    borderWidth: 1,
+    borderRadius: p(8),
   },
   buttonContent: {
     height: p(44),
