@@ -21,8 +21,10 @@ import { p } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
 import PhScale from './components/PhScale';
+import useFormattedDate from '../../hooks/useFormattedDate';
+import { printTable } from '../../utils/printTable';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow' >;
 type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
 
 interface Technician {
@@ -31,8 +33,8 @@ interface Technician {
 }
 
 interface LeadDetail {
-  id: number;
-  odoo: {
+  lead_id: number;
+  lead: {
     odooId: number;
     contactId: number;
     companyId: number;
@@ -51,8 +53,8 @@ interface LeadDetail {
   };
   assignedTechnicians: Technician[];
   type: 'REPAIR' | 'INSPECTION';
-  scheduledDate: string;
-  status: LeadStatus;
+  schedule_date: string;
+  lead_status: LeadStatus;
   remarks: string;
   createdAt: string;
   updatedAt: string;
@@ -72,7 +74,7 @@ const LeadDetailScreen = () => {
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead.status);
+  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.status);
 
   //ph value 
   const [showPhSlider, setShowPhSlider] = useState(false);
@@ -101,11 +103,13 @@ const LeadDetailScreen = () => {
   const fetchLeadDetail = async () => {
     try {
       setLoading(true);
-      const leadDetail = await leadApi.getLeadById(lead.id);
+      const leadDetail = await leadApi.getLeadById(lead.lead_id);
 
       console.log("leadDetail",leadDetail)
+      printTable('Lead Details', leadDetail);
       setLead(leadDetail);
-      setCurrentStatus(leadDetail.status);
+
+      setCurrentStatus(leadDetail.lead_status);
     } catch (error) {
       console.error('Error fetching lead details:', error);
       Alert.alert('Error', 'Failed to fetch lead details');
@@ -117,7 +121,7 @@ const LeadDetailScreen = () => {
   const handleStatusUpdate = async (newStatus: LeadStatus) => {
     try {
       setLoading(true);
-      await leadApi.updateLeadStatus(lead.id, newStatus);
+      await leadApi.updateLeadStatus(lead.lead_id, newStatus);
       setCurrentStatus(newStatus);
       setStatusDialogVisible(false);
       
@@ -143,7 +147,7 @@ const LeadDetailScreen = () => {
       // API call to assign current user as technician
       // This assumes you have an endpoint like POST /api/leads/technician/{lead_id}/
       // You'll need to implement this in your leadApi service
-      await leadApi.assignTechnician(lead.id, user?.id!);
+      await leadApi.assignTechnician(lead.lead_id, user?.id!);
       
       // Refresh lead details to get updated technician list
       await fetchLeadDetail();
@@ -164,7 +168,7 @@ const LeadDetailScreen = () => {
       
       // API call to unassign technician
       // You'll need to implement this in your leadApi service
-      await leadApi.unassignTechnician(lead.id, technicianId);
+      await leadApi.unassignTechnician(lead.lead_id, technicianId);
       
       // Refresh lead details to get updated technician list
       await fetchLeadDetail();
@@ -239,7 +243,7 @@ const LeadDetailScreen = () => {
         </Button>
 
         <Text style={[styles.headerTitle, { color: colors.onSurface, fontSize: p(22) }]}>
-          Job #{lead.id}
+          Job #{lead.lead_id}
         </Text>
 
         {/* Status Badge */}
@@ -318,7 +322,7 @@ const LeadDetailScreen = () => {
 
             <View style={styles.tableContainer}>
               {[
-                { icon: 'calendar', label: 'Appointment Date', value: formatDate(lead.scheduledDate) },
+                { icon: 'calendar', label: 'Appointment Date', value:useFormattedDate(lead.schedule_date)},
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: currentStatus },
@@ -369,8 +373,8 @@ const LeadDetailScreen = () => {
 
             <View style={styles.tableContainer}>
               {[
-                { icon: 'account', label: 'Sales Person', value: lead?.odoo?.salePersonName },
-                { icon: 'truck', label: 'MEU', value: lead?.odoo?.meu },
+                { icon: 'account', label: 'Sales Person', value: lead?.lead?.salePersonName },
+                { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -426,41 +430,66 @@ const LeadDetailScreen = () => {
             </View>
             <Divider style={{ marginVertical: p(6) }} />
 
-            {lead.assignedTechnicians?.length > 0 ? (
-              lead.assignedTechnicians.map((tech, index) => (
-                <View
-                  key={tech.id}
-                  style={[styles.techCard, { borderColor: colors.outline }]}
-                >
-                  <View style={styles.techInfo}>
-                    <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                    <Text style={[styles.techText, {fontSize: p(18)}]}>
-                      {tech.name} (ID: {tech.id})
-                      {tech.id === user?.id && (
-                        <Text style={{ color: colors.primary, fontWeight: 'bold' }}> • You</Text>
-                      )}
-                    </Text>
-                  </View>
-                  {tech.id === user?.id && (
-                    <Button
-                      mode="text"
-                      compact
-                      onPress={() => handleUnassignTechnician(tech.id)}
-                      textColor={colors.error}
-                    >
-                      Unassign
-                    </Button>
+
+              {(lead?.lead?.technicianName || lead.assignedTechnicians?.length > 0) ? (
+                <>
+                  {/* Odoo Technician */}
+                  {lead?.lead?.technicianName && (
+                    <View style={[styles.techCard, { borderColor: colors.outline }]}>
+                      <View style={styles.techInfo}>
+                        <Icon source="account-wrench" size={p(18)} color={colors.primary} />
+                        <Text style={[styles.techText, { fontSize: p(18) }]}>
+                          {lead.lead.technicianName}
+                          <Text style={{ color: colors.outline }}> (from Odoo)</Text>
+                        </Text>
+                      </View>
+                    </View>
                   )}
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyTechnicians}>
-                <Icon source="account-wrench" size={p(24)} color={colors.outline} />
-                <Text style={{ color: colors.outline, marginTop: 8 }}>
-                  No technicians assigned
-                </Text>
-              </View>
-            )}
+
+                  {/* Assigned Technicians */}
+                  {lead.assignedTechnicians?.length > 0 && (
+                    lead.assignedTechnicians.map((tech, index) => {
+                      // Skip duplicate if same as Odoo tech name
+                      if (tech.name === lead?.lead?.technicianName) return null;
+
+                      return (
+                        <View
+                          key={tech.id}
+                          style={[styles.techCard, { borderColor: colors.outline }]}
+                        >
+                          <View style={styles.techInfo}>
+                            <Icon source="account-wrench" size={p(18)} color={colors.primary} />
+                            <Text style={[styles.techText, { fontSize: p(18) }]}>
+                              {tech.name} (ID: {tech.id})
+                              {tech.id === user?.id && (
+                                <Text style={{ color: colors.primary, fontWeight: 'bold' }}> • You</Text>
+                              )}
+                            </Text>
+                          </View>
+                          {tech.id === user?.id && (
+                            <Button
+                              mode="text"
+                              compact
+                              onPress={() => handleUnassignTechnician(tech.id)}
+                              textColor={colors.error}
+                            >
+                              Unassign
+                            </Button>
+                          )}
+                        </View>
+                      );
+                    })
+                  )}
+                </>
+              ) : (
+                    <View style={styles.emptyTechnicians}>
+                      <Icon source="account-wrench" size={p(24)} color={colors.outline} />
+                      <Text style={{ color: colors.outline, marginTop: 8 }}>
+                        No technicians assigned
+                      </Text>
+                    </View>
+              )}
+
           </Card.Content>
         </Card>
 
@@ -549,7 +578,8 @@ const LeadDetailScreen = () => {
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
-              action: () => navigation.navigate('LoadsScreen'),
+              // action: () => navigation.navigate('LoadsScreen'),
+              action: () => navigation.navigate('ViewInspectionScreen'),
             },
           ].map((action, i) => (
             <Button

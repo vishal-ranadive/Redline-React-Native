@@ -23,6 +23,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLeadStore } from '../../store/leadStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
+import useFormattedDate from '../../hooks/useFormattedDate';
 
 interface Technician {
   id: string;
@@ -33,7 +34,7 @@ type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Schedu
 type LeadType = 'Repair' | 'Inspection';
 
 interface LeadItem {
-  id: string;
+  lead_id: string;
   name: string;
   phone: string;
   email: string;
@@ -130,23 +131,17 @@ const LeadScreen = () => {
   // Convert API leads to frontend format
   const filteredLeads = useMemo(() => {
     return leads.map((lead: any) => ({
-      id: lead.id?.toString() || 'Unknown',
-      name: lead.odoo?.salePersonName || 'Unknown Customer',
+      lead_id: lead.lead_id?.toString() || 'Unknown',
+      name: lead.lead?.salePersonName || 'Unknown Customer',
       phone: '555-000-0000',
       email: 'customer@example.com',
       station: lead.firestation?.name || 'Unknown Station',
-      status: lead.status || 'Unknown',
+      status: lead.lead_status || 'Unknown',
       leadType: lead.type === 'REPAIR' ? 'Repair' : 'Inspection',
       technicianDetails: [],
       department: lead.firestation?.name || 'Unknown Department',
       phWater : 5,
-      appointmentDate: lead.scheduledDate 
-        ? new Date(lead.scheduledDate).toLocaleDateString('en-US', {
-            day: '2-digit',
-            month: 'short', 
-            year: 'numeric'
-          })
-        : 'Date not set'
+      appointmentDate: useFormattedDate(lead.schedule_date)
     }));
   }, [leads]);
 
@@ -191,7 +186,7 @@ const LeadScreen = () => {
         <Card.Content>
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-              Job #{item.id}
+              Job #{item.lead_id}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
               <View
@@ -453,7 +448,7 @@ const LeadScreen = () => {
               // @ts-ignore
               data={filteredLeads}
               renderItem={renderLead}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.lead_id}
               numColumns={numColumns}
               contentContainerStyle={styles.grid}
               showsVerticalScrollIndicator={false}
