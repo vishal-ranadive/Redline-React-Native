@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
-import Slider from '@react-native-community/slider';
-import LinearGradient from 'react-native-linear-gradient';
-import { useTheme } from 'react-native-paper';
+import { View, Text, StyleSheet, Alert, TextInput } from 'react-native';
+import { Button, useTheme } from 'react-native-paper';
 
 const PhScale = ({
   initialValue = 7,
@@ -11,128 +9,180 @@ const PhScale = ({
   initialValue?: number;
   onChange?: (value: number) => void;
 }) => {
-  const [ph, setPh] = useState(initialValue); // confirmed pH
-  const [tempPh, setTempPh] = useState(initialValue); // live sliding value
+  const [ph, setPh] = useState(initialValue);
+  const [expandedBase, setExpandedBase] = useState<number | null>(null);
   const { colors } = useTheme();
 
-  const thumbPosition = ((tempPh - 1) / 9) * 100; // maps 1–10 → 0–100%
-
   const getPhLabel = (value: number) => {
-    if (value < 7) return 'Acidic';
-    if (value === 7) return 'Neutral';
-    return 'Alkaline';
+    if (value < 7 - 0.05) return 'Acidic';
+    if (value > 7 + 0.05) return 'Alkaline';
+    return 'Neutral';
   };
 
-  const handleSlidingComplete = (value: number) => {
-    if (value === ph) return; // no change
-    Alert.alert('Confirm Change', `Change pH from ${ph} → ${value}?`, [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: () => setTempPh(ph), // revert if canceled
-      },
-      {
-        text: 'Confirm',
-        onPress: () => {
-          setPh(value);
-          setTempPh(value);
-          if (onChange) onChange(value);
-        },
-      },
-    ]);
+  const updatePh = (newValue: number) => {
+    const rounded = Math.min(10, Math.max(1, Math.round(newValue * 10) / 10));
+    setPh(rounded);
+    if (onChange) onChange(rounded);
+    setExpandedBase(null); // hide decimals after selecting one
+  };
+
+  const handleInput = (text: string) => {
+    const value = parseFloat(text);
+    if (!isNaN(value)) setPh(value);
+  };
+
+  const handleSubmit = () => {
+    if (ph < 1 || ph > 10) {
+      Alert.alert('Invalid Value', 'Please enter a value between 1.0 and 10.0');
+      return;
+    }
+    updatePh(ph);
+  };
+
+  const handleWholeClick = (num: number) => {
+    // select the number and toggle decimals
+    updatePh(num); // set pH to this whole number
+    setExpandedBase(expandedBase === num ? null : num); // toggle
   };
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: colors.onSurface }]}>
-        pH of Water: {Math.round(tempPh)} ({getPhLabel(Math.round(tempPh))})
-      </Text>
+      {/* Inline main control */}
+      <View style={styles.inlineRow}>
+        <Text style={[styles.inlineLabel, { color: colors.onSurface }]}>
+          pH of Water:
+        </Text>
 
-      <View style={styles.gradientWrapper}>
-        <LinearGradient
-        colors={[
-            '#ff0000', // pH 1 - Red
-            '#ff7f00', // pH 3 - Orange
-            '#ffff00', // pH 5 - Yellow
-            '#00ff00', // pH 7 - Green (Neutral)
-            '#00bfff', // pH 8 - Blue
-            '#8b00ff', // pH 10 - Violet
-        ]}
-        locations={[0, 0.25, 0.4, 0.55, 0.75, 1]} // adjusted so green centers around pH 7
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.gradientBar}
-        />
-        {/* Custom Thumb */}
-        <View
-          pointerEvents="none"
+        <Button mode="outlined" onPress={() => updatePh(ph - 0.1)} compact>
+          −
+        </Button>
+
+        <TextInput
+          value={ph.toFixed(1)}
+          onChangeText={handleInput}
+          onEndEditing={handleSubmit}
+          keyboardType="numeric"
           style={[
-            styles.thumbBar,
-            {
-              left: `${thumbPosition}%`,
-            },
+            styles.input,
+            { borderColor: colors.outline, color: colors.onSurface },
           ]}
+          textAlign="center"
         />
+
+        <Button mode="outlined" onPress={() => updatePh(ph + 0.1)} compact>
+          +
+        </Button>
+
+        <Text style={[styles.phType, { color: colors.primary }]}>
+          ({getPhLabel(ph)})
+        </Text>
       </View>
 
-      {/* Interactive Slider (above everything visually but transparent) */}
-      <Slider
-        style={styles.slider}
-        minimumValue={1}
-        maximumValue={10}
-        step={1}
-        value={tempPh}
-        onValueChange={setTempPh}
-        onSlidingComplete={handleSlidingComplete}
-        minimumTrackTintColor="transparent"
-        maximumTrackTintColor="transparent"
-        thumbTintColor="transparent" // hide native thumb
-      />
+      {/* Whole number buttons */}
+      <View style={styles.wholeRow}>
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
+          const isActive = Math.floor(ph) === num;
+          return (
+            <Button
+              key={num}
+              mode={isActive ? 'contained' : 'outlined'}
+              onPress={() => handleWholeClick(num)}
+              compact
+              style={[
+                styles.quickButton,
+                isActive && { backgroundColor: colors.errorContainer },
+              ]}
+              labelStyle={{
+                color: isActive ? colors.error : colors.onSurface,
+                fontWeight: isActive ? 'bold' : 'normal',
+              }}
+            >
+              {num}
+            </Button>
+          );
+        })}
+      </View>
+
+      {/* Decimal buttons */}
+      {expandedBase && (
+        <View style={styles.decimalRow}>
+          {Array.from({ length: 9 }, (_, j) => j + 1).map((dec) => {
+            const value = parseFloat(`${expandedBase}.${dec}`);
+            const isSelected = value === ph;
+            return (
+              <Button
+                key={value}
+                mode={isSelected ? 'contained' : 'text'}
+                onPress={() => updatePh(value)}
+                compact
+                style={[
+                  styles.subButton,
+                  isSelected && { backgroundColor: colors.errorContainer },
+                ]}
+                labelStyle={{
+                  fontSize: 12,
+                  color: isSelected ? colors.error : colors.onSurface,
+                }}
+              >
+                {value.toFixed(1)}
+              </Button>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 20,
+    paddingVertical: 16,
     alignItems: 'center',
     width: '100%',
   },
-  label: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  gradientWrapper: {
-    width: '100%',
-    height: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+    flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  gradientBar: {
-    ...StyleSheet.absoluteFillObject,
+  inlineLabel: {
+    fontSize: 16,
+    fontWeight: '600',
   },
-  thumbBar: {
-    position: 'absolute',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
-    transform: [{ translateX: -11 }], // center the thumb on position
-    top: -3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 3,
+  phType: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  slider: {
-    width: '100%',
-    height: 40,
-    marginTop: -30, // ensures touch area overlaps gradient
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    fontSize: 16,
+    width: 60,
+  },
+  wholeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  decimalRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  quickButton: {
+    minWidth: 40,
+  },
+  subButton: {
+    paddingHorizontal: 4,
+    minWidth: 40,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,17 +6,16 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Animated,
 } from 'react-native';
-import { TextInput, Button, Text, useTheme } from 'react-native-paper';
+import { TextInput, Button, Text, useTheme, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import { p } from '../../utils/responsive';
-import { IconButton } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
-
 
 const LoginScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
@@ -24,11 +23,43 @@ const LoginScreen = () => {
   const paperTheme = useTheme();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('steve@maildrop.cc');
+  const [email, setEmail] = useState('tech@maildrop.cc');
   const [password, setPassword] = useState('Admin@12');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Clear error when component unmounts or when inputs change
+  // 🔁 Dynamic subtitles that cycle every 2 seconds
+  const subtitles = [
+    'First Responder Gear Cleaning & Inspecting',
+    'Real-Time Gear Tracking — Anytime, Anywhere',
+    'Before, After & In-Service Status at Your Fingertips',
+    'Always Ready. Always Reliable. Always RedLine.',
+  ];
+
+  const [currentSubtitle, setCurrentSubtitle] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        // Switch text and fade in
+        setCurrentSubtitle((prev) => (prev + 1) % subtitles.length);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clear error on unmount
   useEffect(() => {
     return () => clearError();
   }, []);
@@ -41,17 +72,12 @@ const LoginScreen = () => {
 
   const handleLogin = async () => {
     console.log('🎯 Login button pressed');
-      if (!email || !password) {
-        Toast.show({
-          type: 'error',
-          text1: 'Missing fields',
-          text2: 'Please enter both email and password',
-        });
-        return;
-      }
-    
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Toast.show({
+        type: 'error',
+        text1: 'Missing fields',
+        text2: 'Please enter both email and password',
+      });
       return;
     }
 
@@ -71,7 +97,6 @@ const LoginScreen = () => {
         text1: 'Login failed',
         text2: 'Invalid credentials or server issue',
       });
-      // Error is already handled in the store and will show via Alert due to useEffect
     }
   };
 
@@ -80,7 +105,7 @@ const LoginScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: paperTheme.colors.background }]}
     >
-      {/* Theme Toggle Button */}
+      {/* 🌗 Theme Toggle */}
       <View style={styles.topRightButton}>
         <IconButton
           icon={theme === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'}
@@ -95,16 +120,22 @@ const LoginScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.formContainer}>
-          {/* App Title */}
+          {/* 🟥 App Title */}
           <Text style={[styles.title, { color: paperTheme.colors.primary }]}>
             RedLine Gear
           </Text>
 
-          <Text style={[styles.subtitle, { color: paperTheme.colors.onBackground }]}>
-            First Responder Gear Cleaning & Inspecting
-          </Text>
+          {/* ✨ Animated Subtitle */}
+          <Animated.Text
+            style={[
+              styles.subtitle,
+              { color: paperTheme.colors.onBackground, opacity: fadeAnim },
+            ]}
+          >
+            {subtitles[currentSubtitle]}
+          </Animated.Text>
 
-          {/* Email Input */}
+          {/* 📧 Email */}
           <TextInput
             label="Email"
             mode="outlined"
@@ -120,7 +151,7 @@ const LoginScreen = () => {
             disabled={isLoading}
           />
 
-          {/* Password Input */}
+          {/* 🔒 Password */}
           <TextInput
             label="Password"
             mode="outlined"
@@ -141,7 +172,7 @@ const LoginScreen = () => {
             disabled={isLoading}
           />
 
-          {/* Login Button */}
+          {/* 🚪 Login Button */}
           <Button
             mode="contained"
             onPress={handleLogin}
@@ -203,6 +234,7 @@ const styles = StyleSheet.create({
     fontSize: p(16),
     marginBottom: p(24),
     textAlign: 'center',
+    fontWeight: '500',
   },
   input: {
     marginBottom: p(16),

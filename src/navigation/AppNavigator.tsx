@@ -32,7 +32,7 @@ export type RootStackParamList = {
 
   GearScan: undefined;
   GearSearch: undefined;
-  AddGear: undefined
+  AddGear: {lead : any};
 
   GearDetail: undefined
 

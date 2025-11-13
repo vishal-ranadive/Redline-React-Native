@@ -1,5 +1,27 @@
+function getCallerInfo() {
+  const stack = new Error().stack?.split('\n');
+  if (!stack) return null;
+
+  // Usually, caller is line 3 or 4 in stack
+  const line = stack.find((l) => l.includes('.js') && !l.includes('printTable'));
+  if (!line) return null;
+
+  // Try to extract file and line number
+  const match = line.match(/(\/[^ )]+):(\d+):(\d+)/);
+  if (match) {
+    const [, file, lineNum] = match;
+    const parts = file.split('/');
+    return parts.slice(-3).join('/') + ':' + lineNum;
+  }
+
+  return line.trim();
+}
+
+
 export function printTable(title: string, data: any) {
-  console.log(`\n===== ${title} =====`);
+const caller = getCallerInfo();
+console.log(`\n===== ${title} =====`);
+if (caller) console.log(`From: ${caller}`);
 
   const rows: { key: string; value: any; type: string }[] = [];
 

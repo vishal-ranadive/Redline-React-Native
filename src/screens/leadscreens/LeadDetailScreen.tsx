@@ -1,5 +1,5 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,8 +24,16 @@ import PhScale from './components/PhScale';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
 
+// Status management
+import { 
+  getStatusesByType, 
+  isValidStatusForType,
+  getStatusColor,
+  formatStatus,
+  type LeadStatus 
+} from '../../constants/leadStatuses';
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow' >;
-type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
 
 interface Technician {
   id: number;
@@ -51,7 +59,7 @@ interface LeadDetail {
     id: number;
     name: string;
   };
-  assignedTechnicians: Technician[];
+  assigned_technicians: Technician[];
   type: 'REPAIR' | 'INSPECTION';
   schedule_date: string;
   lead_status: LeadStatus;
@@ -62,6 +70,10 @@ interface LeadDetail {
   updatedBy: string;
 }
 
+/**
+ * LeadDetailScreen - Detailed view for a single lead
+ * Handles both Repair and Inspection leads with dynamic status management
+ */
 const LeadDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
@@ -74,19 +86,32 @@ const LeadDetailScreen = () => {
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.status);
+  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.lead_status);
 
-  //ph value 
+  // pH value state
   const [showPhSlider, setShowPhSlider] = useState(false);
   const [phValue, setPhValue] = useState(7); // default neutral
 
+  /**
+   * Get available statuses based on lead type
+   * Uses the constants system for dynamic status management
+   */
+  const availableStatuses = useMemo(() => {
+    return getStatusesByType(lead.type);
+  }, [lead.type]);
 
+  /**
+   * Get pH label based on value
+   */
   const getPhLabel = (value: number) => {
     if (value < 7) return 'Acidic';
     if (value === 7) return 'Neutral';
     return 'Alkaline';
   };
 
+  /**
+   * Get pH color based on value
+   */
   const getPhColor = (value: number) => {
     if (value < 4) return '#ff3b30'; // red
     if (value < 7) return '#ff9500'; // yellow/orange
@@ -100,15 +125,17 @@ const LeadDetailScreen = () => {
     fetchLeadDetail();
   }, []);
 
+  /**
+   * Fetch detailed lead information from API
+   */
   const fetchLeadDetail = async () => {
     try {
       setLoading(true);
       const leadDetail = await leadApi.getLeadById(lead.lead_id);
 
-      console.log("leadDetail",leadDetail)
+      console.log("Lead detail fetched:", leadDetail);
       printTable('Lead Details', leadDetail);
       setLead(leadDetail);
-
       setCurrentStatus(leadDetail.lead_status);
     } catch (error) {
       console.error('Error fetching lead details:', error);
@@ -118,8 +145,17 @@ const LeadDetailScreen = () => {
     }
   };
 
+  /**
+   * Update lead status with validation
+   */
   const handleStatusUpdate = async (newStatus: LeadStatus) => {
     try {
+      // Validate if the status is valid for this lead type
+      if (!isValidStatusForType(newStatus, lead.type)) {
+        Alert.alert('Error', `Invalid status for ${lead.type.toLowerCase()} lead`);
+        return;
+      }
+
       setLoading(true);
       await leadApi.updateLeadStatus(lead.lead_id, newStatus);
       setCurrentStatus(newStatus);
@@ -128,7 +164,7 @@ const LeadDetailScreen = () => {
       // Update local lead state
       setLead(prev => ({
         ...prev,
-        status: newStatus
+        lead_status: newStatus
       }));
       
       Alert.alert('Success', 'Job status updated successfully');
@@ -140,13 +176,14 @@ const LeadDetailScreen = () => {
     }
   };
 
+  /**
+   * Assign current user as technician to this lead
+   */
   const handleAssignTechnician = async () => {
     try {
       setLoading(true);
       
       // API call to assign current user as technician
-      // This assumes you have an endpoint like POST /api/leads/technician/{lead_id}/
-      // You'll need to implement this in your leadApi service
       await leadApi.assignTechnician(lead.lead_id, user?.id!);
       
       // Refresh lead details to get updated technician list
@@ -162,12 +199,14 @@ const LeadDetailScreen = () => {
     }
   };
 
+  /**
+   * Unassign technician from lead
+   */
   const handleUnassignTechnician = async (technicianId: number) => {
     try {
       setLoading(true);
       
       // API call to unassign technician
-      // You'll need to implement this in your leadApi service
       await leadApi.unassignTechnician(lead.lead_id, technicianId);
       
       // Refresh lead details to get updated technician list
@@ -183,32 +222,14 @@ const LeadDetailScreen = () => {
   };
 
   // Check if current user is already assigned as technician
-  const isCurrentUserAssigned = lead.assignedTechnicians?.some(
+  const isCurrentUserAssigned = lead.assigned_technicians?.some(
     tech => tech.id === user?.id
   );
 
   // Check if current user can assign themselves (not already assigned and has technician role)
   const canAssignSelf = user && !isCurrentUserAssigned;
 
-  const getStatusColor = useCallback((status: LeadStatus): string => {
-    switch (status) {
-      case 'Ongoing': return '#FFC107';
-      case 'Completed': return '#34A853';
-      case 'Canceled': return '#EA4335';
-      case 'Rescheduled': return '#1E88E5';
-      case 'Scheduled': return '#FB8C00';
-      default: return '#9E9E9E';
-    }
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
+  // Loading state
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -222,7 +243,7 @@ const LeadDetailScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 🧭 Header */}
+      {/* Header with Back Button and Status */}
       <View
         style={[
           styles.header,
@@ -246,7 +267,7 @@ const LeadDetailScreen = () => {
           Job #{lead.lead_id}
         </Text>
 
-        {/* Status Badge */}
+        {/* Status Badge with Edit Button */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
           <Button
             style={[
@@ -259,7 +280,7 @@ const LeadDetailScreen = () => {
               color: colors.surface,
             }}
           >
-            {currentStatus}
+            {formatStatus(currentStatus)}
           </Button>
 
           <Button
@@ -275,7 +296,7 @@ const LeadDetailScreen = () => {
 
       {/* Scrollable Content */}
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 🏠 Station Banner */}
+        {/* Station Banner with Image */}
         <View style={styles.banner}>
           <Image
             source={{
@@ -322,10 +343,10 @@ const LeadDetailScreen = () => {
 
             <View style={styles.tableContainer}>
               {[
-                { icon: 'calendar', label: 'Appointment Date', value:useFormattedDate(lead.schedule_date)},
+                { icon: 'calendar', label: 'Appointment Date', value: useFormattedDate(lead.schedule_date) },
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
-                { icon: 'check-circle', label: 'Job Status', value: currentStatus },
+                { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -404,7 +425,7 @@ const LeadDetailScreen = () => {
           </Card.Content>
         </Card>
 
-        {/* 🧑‍🔧 Technician Info */}
+        {/* Technician Information */}
         <Card
           style={[
             styles.card,
@@ -430,122 +451,121 @@ const LeadDetailScreen = () => {
             </View>
             <Divider style={{ marginVertical: p(6) }} />
 
-
-              {(lead?.lead?.technicianName || lead.assignedTechnicians?.length > 0) ? (
-                <>
-                  {/* Odoo Technician */}
-                  {lead?.lead?.technicianName && (
-                    <View style={[styles.techCard, { borderColor: colors.outline }]}>
-                      <View style={styles.techInfo}>
-                        <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                        <Text style={[styles.techText, { fontSize: p(18) }]}>
-                          {lead.lead.technicianName}
-                          <Text style={{ color: colors.outline }}> (from Odoo)</Text>
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Assigned Technicians */}
-                  {lead.assignedTechnicians?.length > 0 && (
-                    lead.assignedTechnicians.map((tech, index) => {
-                      // Skip duplicate if same as Odoo tech name
-                      if (tech.name === lead?.lead?.technicianName) return null;
-
-                      return (
-                        <View
-                          key={tech.id}
-                          style={[styles.techCard, { borderColor: colors.outline }]}
-                        >
-                          <View style={styles.techInfo}>
-                            <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                            <Text style={[styles.techText, { fontSize: p(18) }]}>
-                              {tech.name} (ID: {tech.id})
-                              {tech.id === user?.id && (
-                                <Text style={{ color: colors.primary, fontWeight: 'bold' }}> • You</Text>
-                              )}
-                            </Text>
-                          </View>
-                          {tech.id === user?.id && (
-                            <Button
-                              mode="text"
-                              compact
-                              onPress={() => handleUnassignTechnician(tech.id)}
-                              textColor={colors.error}
-                            >
-                              Unassign
-                            </Button>
-                          )}
-                        </View>
-                      );
-                    })
-                  )}
-                </>
-              ) : (
-                    <View style={styles.emptyTechnicians}>
-                      <Icon source="account-wrench" size={p(24)} color={colors.outline} />
-                      <Text style={{ color: colors.outline, marginTop: 8 }}>
-                        No technicians assigned
+            {/* Technician List */}
+            {(lead?.lead?.technicianName || lead.assigned_technicians?.length > 0) ? (
+              <>
+                {/* Odoo Technician */}
+                {lead?.lead?.technicianName && (
+                  <View style={[styles.techCard, { borderColor: colors.outline }]}>
+                    <View style={styles.techInfo}>
+                      <Icon source="account-wrench" size={p(18)} color={colors.primary} />
+                      <Text style={[styles.techText, { fontSize: p(18) }]}>
+                        {lead.lead.technicianName}
+                        {/* <Text style={{ color: colors.outline }}> (from Odoo)</Text> */}
                       </Text>
                     </View>
-              )}
+                  </View>
+                )}
 
+                {/* Assigned Technicians */}
+                {lead.assigned_technicians?.length > 0 && (
+                  lead.assigned_technicians.map((tech, index) => {
+                    // Skip duplicate if same as Odoo tech name
+                    if (tech.name === lead?.lead?.technicianName) return null;
+
+                    return (
+                      <View
+                        key={tech.id}
+                        style={[styles.techCard, { borderColor: colors.outline }]}
+                      >
+                        <View style={styles.techInfo}>
+                          <Icon source="account-wrench" size={p(18)} color={colors.primary} />
+                          <Text style={[styles.techText, { fontSize: p(18) }]}>
+                            {tech.name} (ID: {tech.id})
+                            {tech.id === user?.id && (
+                              <Text style={{ color: colors.primary, fontWeight: 'bold' }}> • You</Text>
+                            )}
+                          </Text>
+                        </View>
+                        {tech.id === user?.id && (
+                          <Button
+                            mode="text"
+                            compact
+                            onPress={() => handleUnassignTechnician(tech.id)}
+                            textColor={colors.primary}
+                          >
+                            Unassign
+                          </Button>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyTechnicians}>
+                <Icon source="account-wrench" size={p(24)} color={colors.outline} />
+                <Text style={{ color: colors.outline, marginTop: 8 }}>
+                  No technicians assigned
+                </Text>
+              </View>
+            )}
           </Card.Content>
         </Card>
 
-        {/* 📝 Remarks */}
-{/* 🌊 pH of Water Section */}
-<Card
-  style={[
-    styles.card,
-    { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
-  ]}
->
-  <Card.Content>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
-        PH of Water
-      </Text>
+        {/* pH of Water Section */}
+        <Card
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+          ]}
+        >
+          <Card.Content>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
+                PH of Water
+              </Text>
 
-      {/* Tap area to expand slider */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          setShowPhSlider(!showPhSlider);
-        }}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: p(6),
-        }}
-      >
-        <Text style={{ color: getPhColor(phValue), fontWeight: '700', fontSize: p(18) }}>
-          {phValue} ({getPhLabel(phValue)})
-        </Text>
-        <Icon
-          source={showPhSlider ? 'chevron-up' : 'chevron-down'}
-          size={p(22)}
-          color={colors.primary}
-        />
-      </TouchableOpacity>
-    </View>
+              {/* Tap area to expand slider */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setShowPhSlider(!showPhSlider);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: p(6),
+                }}
+              >
+                <Text style={{ color: getPhColor(phValue), fontWeight: '700', fontSize: p(18) }}>
+                  {phValue} ({getPhLabel(phValue)})
+                </Text>
+                <Icon
+                  source={showPhSlider ? 'chevron-up' : 'chevron-down'}
+                  size={p(22)}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
 
-    {/* Expandable gradient slider */}
-    {showPhSlider && (
-      <View style={{ marginTop: p(10) }}>
-        <PhScale
-          initialValue={phValue}
-          onChange={(val) => {
-            setPhValue(val);
-            console.log('✅ Selected pH:', val);
-          }}
-        />
-      </View>
-    )}
-  </Card.Content>
-</Card>
+            {/* Expandable gradient slider */}
+            {showPhSlider && (
+              <View style={{ marginTop: p(10) }}>
+                <PhScale
+                  initialValue={phValue}
+                  onChange={(val) => {
+                    setPhValue(val);
+                    console.log('✅ Selected pH:', val);
+                  }}
+                />
+              </View>
+            )}
+          </Card.Content>
+        </Card>
 
+        {/* Remarks Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
@@ -574,11 +594,10 @@ const LeadDetailScreen = () => {
           {[
             { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
             { label: 'Search Gear', icon: 'magnify', action: () => navigation.navigate('GearSearch') },
-            { label: 'Add Gear', icon: 'plus-circle-outline', action: () => navigation.navigate('AddGear') },
+            { label: 'Add Gear', icon: 'plus-circle-outline', action: () => navigation.navigate('AddGear', lead) },
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
-              // action: () => navigation.navigate('LoadsScreen'),
               action: () => navigation.navigate('ViewInspectionScreen'),
             },
           ].map((action, i) => (
@@ -611,18 +630,13 @@ const LeadDetailScreen = () => {
         >
           <Dialog.Title>Update Job Status</Dialog.Title>
           <Dialog.Content>
-            {[
-              { status: 'Ongoing', icon: 'progress-clock' },
-              { status: 'Completed', icon: 'check-circle' },
-              { status: 'Canceled', icon: 'close-circle' },
-              { status: 'Rescheduled', icon: 'calendar-refresh' },
-              { status: 'Scheduled', icon: 'calendar-check' },
-            ].map(({ status, icon }) => (
+            {/* Dynamically generated status options based on lead type */}
+            {availableStatuses.map(({ status, icon, label }:any) => (
               <Button
                 key={status}
                 icon={icon}
                 mode={currentStatus === status ? 'contained-tonal' : 'text'}
-                onPress={() => handleStatusUpdate(status as LeadStatus)}
+                onPress={() => handleStatusUpdate(status)}
                 style={{
                   marginVertical: p(4),
                   alignSelf: 'flex-start',
@@ -636,7 +650,7 @@ const LeadDetailScreen = () => {
                   textAlign: 'left',
                 }}
               >
-                {status}
+                {label}
               </Button>
             ))}
           </Dialog.Content>
@@ -669,8 +683,6 @@ const LeadDetailScreen = () => {
     </SafeAreaView>
   );
 };
-
-export default LeadDetailScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -815,3 +827,5 @@ const styles = StyleSheet.create({
     marginBottom: p(26),
   },
 });
+
+export default LeadDetailScreen;

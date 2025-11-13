@@ -1,3 +1,4 @@
+// src/screens/leadscreens/LeadScreen.tsx
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import {
@@ -13,67 +14,79 @@ import {
   ActivityIndicator,
   DataTable
 } from 'react-native-paper';
-
-import LinearGradient from 'react-native-linear-gradient';
-
-import BottomNavBar from '../../navigation/BottomNavBar';
-import { useNavigation } from '@react-navigation/native';
-import type { RootStackParamList } from '../../navigation/AppNavigator';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Store and custom hooks
 import { useLeadStore } from '../../store/leadStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
 import useFormattedDate from '../../hooks/useFormattedDate';
 
-interface Technician {
-  id: string;
-  name: string;
-}
+// Status management
+import { 
+  getStatusesByType, 
+  getAllStatusesGrouped,
+  getStatusColor,
+  formatStatus,
+  type LeadStatus
+} from '../../constants/leadStatuses';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
+import BottomNavBar from '../../navigation/BottomNavBar';
 
-type LeadStatus = 'Ongoing' | 'Completed' | 'Canceled' | 'Rescheduled' | 'Scheduled';
-type LeadType = 'Repair' | 'Inspection';
-
-interface LeadItem {
-  lead_id: string;
-  name: string;
-  phone: string;
-  email: string;
-  station: string;
-  status: LeadStatus;
-  leadType: LeadType;
-  technicianDetails: Technician[];
-  department: string;
-  appointmentDate: string;
-  scheduledDate: string;
-}
-
-// Placeholder for responsive utility
-const p = (size: number): number => size; 
+// Responsive utility placeholder
+const p = (size: number): number => size;
 
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
+/**
+ * LeadScreen - Main screen for displaying and filtering leads
+ * Features dynamic status handling for Repair and Inspection leads
+ */
 const LeadScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<LeadDetailNavProp>();
   
-  // Zustand store
+  // Zustand store for lead management
   const { leads, loading, error, pagination, fetchLeads } = useLeadStore();
   
   // State Hooks
-  const [search, setSearch] = useState<string>('');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<LeadType | null>(null);
-  const [statusMenuVisible, setStatusMenuVisible] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>(''); // Search query
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'REPAIR' | 'INSPECTION' | null>(null); // Type filter
+  const [statusMenuVisible, setStatusMenuVisible] = useState<boolean>(false); // Status dropdown visibility
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
-  );
-  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]);
+  ); // Screen orientation
+  const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]); // Selected status filters
   
   // Pagination state
-  const [page, setPage] = useState<number>(1);
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(20);
-  const numberOfItemsPerPageList = [10, 20, 30, 50];
+  const [page, setPage] = useState<number>(1); // Current page
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(20); // Items per page
+  const numberOfItemsPerPageList = [10, 20, 30, 50]; // Page size options
 
-  // Effect for handling orientation change
+  /**
+   * Get available statuses based on current type filter
+   * If no filter is set, shows all statuses grouped by type
+   */
+  const availableStatuses = useMemo(() => {
+    if (orderTypeFilter) {
+      return getStatusesByType(orderTypeFilter);
+    }
+    // If no type filter, return grouped statuses for the dropdown
+    return getAllStatusesGrouped();
+  }, [orderTypeFilter]);
+
+  /**
+   * Check if a status is available for selection based on current filters
+   */
+  const isStatusAvailable = useCallback((status: LeadStatus) => {
+    if (!orderTypeFilter) return true; // All statuses available when no type filter
+    
+    const statuses = getStatusesByType(orderTypeFilter);
+    return statuses.some(s => s.status === status);
+  }, [orderTypeFilter]);
+
+  // Effect for handling screen orientation changes
   useEffect(() => {
     const updateLayout = () => {
       const { width, height } = Dimensions.get('window');
@@ -84,31 +97,34 @@ const LeadScreen = () => {
     return () => subscription.remove();
   }, []);
 
-  // Fetch leads when filters or pagination change
+  /**
+   * Fetch leads when filters or pagination change
+   */
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Build query parameters
+        // Build query parameters for API call
         const params: any = {
           page,
           page_size: numberOfItemsPerPage
         };
 
-        // Add type filter
+        // Add type filter if selected
         if (orderTypeFilter) {
-          params.type = orderTypeFilter.toUpperCase();
+          params.type = orderTypeFilter;
         }
 
-        // Add status filters
+        // Add status filters if any selected
         if (statusFilters.length > 0) {
-          params.status = statusFilters.join(',');
+          params.lead_status = statusFilters.join(',');
         }
 
-        // Add search filter
+        // Add search query if provided
         if (search) {
           params.search = search;
         }
-        console.log("fetching reslults for", params)
+        
+        console.log("Fetching leads with params:", params);
         await fetchLeads(params);
       } catch (err) {
         console.error('Error fetching leads:', err);
@@ -118,33 +134,41 @@ const LeadScreen = () => {
     fetchData();
   }, [page, numberOfItemsPerPage, orderTypeFilter, statusFilters, search, fetchLeads]);
 
-  // Show error alert if there's an error
+  // Show error alert if there's an error from the store
   useEffect(() => {
     if (error) {
       Alert.alert('Error', error);
     }
   }, [error]);
 
-  // Use memoization for column count
+  // Calculate number of columns based on screen orientation
   const numColumns = useMemo(() => (orientation === 'LANDSCAPE' ? 3 : 2), [orientation]);
 
-  // Convert API leads to frontend format
+  /**
+   * Convert API lead data to frontend format
+   * Adds missing fields and formats data for display
+   */
   const filteredLeads = useMemo(() => {
     return leads.map((lead: any) => ({
-      lead_id: lead.lead_id?.toString() || 'Unknown',
-      name: lead.lead?.salePersonName || 'Unknown Customer',
-      phone: '555-000-0000',
-      email: 'customer@example.com',
-      station: lead.firestation?.name || 'Unknown Station',
-      status: lead.lead_status || 'Unknown',
-      leadType: lead.type === 'REPAIR' ? 'Repair' : 'Inspection',
+      lead_id: lead?.lead_id?.toString() || 'Unknown',
+      name: lead?.lead?.salePersonName || 'Unknown Customer',
+      phone: '555-000-0000', // Placeholder - update with actual data if available
+      email: 'customer@example.com', // Placeholder - update with actual data if available
+      station: lead?.firestation?.name || 'Unknown Station',
+      status: lead?.lead_status || 'Unknown',
+      leadType: lead?.type, // Keep as 'REPAIR' or 'INSPECTION'
       technicianDetails: [],
-      department: lead.firestation?.name || 'Unknown Department',
-      phWater : 5,
-      appointmentDate: useFormattedDate(lead.schedule_date)
+      department: lead?.firestation?.name || 'Unknown Department',
+      phWater: 5, // Placeholder - update with actual data if available
+      appointmentDate: useFormattedDate(lead?.schedule_date),
+      // Include the full lead object for navigation
+      ...lead
     }));
   }, [leads]);
 
+  /**
+   * Clear all filters and reset to default state
+   */
   const clearFilters = useCallback(() => {
     setStatusFilters([]);
     setOrderTypeFilter(null);
@@ -152,31 +176,10 @@ const LeadScreen = () => {
     setPage(1);
   }, []);
 
-  // Status Color Helper
-  const getStatusColor = useCallback((status: LeadStatus): string => {
-    switch (status) {
-      case 'Ongoing': return '#FFC107';
-      case 'Completed': return '#34A853';
-      case 'Canceled': return '#EA4335';
-      case 'Rescheduled': return '#1E88E5';
-      case 'Scheduled': return '#FB8C00';
-      default: return '#9E9E9E';
-    }
-  }, []);
-    const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-
-  // Typed Render Function for FlatList
-  const renderLead = useCallback(({ item }: { item: LeadItem }) => 
-    
-    
-    (
+  /**
+   * Render individual lead card
+   */
+  const renderLead = useCallback(({ item }: { item: any }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('LeadDetail', { lead: item })}
@@ -184,49 +187,53 @@ const LeadScreen = () => {
     > 
       <Card style={{backgroundColor: colors.surface}}>
         <Card.Content>
+          {/* Card Header with Job ID and Status */}
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
               Job #{item.lead_id}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
+              {/* Status indicator dot */}
               <View
                 style={[
                   styles.statusDot,
                   { backgroundColor: getStatusColor(item.status) },
                 ]}
               />
-              <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-                {item.status}
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', fontSize: 12 }}>
+                {formatStatus(item.status)}
               </Text>
             </View>
           </View>
 
+          {/* Lead Details */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
             <View>
+              {/* Customer Name */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Icon source="account" size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }}>{item.name}</Text>
               </View>
 
+              {/* Phone Number */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="phone" size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }}>{item.phone}</Text>
               </View>
 
+              {/* Email */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="email-outline" size={18} color="#555"  />
                 <Text style={{ marginLeft: 6 }}>{item.email}</Text>
               </View>
-                              {/* { icon: 'calendar', label: 'Appointment Date', value: formatDate(lead.scheduledDate) }, */}
+
+              {/* Appointment Date */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="calendar" size={18} color="#555"  />
                 <Text style={{ marginLeft: 6 }}>{item?.appointmentDate}</Text>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <Icon source="clock" size={18} color="#555"  />
-                <Text style={{ marginLeft: 6 }}>{"10:30 PM"}</Text>
-              </View>
 
+              {/* Station/Department */}
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Icon source='office-building' size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }} ellipsizeMode="tail"> 
@@ -236,6 +243,8 @@ const LeadScreen = () => {
                 </Text>
               </View>
             </View>
+            
+            {/* Lead Type Badge */}
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems:"flex-end" }}>
                 <View
@@ -248,12 +257,12 @@ const LeadScreen = () => {
                   ]}
                 >
                   <Icon
-                    source={item.leadType === 'Repair' ? 'wrench' : 'magnify'}
+                    source={item.leadType === 'REPAIR' ? 'wrench' : 'magnify'}
                     color={colors.primary}
                     size={p(14)}
                   />
-                  <Text style={{ marginLeft: p(4), color: colors.onSurface }}>
-                    {item.leadType}
+                  <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
+                    {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
                   </Text>
                 </View>
               </View>
@@ -262,7 +271,81 @@ const LeadScreen = () => {
         </Card.Content>
       </Card>
     </TouchableOpacity> 
-  ), [colors, getStatusColor, navigation]);
+  ), [colors, navigation]);
+
+  /**
+   * Render status dropdown with grouped sections
+   */
+  const renderStatusMenu = () => {
+    // If type filter is applied, show simple list
+    if (orderTypeFilter) {
+      const statuses = getStatusesByType(orderTypeFilter);
+      return (
+        <>
+          {statuses.map(({ status, icon, label }) => {
+            const selected = statusFilters.includes(status);
+            return (
+              <Menu.Item
+                key={status}
+                onPress={() => {
+                  setStatusFilters((prev) =>
+                    selected ? prev.filter((s) => s !== status) : [...prev, status]
+                  );
+                  setPage(1);
+                }}
+                title={label}
+                leadingIcon={icon}
+                trailingIcon={selected ? 'check' : undefined}
+              />
+            );
+          })}
+        </>
+      );
+    }
+
+    // If no type filter, show grouped statuses
+    return (
+      <>
+        {getAllStatusesGrouped().map((group, index) => (
+          <View key={group.title}>
+            {/* Section Header */}
+            <View style={[styles.menuSectionHeader, { backgroundColor: colors.surfaceVariant }]}>
+              <Text style={[styles.menuSectionTitle, { color: colors.onSurfaceVariant }]}>
+                {group.title}
+              </Text>
+            </View>
+            
+            {/* Section Items */}
+            {group.data.map(({ status, icon, label }) => {
+              const selected = statusFilters.includes(status);
+              const available = isStatusAvailable(status);
+              
+              return (
+                <Menu.Item
+                  key={status}
+                  onPress={() => {
+                    if (!available) return;
+                    setStatusFilters((prev) =>
+                      selected ? prev.filter((s) => s !== status) : [...prev, status]
+                    );
+                    setPage(1);
+                  }}
+                  title={label}
+                  leadingIcon={icon}
+                  trailingIcon={selected ? 'check' : undefined}
+                  style={!available ? { opacity: 0.5 } : {}}
+                  disabled={!available}
+                />
+              );
+            })}
+            
+            {/* Divider between sections (except last) */}
+            {index < getAllStatusesGrouped().length - 1 && <Divider />}
+          </View>
+        ))}
+      </>
+    );
+  };
 
   // Pagination calculations
   const from = (page - 1) * numberOfItemsPerPage;
@@ -271,6 +354,7 @@ const LeadScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View>
+        {/* Header */}
         <Text
           variant="headlineMedium"
           style={[styles.header, { color: colors.primary }]}
@@ -278,7 +362,7 @@ const LeadScreen = () => {
           Redline Gear
         </Text>
 
-        {/* Search */}
+        {/* Search Input */}
         <TextInput
           mode="outlined"
           placeholder="Search by job id"
@@ -289,40 +373,41 @@ const LeadScreen = () => {
           activeOutlineColor={colors.primary}
         />
 
-        {/* Filters */}
+        {/* Filter Row */}
         <View style={styles.filterRow}>
-          {/* Order Type Buttons */}
+          {/* Repair Type Filter Button */}
           <Button
-            mode={orderTypeFilter === 'Repair' ? 'contained' : 'outlined'}
+            mode={orderTypeFilter === 'REPAIR' ? 'contained' : 'outlined'}
             onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'Repair' ? null : 'Repair');
+              setOrderTypeFilter(orderTypeFilter === 'REPAIR' ? null : 'REPAIR');
               setPage(1);
             }}
             style={styles.filterButton}
             labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'Repair' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'Repair' ? colors.onPrimary : colors.onSurface}
+            buttonColor={orderTypeFilter === 'REPAIR' ? colors.primary : colors.surface}
+            textColor={orderTypeFilter === 'REPAIR' ? colors.onPrimary : colors.onSurface}
             rippleColor={colors.primaryContainer}
           >
             Repair
           </Button>
 
+          {/* Inspection Type Filter Button */}
           <Button
-            mode={orderTypeFilter === 'Inspection' ? 'contained' : 'outlined'}
+            mode={orderTypeFilter === 'INSPECTION' ? 'contained' : 'outlined'}
             onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'Inspection' ? null : 'Inspection');
+              setOrderTypeFilter(orderTypeFilter === 'INSPECTION' ? null : 'INSPECTION');
               setPage(1);
             }}
             style={styles.filterButton}
             labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'Inspection' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'Inspection' ? colors.onPrimary : colors.onSurface}
+            buttonColor={orderTypeFilter === 'INSPECTION' ? colors.primary : colors.surface}
+            textColor={orderTypeFilter === 'INSPECTION' ? colors.onPrimary : colors.onSurface}
             rippleColor={colors.primaryContainer}
           >
             Inspection
           </Button>
 
-          {/* Status Dropdown */}
+          {/* Status Filter Dropdown */}
           <View>
             <Menu
               visible={statusMenuVisible}
@@ -340,31 +425,10 @@ const LeadScreen = () => {
                 </Button>
               }
             >
-              {[
-                { status: 'Ongoing', icon: 'progress-clock' },
-                { status: 'Completed', icon: 'check-circle' },
-                { status: 'Canceled', icon: 'close-circle' },
-                { status: 'Rescheduled', icon: 'calendar-refresh' },
-                { status: 'Scheduled', icon: 'calendar-check' },
-              ].map(({ status, icon }) => {
-                const selected = statusFilters.includes(status as LeadStatus);
-                return (
-                  <Menu.Item
-                    key={status}
-                    onPress={() => {
-                      setStatusFilters((prev) =>
-                        selected ? prev.filter((s) => s !== status) : [...prev, status as LeadStatus]
-                      );
-                      setPage(1);
-                    }}
-                    title={status}
-                    leadingIcon={icon}
-                    trailingIcon={selected ? 'check' : undefined}
-                  />
-                );
-              })}
+              {renderStatusMenu()}
 
               <Divider />
+              {/* Clear all status filters */}
               <Menu.Item
                 onPress={() => {
                   setStatusFilters([]);
@@ -376,6 +440,7 @@ const LeadScreen = () => {
             </Menu>
           </View>
 
+          {/* Clear Filters Button with Badge */}
           <View style={{ position: 'relative' }}>
             <Button
               mode="text"
@@ -390,6 +455,7 @@ const LeadScreen = () => {
             >
               Clear
             </Button>
+            {/* Show badge when filters are active */}
             {(statusFilters.length > 0 || orderTypeFilter || search) && (
               <Badge
                 visible
@@ -412,7 +478,7 @@ const LeadScreen = () => {
           </View>
         </View>
 
-        {/* Active Status Filters */}
+        {/* Active Status Filter Chips */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
           {statusFilters.map((status) => (
             <Button
@@ -429,13 +495,14 @@ const LeadScreen = () => {
                 borderColor: getStatusColor(status),
               }}
               textColor={getStatusColor(status)}
+              labelStyle={{ fontSize: 12 }}
             >
-              {status}
+              {formatStatus(status)}
             </Button>
           ))}
         </View>
 
-        {/* Loading State */}
+        {/* Loading State or Lead Grid */}
         {loading || filteredLeads.length === 0 ? (
           <View >
             <LeadCardSkeleton />
@@ -445,7 +512,6 @@ const LeadScreen = () => {
             {/* Grid of Leads */}
             <FlatList
               key={numColumns.toString()}
-              // @ts-ignore
               data={filteredLeads}
               renderItem={renderLead}
               keyExtractor={(item) => item.lead_id}
@@ -460,7 +526,6 @@ const LeadScreen = () => {
                   </Text>
                   <Button 
                     mode="contained" 
-                    // onPress={() => fetchLeads({ page: 1, page_size: numberOfItemsPerPage })}
                     style={{ marginTop: 16 }}
                   >
                     Refresh
@@ -471,39 +536,37 @@ const LeadScreen = () => {
           </>
         )}
       </View>
-                  {/* Pagination */}
-            {pagination && pagination.total > 0 && (
-              <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
-                <DataTable.Pagination
-                  page={page - 1} // DataTable.Pagination uses 0-based index
-                  numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
-                  onPageChange={(newPage) => setPage(newPage + 1)} // Convert back to 1-based
-                  label={`${from + 1}-${to} of ${pagination.total}`}
-                  showFastPaginationControls
-                  numberOfItemsPerPageList={numberOfItemsPerPageList}
-                  numberOfItemsPerPage={numberOfItemsPerPage}
-                  onItemsPerPageChange={setNumberOfItemsPerPage}
-                  selectPageDropdownLabel={'Rows per page'}
-                  theme={{
-                    colors: {
-                      primary: colors.primary,
-                      onSurface: colors.onSurface,
-                      surface: colors.surface,
-                    },
-                  }}
-                />
-              </View>
-            )}
+
+      {/* Pagination Controls */}
+      {pagination && pagination.total > 0 && (
+        <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
+          <DataTable.Pagination
+            page={page - 1}
+            numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
+            onPageChange={(newPage) => setPage(newPage + 1)}
+            label={`${from + 1}-${to} of ${pagination.total}`}
+            showFastPaginationControls
+            numberOfItemsPerPageList={numberOfItemsPerPageList}
+            numberOfItemsPerPage={numberOfItemsPerPage}
+            onItemsPerPageChange={setNumberOfItemsPerPage}
+            selectPageDropdownLabel={'Rows per page'}
+            theme={{
+              colors: {
+                primary: colors.primary,
+                onSurface: colors.onSurface,
+                surface: colors.surface,
+              },
+            }}
+          />
+        </View>
+      )}
       
+      {/* Bottom Navigation */}
       <BottomNavBar />
     </SafeAreaView>
   );
 };
 
-
-            // selectPageDropdownLabel="Rows per page"
-         
-            // }}
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: p(10) },
   header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
@@ -567,17 +630,15 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   paginationContainer: {
-    // marginVertical: p(10),
-    // backgroundColor: 'transparent',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        marginInline:'auto',
-        marginBottom:p(65),
-        backgroundColor: '#f5f5f5',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    marginInline:'auto',
+    marginBottom:p(65),
+    backgroundColor: '#f5f5f5',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   emptyContainer: {
     flex: 1,
@@ -585,9 +646,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
   },
-  skeleton: {
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+  menuSectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  menuSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 

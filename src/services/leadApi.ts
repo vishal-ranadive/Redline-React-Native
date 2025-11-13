@@ -20,13 +20,13 @@ export const leadApi = {
   },
 
   assignTechnician: async (leadId: number, technicianId: number): Promise<void> => {
-    await axiosInstance.post(`/leads/technician/${leadId}/`, { 
+    await axiosInstance.post(`/lead/technician/${leadId}/`, { 
      technician_id: technicianId 
     });
   },
 
   unassignTechnician: async (leadId: number, technicianId: number): Promise<void> => {
-    await axiosInstance.delete(`/leads/technician/${leadId}/`, {
+    await axiosInstance.delete(`/lead/technician/${leadId}/`, {
       data: { technician_id: technicianId }
     });
   },

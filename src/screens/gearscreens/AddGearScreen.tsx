@@ -21,7 +21,7 @@ import {
   Chip,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
@@ -74,6 +74,8 @@ const SERVICE_TYPES = [
 
 const AddGearScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute();
+  const { lead: initialLead } = route.params as any;
   const { colors } = useTheme();
 
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
@@ -507,7 +509,7 @@ const AddGearScreen = () => {
                 </View>
 
                 {/* compact rows for dates (two per row) */}
-                <View style={styles.smallRow}>
+                {/* <View style={styles.smallRow}>
                   <View style={styles.smallCol}>
                     <Text style={[styles.label, { color: colors.onSurface, marginBottom: p(6) }]}>Warranty Expiry</Text>
                     <CommonDatePicker value={warrantyExpiry} onChange={setWarrantyExpiry} mode="date" placeholder="Select" />
@@ -519,15 +521,15 @@ const AddGearScreen = () => {
                     <Text style={[styles.label, { color: colors.onSurface, marginBottom: p(6) }]}>Last Inspection</Text>
                     <CommonDatePicker value={lastInspection} onChange={setLastInspection} mode="date" placeholder="Select" />
                   </View>
-                </View>
+                </View> */}
 
                 <View style={[styles.smallRow, { marginTop: p(8) }]}>
-                  <View style={styles.smallCol}>
+                  {/* <View style={styles.smallCol}>
                     <Text style={[styles.label, { color: colors.onSurface, marginBottom: p(6) }]}>Next Inspection</Text>
                     <CommonDatePicker value={nextInspection} onChange={setNextInspection} mode="date" placeholder="Select" />
-                  </View>
+                  </View> */}
 
-                  <View style={{ width: p(10) }} />
+                  {/* <View style={{ width: p(10) }} /> */}
 
                   <View style={[styles.smallCol, { justifyContent: 'flex-start' }]}>
                     {/* Status dropdown - Requirement #7 (all caps) */}

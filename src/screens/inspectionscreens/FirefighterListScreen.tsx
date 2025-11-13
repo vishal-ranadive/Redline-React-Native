@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { Text, Card, Button, Icon, useTheme, Chip, Portal, Dialog, TextInput, DataTable, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { Text, Button, Icon, useTheme, TextInput, DataTable, ActivityIndicator } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,17 +8,30 @@ import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-type FirefighterStatus = 'Active' | 'Inactive' | 'On-Duty' | 'Off-Duty';
-
 type Firefighter = {
-  id: string;
-  name: string;
-  station: string;
-  status: FirefighterStatus;
-  gearCount: number;
-  pendingInspections: number;
-  lastInspection: string;
-  badgeNumber: string;
+  roster_id: string;
+  franchise: {
+    id: string;
+    name: string;
+  };
+  firestation: {
+    id: string;
+    name: string;
+  };
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  email: string;
+  phone: string;
+  active_status: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+  roster_name: string;
+  gearCount?: number;
+  lastInspection?: string;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
@@ -26,56 +39,178 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Firefighter
 // Mock API response - replace with actual API call
 const MOCK_FIREFIGHTERS: Firefighter[] = [
   {
-    id: 'FF1',
-    name: 'John Doe',
-    station: 'Central Fire Station',
-    status: 'On-Duty',
+    roster_id: '1',
+    franchise: {
+      id: '19',
+      name: 'Beta Motors Franchise - test'
+    },
+    firestation: {
+      id: '10',
+      name: 'Central Fire Station'
+    },
+    first_name: 'Jane',
+    middle_name: 'M',
+    last_name: 'Doe',
+    email: 'jane.doe@fire.com',
+    phone: '5551234567',
+    active_status: false,
+    is_deleted: true,
+    created_at: '2025-10-30T21:26:25.282836Z',
+    updated_at: '2025-11-13T13:18:49.282531Z',
+    created_by: 'DummyScript',
+    updated_by: 'steve Schnepp',
+    roster_name: 'Jane M Doe',
     gearCount: 5,
-    pendingInspections: 2,
-    lastInspection: '2025-11-10',
-    badgeNumber: 'FD-001'
+    lastInspection: '2025-11-10'
   },
   {
-    id: 'FF2',
-    name: 'Jane Smith',
-    station: 'North Station',
-    status: 'Active',
+    roster_id: '2',
+    franchise: {
+      id: '22',
+      name: 'testing Franchise'
+    },
+    firestation: {
+      id: '11',
+      name: 'Department-2'
+    },
+    first_name: 'Michael',
+    middle_name: null,
+    last_name: 'Clark',
+    email: 'michael.clark@fire.com',
+    phone: '5559876543',
+    active_status: false,
+    is_deleted: true,
+    created_at: '2025-10-30T21:26:25.282836Z',
+    updated_at: '2025-11-13T13:19:00.448341Z',
+    created_by: 'DummyScript',
+    updated_by: 'steve Schnepp',
+    roster_name: 'Michael Clark',
     gearCount: 3,
-    pendingInspections: 1,
-    lastInspection: '2025-11-09',
-    badgeNumber: 'FD-002'
+    lastInspection: '2025-11-09'
   },
   {
-    id: 'FF3',
-    name: 'Michael Clark',
-    station: 'Central Fire Station',
-    status: 'Off-Duty',
-    gearCount: 4,
-    pendingInspections: 0,
-    lastInspection: '2025-11-08',
-    badgeNumber: 'FD-003'
-  },
-  {
-    id: 'FF4',
-    name: 'Sarah Johnson',
-    station: 'South Station',
-    status: 'On-Duty',
+    roster_id: '8',
+    franchise: {
+      id: '19',
+      name: 'Beta Motors Franchise - test'
+    },
+    firestation: {
+      id: '13',
+      name: 'Central Fire Station'
+    },
+    first_name: 'Jane',
+    middle_name: 'M',
+    last_name: 'Doe',
+    email: 'jane.doe@fire.com',
+    phone: '5551234567',
+    active_status: true,
+    is_deleted: false,
+    created_at: '2025-11-07T19:43:33.125759Z',
+    updated_at: '2025-11-07T19:43:33.125771Z',
+    created_by: 'steve-update test',
+    updated_by: 'steve-update test',
+    roster_name: 'Jane M Doe',
     gearCount: 6,
-    pendingInspections: 3,
-    lastInspection: '2025-11-07',
-    badgeNumber: 'FD-004'
+    lastInspection: '2025-11-07'
+  },
+  {
+    roster_id: '16',
+    franchise: {
+      id: '22',
+      name: 'testing Franchise'
+    },
+    firestation: {
+      id: '13',
+      name: 'Central Fire Station'
+    },
+    first_name: 'JohnABC',
+    middle_name: 'A',
+    last_name: 'Doe',
+    email: 'john.doe@example.com',
+    phone: '9876543210',
+    active_status: true,
+    is_deleted: false,
+    created_at: '2025-11-12T17:16:34.314292Z',
+    updated_at: '2025-11-13T13:20:41.936975Z',
+    created_by: 'John Doe',
+    updated_by: 'steve Schnepp',
+    roster_name: 'JohnABC A Doe',
+    gearCount: 4,
+    lastInspection: '2025-11-08'
+  },
+  {
+    roster_id: '17',
+    franchise: {
+      id: '1',
+      name: 'Redline Gear Cleaning (Corporate)'
+    },
+    firestation: {
+      id: '14',
+      name: 'Central Fire Station'
+    },
+    first_name: 'Shahzad',
+    middle_name: 'M',
+    last_name: 'Iqbal',
+    email: 'shahzadiqbal.may18@gmail.com',
+    phone: '017636757799',
+    active_status: true,
+    is_deleted: false,
+    created_at: '2025-11-12T17:19:11.473294Z',
+    updated_at: '2025-11-12T17:19:11.473306Z',
+    created_by: 'steve Schnepp',
+    updated_by: 'steve Schnepp',
+    roster_name: 'Shahzad M Iqbal',
+    gearCount: 2,
+    lastInspection: '2025-11-06'
+  },
+  {
+    roster_id: '18',
+    franchise: {
+      id: '5',
+      name: 'Redline - New Jersey'
+    },
+    firestation: {
+      id: '11793',
+      name: 'Atlantic City Fire Department'
+    },
+    first_name: 'demo',
+    middle_name: 'DM',
+    last_name: 'firefighter',
+    email: 'demoff@gmail.com',
+    phone: '+1-555-123-4888',
+    active_status: true,
+    is_deleted: false,
+    created_at: '2025-11-13T11:11:01.839914Z',
+    updated_at: '2025-11-13T11:11:01.839927Z',
+    created_by: 'steve Schnepp',
+    updated_by: 'steve Schnepp',
+    roster_name: 'demo DM firefighter',
+    gearCount: 7,
+    lastInspection: '2025-11-05'
   }
 ];
 
 // API Service function
-const fetchFirefighters = async (page: number, limit: number): Promise<{ data: Firefighter[], total: number }> => {
-  // Simulate API call
+const fetchFirefighters = async (page: number, limit: number, search?: string): Promise<{ data: Firefighter[], total: number }> => {
+  // Simulate API call with search
   return new Promise(resolve => {
     setTimeout(() => {
+      let filteredData = MOCK_FIREFIGHTERS;
+      
+      // Apply search filter if provided
+      if (search) {
+        filteredData = MOCK_FIREFIGHTERS.filter(ff => 
+          ff.email.toLowerCase().includes(search.toLowerCase()) ||
+          ff.roster_name.toLowerCase().includes(search.toLowerCase()) ||
+          ff.first_name.toLowerCase().includes(search.toLowerCase()) ||
+          ff.last_name.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
-      const paginatedData = MOCK_FIREFIGHTERS.slice(startIndex, endIndex);
-      resolve({ data: paginatedData, total: MOCK_FIREFIGHTERS.length });
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+      resolve({ data: paginatedData, total: filteredData.length });
     }, 1000);
   });
 };
@@ -88,18 +223,13 @@ export default function FirefighterListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Search & Filter state
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FirefighterStatus | 'All'>('All');
-  const [stationFilter, setStationFilter] = useState<string>('All');
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Get unique stations for filter
-  const stations = ['All', ...new Set(MOCK_FIREFIGHTERS.map(ff => ff.station))];
 
   // Fetch firefighters data
   const loadFirefighters = async (pageNum: number, refresh = false) => {
@@ -110,7 +240,7 @@ export default function FirefighterListScreen() {
     }
 
     try {
-      const response = await fetchFirefighters(pageNum, itemsPerPage);
+      const response = await fetchFirefighters(pageNum, itemsPerPage, searchQuery);
       setFirefighters(response.data);
       setTotalCount(response.total);
     } catch (error) {
@@ -125,40 +255,18 @@ export default function FirefighterListScreen() {
     loadFirefighters(page);
   }, [page, itemsPerPage]);
 
-  const getStatusColor = (status: FirefighterStatus) => {
-    switch (status) {
-      case 'On-Duty': return '#4CAF50';
-      case 'Active': return '#2196F3';
-      case 'Off-Duty': return '#FF9800';
-      case 'Inactive': return '#9E9E9E';
-      default: return '#9E9E9E';
-    }
-  };
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setPage(1);
+      loadFirefighters(1);
+    }, 500);
 
-  const getStatusIcon = (status: FirefighterStatus) => {
-    switch (status) {
-      case 'On-Duty': return 'shield-account';
-      case 'Active': return 'account-check';
-      case 'Off-Duty': return 'account-clock';
-      case 'Inactive': return 'account-off';
-      default: return 'account';
-    }
-  };
-
-  // Filter firefighters based on search and filters
-  const filteredFirefighters = firefighters.filter(ff => {
-    const matchesSearch = 
-      ff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ff.badgeNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ff.station.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesStatus = statusFilter === 'All' || ff.status === statusFilter;
-    const matchesStation = stationFilter === 'All' || ff.station === stationFilter;
-
-    return matchesSearch && matchesStatus && matchesStation;
-  });
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const handleViewGears = (firefighter: Firefighter) => {
+    console.log("firefighter_passed_toGear", firefighter)
     navigation.navigate('FirefighterGearsScreen', { firefighter });
   };
 
@@ -167,67 +275,58 @@ export default function FirefighterListScreen() {
     loadFirefighters(1, true);
   };
 
-  const renderFirefighterCard = (firefighter: Firefighter) => (
-    <Card key={firefighter.id} style={[styles.firefighterCard, { backgroundColor: colors.surface }]}>
-      <Card.Content>
-        <View style={styles.firefighterHeader}>
-          <View style={styles.firefighterInfo}>
-            <Icon 
-              source={getStatusIcon(firefighter.status)} 
-              size={p(32)} 
-              color={getStatusColor(firefighter.status)} 
-            />
-            <View style={styles.firefighterDetails}>
-              <Text variant="titleMedium" style={{ fontWeight: '700', fontSize: p(16) }}>
-                {firefighter.name}
-              </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, fontSize: p(12) }}>
-                {firefighter.station} • {firefighter.badgeNumber}
-              </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, fontSize: p(12) }}>
-                Last Inspection: {firefighter.lastInspection}
-              </Text>
-            </View>
-          </View>
-          <Chip 
-            style={{ backgroundColor: getStatusColor(firefighter.status) }}
-            textStyle={{ color: '#fff', fontWeight: '600', fontSize: p(10) }}
-            icon={getStatusIcon(firefighter.status)}
-          >
-            {firefighter.status}
-          </Chip>
-        </View>
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Icon source="tools" size={p(20)} color={colors.primary} />
-            <Text variant="titleSmall" style={{ fontWeight: '600', marginLeft: p(4) }}>
-              {firefighter.gearCount}
-            </Text>
-            <Text variant="bodySmall" style={{ fontSize: p(10) }}>Total Gears</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Icon source="clipboard-alert" size={p(20)} color="#FF6B35" />
-            <Text variant="titleSmall" style={{ fontWeight: '600', marginLeft: p(4) }}>
-              {firefighter.pendingInspections}
-            </Text>
-            <Text variant="bodySmall" style={{ fontSize: p(10) }}>Pending</Text>
-          </View>
-        </View>
+  const getAvatarColor = (id: string) => {
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
+      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
+    ];
+    const index = parseInt(id) % colors.length;
+    return colors[index];
+  };
 
-        <View style={styles.actionsContainer}>
-          <Button
-            mode="contained"
-            onPress={() => handleViewGears(firefighter)}
-            icon="arrow-right"
-            style={styles.viewButton}
-            disabled={firefighter.gearCount === 0}
-          >
-            View Gears ({firefighter.gearCount})
-          </Button>
+  /**
+   * Render individual firefighter row
+   */
+  const renderFirefighter = ({ item }: { item: Firefighter }) => (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => handleViewGears(item)}
+      style={[styles.firefighterRow, { backgroundColor: colors.surface }]}
+    > 
+      {/* Left: Profile Avatar and Name/Email */}
+      <View style={styles.leftSection}>
+        <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.roster_id) }]}>
+          <Text style={styles.avatarText}>{getInitials(item.roster_name)}</Text>
         </View>
-      </Card.Content>
-    </Card>
+        <View style={styles.nameEmailContainer}>
+          <Text variant="titleMedium" style={{ fontWeight: 'bold', fontSize: p(14) }}>
+            {item.roster_name}
+          </Text>
+          <Text style={{ fontSize: p(12), color: '#666' }} numberOfLines={1}>
+            {item.email}
+          </Text>
+        </View>
+      </View>
+
+      {/* Right: Total Scanned Gears and Arrow */}
+      <View style={styles.rightSection}>
+        <View style={styles.gearCountContainer}>
+          <Icon source="tools" size={p(16)} color={colors.primary} />
+          <Text style={styles.gearCountText}>{item.gearCount || 0}</Text>
+          <Text style={styles.gearLabel}>Total Scanned Gears</Text>
+        </View>
+        <Icon source="chevron-right" size={p(20)} color="#666" />
+      </View>
+    </TouchableOpacity> 
   );
 
   if (loading && !refreshing) {
@@ -246,88 +345,37 @@ export default function FirefighterListScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="Firefighters" showBackButton={true} />
 
-      {/* 🔍 Search & Filter Section */}
-      <View style={[styles.searchFilterContainer, { backgroundColor: colors.surface }]}>
+      {/* 🔍 Search Section */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by name, badge, or station"
+          placeholder="Search by email or name"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
           style={styles.searchInput}
           dense
         />
-        
-        <View style={styles.filterRow}>
-          <View style={styles.filterChips}>
-            {(['All', 'On-Duty', 'Active', 'Off-Duty', 'Inactive'] as (FirefighterStatus | 'All')[]).map(status => (
-              <Chip
-                key={status}
-                selected={statusFilter === status}
-                onPress={() => setStatusFilter(status)}
-                style={[
-                  styles.filterChip,
-                  { 
-                    backgroundColor: statusFilter === status ? getStatusColor(status as FirefighterStatus) : colors.surfaceVariant 
-                  }
-                ]}
-                textStyle={{
-                  color: statusFilter === status ? '#fff' : colors.onSurfaceVariant,
-                  fontSize: p(10)
-                }}
-                compact
-              >
-                {status}
-              </Chip>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          <Text variant="bodySmall" style={styles.filterLabel}>Station:</Text>
-          <View style={styles.stationChips}>
-            {stations.map(station => (
-              <Chip
-                key={station}
-                selected={stationFilter === station}
-                onPress={() => setStationFilter(station)}
-                style={[
-                  styles.stationChip,
-                  { 
-                    backgroundColor: stationFilter === station ? colors.primary : colors.surfaceVariant 
-                  }
-                ]}
-                textStyle={{
-                  color: stationFilter === station ? '#fff' : colors.onSurfaceVariant,
-                  fontSize: p(10)
-                }}
-                compact
-              >
-                {station}
-              </Chip>
-            ))}
-          </View>
-        </View>
       </View>
 
-      {/* Firefighters List */}
+      {/* Firefighters List - Horizontal Rows */}
       <FlatList
-        data={filteredFirefighters}
-        renderItem={({ item }) => renderFirefighterCard(item)}
-        keyExtractor={(item) => item.id}
+        data={firefighters}
+        renderItem={renderFirefighter}
+        keyExtractor={(item) => item.roster_id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Icon source="account-search" size={p(48)} color={colors.onSurfaceVariant} />
-            <Text variant="titleMedium" style={{ color: colors.onSurfaceVariant, marginTop: p(8) }}>
+          <View style={styles.emptyContainer}>
+            <Icon source="account-search" size={64} color={colors.outline} />
+            <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
               No Firefighters Found
             </Text>
-            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
-              {searchQuery || statusFilter !== 'All' || stationFilter !== 'All' 
-                ? 'Try adjusting your search or filters' 
+            <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
+              {searchQuery
+                ? 'Try adjusting your search criteria' 
                 : 'No firefighters available'
               }
             </Text>
@@ -336,17 +384,24 @@ export default function FirefighterListScreen() {
       />
 
       {/* Pagination */}
-      <View style={styles.paginationContainer}>
+      <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
         <DataTable.Pagination
           page={page - 1}
           numberOfPages={Math.ceil(totalCount / itemsPerPage)}
           onPageChange={newPage => setPage(newPage + 1)}
           label={`${((page - 1) * itemsPerPage) + 1}-${Math.min(page * itemsPerPage, totalCount)} of ${totalCount}`}
           showFastPaginationControls
-          numberOfItemsPerPageList={[3, 6, 9]}
+          numberOfItemsPerPageList={[10, 20, 30]}
           numberOfItemsPerPage={itemsPerPage}
           onItemsPerPageChange={setItemsPerPage}
           selectPageDropdownLabel={'Firefighters per page'}
+          theme={{
+            colors: {
+              primary: colors.primary,
+              onSurface: colors.onSurface,
+              surface: colors.surface,
+            },
+          }}
         />
       </View>
     </SafeAreaView>
@@ -354,13 +409,16 @@ export default function FirefighterListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1, 
+    paddingHorizontal: p(10) 
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchFilterContainer: {
+  searchContainer: {
     paddingHorizontal: p(14),
     paddingTop: p(8),
     paddingBottom: p(8),
@@ -368,92 +426,76 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: p(8),
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: p(6),
-  },
-  filterLabel: {
-    marginRight: p(8),
-    fontWeight: '600',
-  },
-  filterChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: p(6),
-    flex: 1,
-  },
-  stationChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: p(6),
-    flex: 1,
-  },
-  filterChip: {
-    marginRight: p(4),
-    marginBottom: p(4),
-  },
-  stationChip: {
-    marginRight: p(4),
-    marginBottom: p(4),
-  },
   listContainer: {
-    padding: p(14),
-    paddingBottom: p(120),
+    paddingBottom: p(100),
     flexGrow: 1,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: p(40),
-  },
-  firefighterCard: {
-    marginBottom: p(16),
-    borderRadius: p(12),
-    elevation: 2,
-    padding: p(8),
-  },
-  firefighterHeader: {
+  firefighterRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: p(12),
-  },
-  firefighterInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  firefighterDetails: {
-    marginLeft: p(12),
-    flex: 1,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: p(12),
     padding: p(12),
-    backgroundColor: '#f8f9fa',
+    marginHorizontal: p(14),
+    marginBottom: p(8),
     borderRadius: p(8),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  statItem: {
+  leftSection: {
+    flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  actionsContainer: {
-    flexDirection: 'row',
+  avatar: {
+    width: p(40),
+    height: p(40),
+    borderRadius: p(20),
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: p(12),
   },
-  viewButton: {
+  avatarText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: p(14),
+  },
+  nameEmailContainer: {
     flex: 1,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(8),
+  },
+  gearCountContainer: {
+    alignItems: 'center',
+    marginRight: p(8),
+  },
+  gearCountText: {
+    fontSize: p(16),
+    fontWeight: 'bold',
+    marginTop: p(2),
+  },
+  gearLabel: {
+    fontSize: p(10),
+    color: '#666',
+    marginTop: p(2),
   },
   paginationContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#f5f5f5',
+    marginBottom: p(65),
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
   },
 });
