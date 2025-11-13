@@ -33,7 +33,25 @@ const GearDetailScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [assignedRoster, setAssignedRoster] = useState<Roster | null>(null);
+  const [assignedRoster, setAssignedRoster] = useState<Roster | null>( {
+    "roster_id": 1,
+    "firestation": {
+        "firestation_id": 2,
+        "fire_station_name": "Community Volunteer Fire Department"
+    },
+    "first_name": "Guardado",
+    "middle_name": "",
+    "last_name": "F",
+    "email": "Guardado.f@example.com",
+    "phone": "1234567810",
+    "active_status": true,
+    // "is_deleted": false,
+    // "created_at": "2025-10-24T15:37:57.860189Z",
+    // "updated_at": "2025-10-24T15:39:44.434618Z",
+    // "created_by": null,
+    // "updated_by": null,
+    "roster_name": "Guardado A. F."
+});
 
   // Mock data
   const manufacturer = {
@@ -86,6 +104,7 @@ const GearDetailScreen = ({ navigation }: any) => {
   };
 
   const handleRosterSelect = (roster: Roster) => {
+    console.log("rosterhandleRosterSelect",roster)
     setAssignedRoster(roster);
     Alert.alert('Success', `Roster assigned to ${roster.roster_name}`);
   };
@@ -139,7 +158,7 @@ const GearDetailScreen = ({ navigation }: any) => {
               <Card.Content>
                 <View style={styles.cardHeader}>
                   <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
-                    Assigned Roster
+                    Assigned Fire Fighter
                   </Text>
                   <Menu
                     visible={menuVisible}
