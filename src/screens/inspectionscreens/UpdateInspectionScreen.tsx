@@ -57,13 +57,35 @@ const SIZE_OPTIONS = [
 
 // Helmet Findings options
 const HELMET_FINDINGS = [
-  { value: 'SCRATCHED_VISOR', label: 'Scratched or fogged visor' },
-  { value: 'CHIN_STRAP_DAMAGED', label: 'Chin strap frayed or damaged' },
-  { value: 'REFLECTIVE_TRIM_MISSING', label: 'Reflective trim peeling or missing' },
-  { value: 'HELMET_SHELL_DAMAGED', label: 'Helmet shell scratched or dented' },
-  { value: 'PADDING_WORN', label: 'Interior padding worn or loose' },
-  { value: 'NECK_PROTECTOR_DAMAGED', label: 'Neck protector torn or partially detached' },
+  { value: 'MFR_LABEL_DAMAGED_LOOSE', label: 'Mfr. Info Label Damaged/Loose' },
+  { value: 'MFR_LABEL_MISSING_UNREADABLE', label: 'Mfr. Info Label Missing/Unreadable (Critical Fail)' },
+
+  { value: 'HELMET_SHELL_DAMAGED', label: 'Helmet Shell Damaged' },
+  { value: 'IMPACT_CAP_DAMAGED', label: 'Impact Cap Damaged' },
+
+  { value: 'SUSPENSION_SYSTEM_DAMAGED', label: 'Suspension System Damaged' },
+  { value: 'SUSPENSION_SYSTEM_MISSING', label: 'Suspension System Missing (Critical Fail)' },
+
+  { value: 'RATCHETING_STRAP_DAMAGED', label: 'Ratcheting Strap Damaged' },
+
+  { value: 'EAR_COVER_STAINING', label: 'Ear Cover/Shroud Staining' },
+  { value: 'EAR_COVER_MISSING', label: 'Ear Cover/Shroud Missing' },
+  { value: 'EAR_COVER_DAMAGED', label: 'Ear Cover/Shroud Damaged' },
+
+  { value: 'EYE_PROTECTION_DAMAGED', label: 'Eye Protection Damaged' },
+  { value: 'EYE_PROTECTION_MISSING', label: 'Eye Protection Missing (Critical Fail)' },
+
+  { value: 'CHIN_STRAP_DAMAGED', label: 'Chin Strap Damaged' },
+  { value: 'CHIN_STRAP_MISSING', label: 'Chin Strap Missing' },
+
+  { value: 'REFLECTIVE_TRIM_DAMAGED_FADED', label: 'Reflective Trim Damaged/Faded' },
+  { value: 'REFLECTIVE_TRIM_MISSING', label: 'Reflective Trim Missing' },
+
+  { value: 'D_RING_MISSING_DAMAGED', label: 'D-Ring Missing/Damaged' },
+
+  { value: 'OTHER', label: 'Other' }
 ];
+
 
 type Gear = {
   id: string;
@@ -108,6 +130,8 @@ type Gear = {
   hydrotestResult?: string;
   condition?: string;
 };
+
+
 
 export default function UpdateInspectionScreen() {
   const { colors } = useTheme();

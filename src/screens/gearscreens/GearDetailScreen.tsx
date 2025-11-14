@@ -14,11 +14,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import RosterModal from '../../components/common/Modal/RosterModal';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGearStore } from '../../store/gearStore';
 import { printTable } from '../../utils/printTable';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 
-const GearDetailScreen = ({ navigation }: any) => {
+
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
+
+
+const GearDetailScreen = () => {
+
+    const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const route = useRoute();
   const { gear_id } = route.params as any;
@@ -394,7 +403,7 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('UpdateInspection')}
+          onPress={() => navigation.navigate('UpadateInspection')}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}

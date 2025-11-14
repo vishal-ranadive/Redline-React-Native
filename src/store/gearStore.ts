@@ -21,12 +21,12 @@ interface Gear {
   manufacturer: {
     manufacturer_id: number;
     manufacturer_name: string;
-    city:string; 
-    country:string;
-    state:string; 
-    address:string;
-    phone:string;
-    email:string;
+    city: string; 
+    country: string;
+    state: string; 
+    address: string;
+    phone: string;
+    email: string;
   };
   franchise: {
     id: number;
@@ -55,19 +55,27 @@ interface Gear {
 interface GearState {
   // State
   gearTypes: GearType[];
+  gears: Gear[]; // Added for search results
   currentGear: Gear | null;
   loading: boolean;
   error: string | null;
+  pagination: {
+    page: number;
+    page_size: number;
+    total: number;
+  } | null;
 
   // Actions
   fetchGearTypes: () => Promise<void>;
   createGear: (gearData: any) => Promise<Gear | null>;
   fetchGearById: (id: number) => Promise<Gear | null>;
+  searchGears: (params?: any) => Promise<void>; // Added search function
   
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
   clearCurrentGear: () => void;
+  clearGears: () => void; // Added to clear search results
 }
 
 export const useGearStore = create<GearState>()(
@@ -75,9 +83,11 @@ export const useGearStore = create<GearState>()(
     (set, get) => ({
       // Initial state
       gearTypes: [],
+      gears: [],
       currentGear: null,
       loading: false,
       error: null,
+      pagination: null,
 
       // Fetch gear types
       fetchGearTypes: async () => {
@@ -163,10 +173,37 @@ export const useGearStore = create<GearState>()(
         }
       },
 
+      // Search gears by name (gear_name parameter)
+      searchGears: async (params: any = {}) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await gearApi.getGears(params);
+          if (response.status) {
+            set({
+              gears: response.gears || [],
+              pagination: response.pagination || null,
+              loading: false,
+              error: null,
+            });
+          } else {
+            set({
+              error: response.message || 'Failed to search gears',
+              loading: false,
+            });
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Network error',
+            loading: false,
+          });
+        }
+      },
+
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
       clearError: () => set({ error: null }),
       clearCurrentGear: () => set({ currentGear: null }),
+      clearGears: () => set({ gears: [], pagination: null }),
     }),
     {
       name: 'gear-storage',

@@ -19,8 +19,27 @@ export const gearApi = {
 
   // Get gear by ID
   getGearById: async (id: number): Promise<any> => {
+    console.log('➡️ API CALL /gear/${id}/');
     const response = await axiosInstance.get(`/gear/${id}/`);
+    console.log('✅ API Response /gear/${id}/', response.data);
     return response.data;
+  },
+
+  // Search gears with optional parameters (gear_name)
+  getGears: async (params?: any): Promise<any> => {
+    console.log('➡️ API CALL /gear/ with params:', params);
+    try {
+      const response = await axiosInstance.get(`/gear/`, { params });
+      console.log('✅ API Response /gear/:', response.data);
+      console.log('✅ Response status:', response.status);
+      console.log('✅ Gears found:', response.data.gears?.length || 0);
+      return response.data;
+    } catch (error: any) {
+      console.log('❌ API Error /gear/:', error);
+      console.log('❌ Error message:', error.message);
+      console.log('❌ Error response:', error.response?.data);
+      throw error;
+    }
   },
 
   // Update gear
