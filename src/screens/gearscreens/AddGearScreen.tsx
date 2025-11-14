@@ -1,4 +1,3 @@
-// src/screens/gearscreens/AddGearScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,7 +17,7 @@ import {
   Icon,
   Menu,
   Divider,
-  Chip,
+  Snackbar,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -28,18 +27,40 @@ import { p } from '../../utils/responsive';
 import CommonDatePicker from '../../components/common/DatePicker';
 import RosterModal from '../../components/common/Modal/RosterModal';
 import ManufacturerModal from '../../components/common/Modal/ManufacturerModal';
+import { useLeadStore } from '../../store/leadStore';
+import { useGearStore } from '../../store/gearStore';
+import { useRosterStore } from '../../store/rosterStore';
+import { useManufacturerStore } from '../../store/manufacturerStore';
+import { GEAR_STATUSES, GearStatus } from '../../constants/gearTypes';
+import { printTable } from '../../utils/printTable';
+
+import dayjs from 'dayjs';
+import Toast from 'react-native-toast-message';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddGear', 'GearSearch'>;
 
 interface RosterItem {
   roster_id: number;
-  roster_name: string;
+  franchise: {
+    id: number;
+    name: string;
+  };
+  firestation: {
+    id: number;
+    name: string;
+  };
+  first_name: string;
+  middle_name: string;
+  last_name: string;
   email: string;
   phone: string;
-  firestation: { firestation_id: number; fire_station_name: string };
   active_status: boolean;
   is_deleted?: boolean;
-  avatar?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  roster_name: string;
 }
 
 interface ManufacturerItem {
@@ -55,47 +76,35 @@ interface ManufacturerItem {
   is_deleted?: boolean;
 }
 
-// Updated STATUS_OPTIONS as per requirement #7 - all caps
-const STATUS_OPTIONS = [
-  { value: 'PASS', label: 'PASS', color: '#34A853' },
-  { value: 'EXPIRED', label: 'EXPIRED', color: '#F9A825' },
-  { value: 'RECOMMENDED OOS', label: 'RECOMMENDED OOS', color: '#EA4335' },
-  { value: 'CORRECTIVE ACTION REQUIRED', label: 'CORRECTIVE ACTION REQUIRED', color: '#9a25f9ff' },
-];
-
-// Service types as per requirement #6
-const SERVICE_TYPES = [
-  { value: 'CLEANED_AND_INSPECTED', label: 'Cleaned and Inspected' },
-  { value: 'CLEANED_ONLY', label: 'Cleaned Only' },
-  { value: 'INSPECTED_ONLY', label: 'Inspected Only' },
-  { value: 'SPECIALIZED_CLEANING', label: 'Specialized Cleaning' },
-  { value: 'OTHER', label: 'Other' },
-];
-
 const AddGearScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const { lead: initialLead } = route.params as any;
+  const { currentLead } = useLeadStore();
   const { colors } = useTheme();
+
+  // Stores
+  const { gearTypes, loading: gearLoading, createGear, fetchGearTypes } = useGearStore();
+  const { fetchRosters } = useRosterStore();
+  const { fetchManufacturers } = useManufacturerStore();
 
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
+  printTable("AddGears_screen - currentLead", currentLead);
 
-  // form state
-  const [gearType, setGearType] = useState('');
-  const [name, setName] = useState('');
+  // Form state
+  const [gearName, setGearName] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [assignedRoster, setAssignedRoster] = useState<RosterItem | null>(null);
-  const [barcode, setBarcode] = useState('');
   const [manufacturer, setManufacturer] = useState<ManufacturerItem | null>(null);
-  const [dateOfManufacture, setDateOfManufacture] = useState('');
-  const [warrantyExpiry, setWarrantyExpiry] = useState('');
-  const [lastInspection, setLastInspection] = useState('');
-  const [nextInspection, setNextInspection] = useState('');
-  const [status, setStatus] = useState(STATUS_OPTIONS[0].value);
-  const [condition, setCondition] = useState('Good');
-  const [notes, setNotes] = useState('');
-  const [serviceType, setServiceType] = useState('');
+  const [selectedGearType, setSelectedGearType] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState<GearStatus>('new');
+  const [manufacturingDate, setManufacturingDate] = useState('');
+
+  // UI states
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // mock images
   const gearImages = [
@@ -111,7 +120,7 @@ const AddGearScreen = () => {
   const [manufacturerMenuVisible, setManufacturerMenuVisible] = useState(false);
   const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   const [rosterMenuVisible, setRosterMenuVisible] = useState(false);
-  const [serviceTypeMenuVisible, setServiceTypeMenuVisible] = useState(false);
+  const [gearTypeMenuVisible, setGearTypeMenuVisible] = useState(false);
 
   useEffect(() => {
     const onChange = () => {
@@ -122,47 +131,146 @@ const AddGearScreen = () => {
     return () => sub.remove();
   }, []);
 
+  // Fetch gear types on mount
+  useEffect(() => {
+    fetchGearTypes();
+  }, []);
+
   const isLandscape = orientation === 'LANDSCAPE';
 
-  const handleSave = () => {
-    const payload = {
-      gearType,
-      name,
-      roster: assignedRoster?.roster_id ?? null,
-      barcode,
-      manufacturer: manufacturer?.manufacturer_id ?? null,
-      dateOfManufacture, // Already in dd-mm-yyyy format from CommonDatePicker
-      warrantyExpiry,
-      lastInspection,
-      nextInspection,
-      status, // All caps as per requirement #7
-      condition,
-      notes,
-      serviceType,
+  const showSnackbar = (message: string) => {
+    setSnackbarMessage(message);
+    setSnackbarVisible(true);
+  };
+
+  const validateForm = (): boolean => {
+    if (!gearName.trim()) {
+      showSnackbar('Please enter gear name');
+      return false;
+    }
+    if (!serialNumber.trim()) {
+      showSnackbar('Please enter serial number');
+      return false;
+    }
+    if (!selectedGearType) {
+      showSnackbar('Please select gear type');
+      return false;
+    }
+    if (!manufacturer) {
+      showSnackbar('Please select manufacturer');
+      return false;
+    }
+    if (!assignedRoster) {
+      showSnackbar('Please select fire fighter');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    // if (!validateForm()) return;
+
+    if (!currentLead) {
+      showSnackbar('No current lead found');
+      return;
+    }
+
+    setSubmitting(true);
+
+    // Convert manufacturing date from dd-mm-yyyy to yyyy-mm-dd for API
+    // Convert manufacturing date from dd-mm-yyyy to yyyy-mm-dd for API
+    const formatDateForAPI = (dateString: string) => {
+      if (!dateString) return '';
+      const parts = dateString.split('-');
+      if (parts.length === 3) {
+        // Convert from dd-mm-yyyy to yyyy-mm-dd
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      return dateString;
     };
-    console.log('Save payload', payload);
-    // TODO: API call
 
-    navigation.navigate('GearDetail');
+    const payload = {
+      gear_name: gearName.trim(),
+      manufacturer_id: manufacturer?.manufacturer_id,
+      roster_id: assignedRoster?.roster_id,
+      serial_number: serialNumber.trim(),
+      status: selectedStatus,
+      active_status: true,
+      firestation_id: currentLead?.firestation?.id || assignedRoster?.firestation.id,
+      franchise_id: currentLead?.franchise?.id || assignedRoster?.franchise.id,
+      // firestation_id : 11,
+      // franchise_id : 22,
+      gear_type_id: selectedGearType?.gear_type_id,
+      // manufacturing_date: formatDateForAPI(manufacturingDate), // Add manufacturing date
+      manufacturing_date : dayjs(manufacturingDate).format('YYYY-MM-DD')
+    };
+
+    console.log('Save payload', payload , "manufacturingDate",manufacturingDate);
+
+    try {
+      // const success:any = await createGear(payload);
+      // console.log("success-Gear_added successfully",success)'
+    // const createdGear = await createGear(payload);
+    const createdGear = { success : true};
+    console.log("success-Gear_added successfully", createdGear);
+      if (createdGear) {
+            Toast.show({
+              type: 'success',
+              text1: 'Gear added successfully!',
+            });
+        // Reset form and navigate back after success
+        setTimeout(() => {
+        resetForm();
+          // navigation.goBack();
+        // navigation.navigate('GearDetail', {  gear_id: 22 });
+        navigation.navigate('GearDetail', {  gear_id: 22 });
+        }, 1500);
+      } else {
+        // showSnackbar('Failed to add gear. Please try again.');
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to add Gear',
+        });
+      }
+    } catch (error) {
+      console.error('Error adding gear:', error);
+      showSnackbar('An error occurred. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // helpers
-  const getStatusColor = (val: string) => {
-    const found = STATUS_OPTIONS.find(s => s.value === val);
-    return found ? found.color : colors.primary;
-  };
-
-  const getServiceTypeLabel = (value: string) => {
-    const found = SERVICE_TYPES.find(s => s.value === value);
-    return found ? found.label : 'Select Service Type';
+  const resetForm = () => {
+    setGearName('');
+    setSerialNumber('');
+    setAssignedRoster(null);
+    setManufacturer(null);
+    setSelectedGearType(null);
+    setSelectedStatus('new');
+    setManufacturingDate('');
   };
 
   const onRosterSelect = (roster: RosterItem) => {
+    printTable("onRosterSelect", roster);
     setAssignedRoster(roster);
   };
 
   const onManufacturerSelect = (mfr: ManufacturerItem) => {
+    printTable("mfr", mfr);
     setManufacturer(mfr);
+  };
+
+  const onGearTypeSelect = (gearType: any) => {
+    setSelectedGearType(gearType);
+    setGearTypeMenuVisible(false);
+  };
+
+  const getStatusLabel = (status: GearStatus) => {
+    return GEAR_STATUSES.find(s => s.value === status)?.label || 'New';
+  };
+
+  const handleAddRosterManual = () => {
+    showSnackbar('Add roster manual functionality to be implemented');
   };
 
   /* ---------- Render ---------- */
@@ -193,7 +301,7 @@ const AddGearScreen = () => {
                 {assignedRoster.roster_name}
               </Text>
               <Text style={[styles.selectedItemSubtitle, { color: colors.onSurfaceVariant }]}>
-                {assignedRoster.firestation.fire_station_name}
+                {assignedRoster.firestation?.name || 'Unknown Station'}
               </Text>
               <Text style={[styles.selectedItemSubtitle, { color: colors.onSurfaceVariant }]}>
                 {assignedRoster.email} • {assignedRoster.phone}
@@ -290,7 +398,7 @@ const AddGearScreen = () => {
                 setManufacturerModalVisible(true);
               }}
               title="Update Manufacturer"
-              leadingIcon="factory-edit"
+              leadingIcon="pen"
             />
 
             <Menu.Item
@@ -299,7 +407,7 @@ const AddGearScreen = () => {
                 setManufacturer(null);
               }}
               title="Remove Manufacturer"
-              leadingIcon="factory-remove"
+              leadingIcon="delete"
             />
           </Menu>
         </Card.Content>
@@ -319,7 +427,18 @@ const AddGearScreen = () => {
 
         <View style={styles.headerActions}>
           <Button mode="text" compact onPress={() => navigation.goBack()} textColor={colors.onSurface}>Cancel</Button>
-          <Button mode="contained" compact onPress={handleSave} buttonColor={colors.primary} style={styles.saveBtn} textColor={colors.surface}>Save</Button>
+          <Button 
+            mode="contained" 
+            compact 
+            onPress={handleSave} 
+            loading={submitting}
+            disabled={submitting}
+            buttonColor={colors.primary} 
+            style={styles.saveBtn} 
+            textColor={colors.surface}
+          >
+            {submitting ? 'Saving...' : 'Save'}
+          </Button>
         </View>
       </View>
 
@@ -331,29 +450,56 @@ const AddGearScreen = () => {
             <Divider style={{ marginVertical: p(8) }} />
 
             <View style={styles.inputRow}>
-              <View style={[styles.inputCol, { flex: 1 ,}]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Gear Type</Text>
-                <TextInput
-                  mode="outlined"
-                  value={gearType}
-                  onChangeText={setGearType}
-                  placeholder="Select gear type"
-                  right={<TextInput.Icon icon="magnify" />}
-                  style={[styles.input,]}
-                  outlineColor={colors.outline}
-                  activeOutlineColor={colors.primary}
-                  dense
-                />
+              <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Gear Type *</Text>
+                <Menu
+                  visible={gearTypeMenuVisible}
+                  onDismiss={() => setGearTypeMenuVisible(false)}
+                  anchor={
+                    <TouchableOpacity
+                      style={[
+                        styles.selectButton,
+                        { 
+                          backgroundColor: colors.surface,
+                          borderColor: colors.outline 
+                        }
+                      ]}
+                      onPress={() => setGearTypeMenuVisible(true)}
+                    >
+                      <Text style={[
+                        styles.selectButtonText,
+                        { 
+                          color: selectedGearType ? colors.onSurface : colors.onSurfaceVariant 
+                        }
+                      ]}>
+                        {selectedGearType ? selectedGearType.gear_type : 'Select Gear Type'}
+                      </Text>
+                      <Text style={[styles.selectButtonIcon, { color: colors.onSurfaceVariant }]}>
+                        ▼
+                      </Text>
+                    </TouchableOpacity>
+                  }
+                  contentStyle={{ backgroundColor: colors.surface }}
+                >
+                  {gearTypes.map((gearType) => (
+                    <Menu.Item
+                      key={gearType.gear_type_id}
+                      onPress={() => onGearTypeSelect(gearType)}
+                      title={gearType.gear_type}
+                      titleStyle={{ color: colors.onSurface }}
+                    />
+                  ))}
+                </Menu>
               </View>
 
               <View style={{ width: p(12) }} />
 
               <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Name</Text>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Gear Name *</Text>
                 <TextInput
                   mode="outlined"
-                  value={name}
-                  onChangeText={setName}
+                  value={gearName}
+                  onChangeText={setGearName}
                   placeholder="Enter gear name"
                   style={styles.input}
                   outlineColor={colors.outline}
@@ -363,10 +509,73 @@ const AddGearScreen = () => {
               </View>
             </View>
 
-            {/* Fire Fighter & Manufacturer side-by-side in landscape, stacked in portrait */}
+            <View style={styles.inputRow}>
+              <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Serial Number *</Text>
+                <TextInput
+                  mode="outlined"
+                  value={serialNumber}
+                  onChangeText={setSerialNumber}
+                  placeholder="Enter serial number"
+                  style={styles.input}
+                  outlineColor={colors.outline}
+                  activeOutlineColor={colors.primary}
+                  dense
+                />
+              </View>
+
+              <View style={{ width: p(12) }} />
+
+              <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Status</Text>
+                <Menu
+                  visible={statusMenuVisible}
+                  onDismiss={() => setStatusMenuVisible(false)}
+                  anchor={
+                    <TouchableOpacity
+                      style={[
+                        styles.selectButton,
+                        { 
+                          backgroundColor: colors.surface,
+                          borderColor: colors.outline 
+                        }
+                      ]}
+                      // onPress={() => setStatusMenuVisible(true)}
+                    >
+                      <Text style={[
+                        styles.selectButtonText,
+                        { 
+                          color: colors.onSurface
+                        }
+                      ]}>
+                        {getStatusLabel(selectedStatus)}
+                      </Text>
+                      <Text style={[styles.selectButtonIcon, { color: colors.onSurfaceVariant }]}>
+                        ▼
+                      </Text>
+                    </TouchableOpacity>
+                  }
+                  contentStyle={{ backgroundColor: colors.surface }}
+                >
+                  {GEAR_STATUSES.map((status) => (
+                    <Menu.Item
+                      key={status.value}
+                      onPress={() => {
+                        setSelectedStatus(status.value);
+                        setStatusMenuVisible(false);
+                      }}
+                      title={status.label}
+                      titleStyle={{ color: colors.onSurface }}
+                    />
+                  ))}
+                </Menu>
+              </View>
+            </View>
+
+            {/* Fire Fighter & Manufacturer side-by-side */}
             <View style={[styles.inputRow, { marginTop: p(8), alignItems: 'flex-start', gap: p(6) }]}>
               <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter</Text>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter *</Text>
                 {renderSelectedRosterCard()}
                 {!assignedRoster && (
                   <TextInput
@@ -384,7 +593,7 @@ const AddGearScreen = () => {
               <View style={{ width: isLandscape ? p(12) : 0, height: isLandscape ? undefined : p(12) }} />
 
               <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturer</Text>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturer *</Text>
                 {renderSelectedManufacturerCard()}
                 {!manufacturer && (
                   <TextInput
@@ -399,115 +608,88 @@ const AddGearScreen = () => {
                 )}
               </View>
             </View>
-            <View style={{ flexDirection: 'row', gap: p(10) }}>
-              {/* Barcode Input */}
-              <View style={{ flex: 1 }}>
-                <View style={{ marginTop: p(10) }}>
-                  <Text style={[styles.label, { color: colors.onSurface }]}>Barcode</Text>
-                  <TextInput
-                    mode="outlined"
-                    value={barcode}
-                    onChangeText={setBarcode}
-                    placeholder="Scan or enter barcode"
-                    right={<TextInput.Icon icon="barcode-scan" />}
-                    style={styles.input}
-                    outlineColor={colors.outline}
-                    activeOutlineColor={colors.primary}
-                    dense
-                  />
-                </View>
-              </View>
 
-
-              <View style={{ flex: 1 }}>
-                <View style={{ marginTop: p(10) }}>
-                  <Text style={[styles.label, { color: colors.onSurface }]}>Date of Manufacture (dd-mm-yyyy)</Text>
-                    <CommonDatePicker
-                      value={dateOfManufacture}
-                      onChange={setDateOfManufacture}
-                      mode="date"
-                      placeholder="Select manufacturing date"
-                    />
-                </View>
-              </View>
+            {/* Manufacturing Date */}
+            <View style={{ marginTop: p(10) }}>
+              <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturing Date (dd-mm-yyyy)</Text>
+              <CommonDatePicker
+                value={manufacturingDate}
+                onChange={setManufacturingDate}
+                mode="date"
+                placeholder="Select manufacturing date"
+              />
             </View>
-
-
           </Card.Content>
         </Card>
 
-        {/* Manufacturer / Dates & Status area */}
-        <View style={isLandscape ? styles.landscapeContainer : undefined}>
-          {/* Left column */}
-          <View style={isLandscape ? styles.leftColumn : undefined}>
-            {/* Manufacturing Date Card - Requirement #5 */}
-            {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Card.Content>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Manufacturing Date</Text>
-                <Divider style={{ marginVertical: p(8) }} />
-                
-                <Text style={[styles.label, { color: colors.onSurface, marginBottom: p(6) }]}>
-                  Date of Manufacture (dd-mm-yyyy)
-                </Text>
-                <CommonDatePicker 
-                  value={dateOfManufacture} 
-                  onChange={setDateOfManufacture} 
-                  mode="date" 
-                  placeholder="Select manufacturing date"
-                  // dateFormat="dd-mm-yyyy" // Ensure this format is used
-                />
-              </Card.Content>
-            </Card> */}
+        {/* Gear Images Card - Keeping your existing gear images */}
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Card.Content>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+            <Divider style={{ marginVertical: p(8) }} />
 
-            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Card.Content>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
-                <Divider style={{ marginVertical: p(8) }} />
-
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <FlatList
-                    horizontal
-                    data={gearImages}
-                    keyExtractor={(_, i) => i.toString()}
-                    renderItem={({ item }) => (
-                      <Image source={item} style={styles.thumb} />
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingRight: p(12) }}
-                  />
-
-                  <Button
-                    mode="outlined"
-                    compact
-                    icon="camera"
-                    style={[styles.smallBtn, { marginLeft: p(8) }]}
-                    onPress={() => { /* upload */ }}
-                  >
-                    Upload
-                  </Button>
-                </View>
-              </Card.Content>
-            </Card>
-          </View>
-
-
-        </View>
-
-            <View style={{ marginTop: p(12), marginBottom: p(22), marginInline:p(100) }}>
-              <Button 
-                mode="contained" 
-                onPress={handleSave} 
-                buttonColor={colors.primary} 
-                contentStyle={{ paddingVertical: p(8) }}
-                labelStyle={{
-                  fontSize: p(16),
-                  fontWeight: '600',
-                  color: '#fff',
-                }}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FlatList
+                horizontal
+                data={gearImages}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => (
+                  <Image source={item} style={styles.thumb} />
+                )}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: p(12) }}
+              />
+              
+              <Button
+                mode="outlined"
+                compact
+                icon="camera"
+                style={[styles.smallBtn, { marginLeft: p(8) }]}
+                onPress={() => { /* upload */ }}
               >
-                Save
+                Upload
               </Button>
             </View>
+            
+          </Card.Content>
+        </Card>
+
+        {/* Current Lead Info */}
+        {currentLead && (
+          <Card style={[styles.card, { backgroundColor: colors.surfaceVariant }]}>
+            <Card.Content>
+              <Text style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}>
+                Current Lead Information
+              </Text>
+              <Divider style={{ marginVertical: p(8) }} />
+              <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
+                Fire Station: {currentLead.firestation?.name}
+              </Text>
+              <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
+                Franchise: {currentLead.franchise?.name}
+              </Text>
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Submit Button */}
+        <View style={{ marginTop: p(12), marginBottom: p(22), marginHorizontal: p(100) }}>
+          <Button 
+            mode="contained" 
+            onPress={handleSave} 
+            loading={submitting}
+            disabled={submitting}
+            buttonColor={colors.primary} 
+            contentStyle={{ paddingVertical: p(8) }}
+            labelStyle={{
+              fontSize: p(16),
+              fontWeight: '600',
+              color: '#fff',
+            }}
+          >
+            {submitting ? 'Adding Gear...' : 'Add Gear'}
+          </Button>
+        </View>
       </ScrollView>
 
       {/* Modals */}
@@ -515,7 +697,7 @@ const AddGearScreen = () => {
         visible={rosterModalVisible}
         onClose={() => setRosterModalVisible(false)}
         onRosterSelect={(r: any) => { onRosterSelect(r as RosterItem); setRosterModalVisible(false); }}
-        onAddRosterManual={() => { setRosterModalVisible(false); /* navigate to add fire fighter */ }}
+        onAddRosterManual={handleAddRosterManual}
       />
 
       <ManufacturerModal
@@ -523,6 +705,16 @@ const AddGearScreen = () => {
         onClose={() => setManufacturerModalVisible(false)}
         onSelect={(mfr: any) => { onManufacturerSelect(mfr as ManufacturerItem); setManufacturerModalVisible(false); }}
       />
+
+      {/* Snackbar */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={{ backgroundColor: colors.surface }}
+      >
+        <Text style={{ color: colors.onSurface }}>{snackbarMessage}</Text>
+      </Snackbar>
     </SafeAreaView>
   );
 };
@@ -545,11 +737,29 @@ const styles = StyleSheet.create({
 
   cardTitle: { fontSize: p(16), fontWeight: '700' },
 
-  inputRow: { flexDirection: 'row', alignItems: 'center' },
+  inputRow: { flexDirection: 'row', alignItems: 'center',  marginBottom: p(4)  },
   inputCol: { flex: 1 },
   label: { fontSize: p(13), fontWeight: '600', marginBottom: p(4) },
-  input: {  height: p(44) },
+  input: { height: p(44) },
   smallBtn: { borderRadius: p(8) },
+
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(16),
+    paddingVertical: p(12),
+    borderRadius: p(4),
+    borderWidth: 1,
+  },
+  selectButtonText: {
+    fontSize: p(16),
+    flex: 1,
+  },
+  selectButtonIcon: {
+    fontSize: p(12),
+    marginLeft: p(8),
+  },
 
   selectedItemCard: { borderWidth: 1, borderRadius: p(8), backgroundColor: 'white' },
   selectedItemContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: p(8) },
@@ -558,10 +768,6 @@ const styles = StyleSheet.create({
   selectedItemName: { fontSize: p(15), fontWeight: '600' },
   selectedItemSubtitle: { fontSize: p(13), color: '#666' },
 
-  landscapeContainer: { flexDirection: 'row', gap: p(12) },
-  leftColumn: { flex: 1, gap: p(12) },
-  rightColumn: { flex: 1, gap: p(12) },
-
   thumb: {
     width: p(70),
     height: p(70),
@@ -569,29 +775,7 @@ const styles = StyleSheet.create({
     marginRight: p(8),
     resizeMode: 'cover',
   },
-  smallRow: { flexDirection: 'row', alignItems: 'center' },
-  smallCol: { flex: 1 },
-
-  statusSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: p(10),
-    height: p(44),
-    borderRadius: p(8),
-    backgroundColor: 'transparent',
-  },
-  serviceTypeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: p(10),
-    height: p(44),
-    borderRadius: p(8),
-    backgroundColor: 'transparent',
-  },
-  statusBadge: { width: p(12), height: p(12), borderRadius: p(6) },
-  menuDot: { width: p(10), height: p(10), borderRadius: p(5), marginRight: p(8) },
+  infoText: { fontSize: p(14), marginBottom: p(4) },
 });
 
 export default AddGearScreen;

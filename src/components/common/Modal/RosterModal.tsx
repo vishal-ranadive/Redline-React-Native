@@ -1,4 +1,3 @@
-// src/components/common/RosterModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,103 +17,16 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
-
-interface Firestation {
-  firestation_id: number;
-  fire_station_name: string;
-}
-
-interface Roster {
-  roster_id: number;
-  firestation: Firestation;
-  first_name: string;
-  middle_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  active_status: boolean;
-  is_deleted?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string | null;
-  updated_by?: string | null;
-  roster_name: string;
-}
-
-interface ApiResponse {
-  status: boolean;
-  message: string;
-  rosters: Roster[];
-  pagination: {
-    page: number;
-    page_size: number;
-    total: number;
-  };
-}
+import { useRosterStore } from '../../../store/rosterStore';
+import { useLeadStore } from '../../../store/leadStore';
+import  useDebounce  from '../../../hooks/useDebounce';
 
 interface RosterModalProps {
   visible: boolean;
   onClose: () => void;
-  onRosterSelect: (roster: Roster) => void;
+  onRosterSelect: (roster: any) => void;
   onAddRosterManual: () => void;
 }
-
-// Mock API function - replace with actual API call
-const fetchRostersFromAPI = async (): Promise<ApiResponse> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        status: true,
-        message: "Rosters fetched successfully",
-        rosters: [
-          {
-            roster_id: 1,
-            firestation: {
-              firestation_id: 2,
-              fire_station_name: "Community Volunteer Fire Department"
-            },
-            first_name: "Guardado",
-            middle_name: "",
-            last_name: "F",
-            email: "Guardado.f@example.com",
-            phone: "1234567810",
-            active_status: true,
-            is_deleted: false,
-            created_at: "2025-10-24T15:37:57.860189Z",
-            updated_at: "2025-10-24T15:39:44.434618Z",
-            created_by: null,
-            updated_by: null,
-            roster_name: "Guardado A. F."
-          },
-          {
-            roster_id: 3,
-            firestation: {
-              firestation_id: 10,
-              fire_station_name: "Downtown township Station 3"
-            },
-            first_name: "Johny",
-            middle_name: "A.",
-            last_name: "Don",
-            email: "john.don22@example.com",
-            phone: "1234567810",
-            active_status: true,
-            is_deleted: false,
-            created_at: "2025-10-24T17:07:39.464219Z",
-            updated_at: "2025-10-24T17:07:39.464235Z",
-            created_by: null,
-            updated_by: null,
-            roster_name: "Johny A. Don"
-          }
-        ],
-        pagination: {
-          page: 1,
-          page_size: 10,
-          total: 2
-        }
-      });
-    }, 1000);
-  });
-};
 
 const RosterModal: React.FC<RosterModalProps> = ({
   visible,
@@ -124,51 +36,48 @@ const RosterModal: React.FC<RosterModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [rosters, setRosters] = useState<Roster[]>([]);
-  const [filteredRosters, setFilteredRosters] = useState<Roster[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // Fetch rosters from API
-  const fetchRosters = async () => {
-    try {
-      setLoading(true);
-      const response = await fetchRostersFromAPI();
-      const activeRosters = response.rosters.filter(
-        (roster: Roster) => roster.active_status && !roster.is_deleted
-      );
-      setRosters(activeRosters);
-      setFilteredRosters(activeRosters);
-    } catch (error) {
-      console.error('Error fetching rosters:', error);
-      Alert.alert('Error', 'Failed to fetch rosters');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  
+  // Stores
+  const { rosters, loading, fetchRosters } = useRosterStore();
+  const { currentLead } = useLeadStore();
 
   // Filter rosters based on search query
+  const filteredRosters = rosters.filter(roster =>
+    searchQuery.trim() === '' ? true :
+    roster.roster_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    roster.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (roster.first_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (roster.last_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Fetch rosters with search
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredRosters(rosters);
-    } else {
-      const filtered = rosters.filter(roster =>
-        roster.roster_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        roster.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        roster.firestation.fire_station_name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredRosters(filtered);
+    if (visible) {
+      const searchParams: any = {};
+      
+      if (debouncedSearch.trim()) {
+        searchParams.first_name = debouncedSearch;
+        searchParams.email = debouncedSearch;
+      }
+
+      // Optionally filter by current lead's firestation
+      // if (currentLead?.firestation?.id) {
+      //   searchParams.firestation_id = currentLead.firestation.id;
+      // }
+
+      fetchRosters(searchParams);
     }
-  }, [searchQuery, rosters]);
+  }, [visible, debouncedSearch]);
 
   // Reset when modal opens
   useEffect(() => {
     if (visible) {
-      fetchRosters();
       setSearchQuery('');
     }
   }, [visible]);
 
-  const handleRosterSelect = (roster: Roster) => {
+  const handleRosterSelect = (roster: any) => {
     onRosterSelect(roster);
     onClose();
   };
@@ -178,7 +87,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
     onAddRosterManual();
   };
 
-  const renderRosterItem = ({ item }: { item: Roster }) => (
+  const renderRosterItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.rosterItem, { backgroundColor: colors.surface }]}
       onPress={() => handleRosterSelect(item)}
@@ -188,7 +97,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
           {item.roster_name}
         </Text>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-          {item.firestation.fire_station_name}
+          {item.firestation?.name || 'Unknown Station'}
         </Text>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
           {item.email} • {item.phone}
@@ -219,7 +128,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Searchbar
-            placeholder="Search by name, email, or station..."
+            placeholder="Search by name, email..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchBar}
@@ -234,7 +143,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
-                Loading rosters...
+                Loading fire fighters...
               </Text>
             </View>
           ) : filteredRosters.length > 0 ? (
@@ -249,10 +158,10 @@ const RosterModal: React.FC<RosterModalProps> = ({
             <View style={styles.emptyContainer}>
               <Icon source="account-search" size={p(64)} color={colors.onSurfaceVariant} />
               <Text style={[styles.emptyText, { color: colors.onSurfaceVariant, fontSize: p(18) }]}>
-                {searchQuery ? 'No rosters found' : 'No rosters available'}
+                {searchQuery ? 'No fire fighters found' : 'No fire fighters available'}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                {searchQuery ? 'Try a different search term' : 'Add a new roster manually'}
+                {searchQuery ? 'Try a different search term' : 'Add a new fire fighter manually'}
               </Text>
             </View>
           )}

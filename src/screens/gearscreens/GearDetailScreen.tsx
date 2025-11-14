@@ -1,5 +1,5 @@
 // src/screens/gearscreens/GearDetailScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Image, Linking, Alert } from 'react-native';
 import { 
   Text, 
@@ -9,70 +9,35 @@ import {
   Icon, 
   useTheme,
   Menu,
+  ActivityIndicator,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import RosterModal from '../../components/common/Modal/RosterModal';
-
-interface Roster {
-  roster_id: number;
-  firestation: {
-    firestation_id: number;
-    fire_station_name: string;
-  };
-  first_name: string;
-  middle_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  active_status: boolean;
-  roster_name: string;
-}
+import { useRoute } from '@react-navigation/native';
+import { useGearStore } from '../../store/gearStore';
+import { printTable } from '../../utils/printTable';
 
 const GearDetailScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
+  const route = useRoute();
+  const { gear_id } = route.params as any;
+  
+  const { currentGear, loading, fetchGearById } = useGearStore();
+  
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [assignedRoster, setAssignedRoster] = useState<Roster | null>( {
-    "roster_id": 1,
-    "firestation": {
-        "firestation_id": 2,
-        "fire_station_name": "Community Volunteer Fire Department"
-    },
-    "first_name": "Guardado",
-    "middle_name": "",
-    "last_name": "F",
-    "email": "Guardado.f@example.com",
-    "phone": "1234567810",
-    "active_status": true,
-    // "is_deleted": false,
-    // "created_at": "2025-10-24T15:37:57.860189Z",
-    // "updated_at": "2025-10-24T15:39:44.434618Z",
-    // "created_by": null,
-    // "updated_by": null,
-    "roster_name": "Guardado A. F."
-});
 
-  // Mock data
-  const manufacturer = {
-    name: 'Honeywell/Morning Pride',
-    country: 'USA',
-    website: 'https://automation.honeywell.com/us/en/products/personal-protective-equipment/first-responder-gear/structural-turnout-gear/morning-pride-tails-structural-turnout-gear',
-  };
+  console.log("gear_id-Gear-details screen", gear_id);
 
-  const gear = {
-    id: 'GEAR-001',
-    type: 'Jacket',
-    name: 'Jacket Shell',
-    serial: 'D30508592',
-    model: 'Jacket Shell',
-    year: 2023,
-    status: 'In Service',
-    notes: 'Tear near right elbow, reflective tape needs cleaning.',
-    lastInspection: '2024-05-10',
-    nextInspection: '2024-08-10',
-  };
+  // Fetch gear details when component mounts
+  useEffect(() => {
+    if (gear_id) {
+      fetchGearById(gear_id);
+    }
+  }, [gear_id]);
 
+  // Mock inspection history (keep as is)
   const inspectionHistory = [
     {
       id: 'INSP006',
@@ -103,14 +68,12 @@ const GearDetailScreen = ({ navigation }: any) => {
     return colors.onSurfaceVariant;
   };
 
-  const handleRosterSelect = (roster: Roster) => {
-    console.log("rosterhandleRosterSelect",roster)
-    setAssignedRoster(roster);
+  const handleRosterSelect = (roster: any) => {
+    console.log("rosterhandleRosterSelect", roster);
     Alert.alert('Success', `Roster assigned to ${roster.roster_name}`);
   };
 
   const handleAddRosterManual = () => {
-    // Navigate to Add Roster screen or show form
     Alert.alert('Add Roster', 'Navigate to add roster form');
   };
 
@@ -120,10 +83,41 @@ const GearDetailScreen = ({ navigation }: any) => {
   };
 
   const handleRemoveRoster = () => {
-    setAssignedRoster(null);
     setMenuVisible(false);
     Alert.alert('Success', 'Roster removed from gear');
   };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+  };
+  printTable("currentGear",currentGear)
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.onSurface, marginTop: p(16) }}>Loading gear details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentGear) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.errorContainer}>
+          <Icon source="alert-circle" size={p(48)} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.onSurface }]}>Gear not found</Text>
+          <Button mode="contained" onPress={() => navigation.goBack()}>
+            Go Back
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -144,7 +138,7 @@ const GearDetailScreen = ({ navigation }: any) => {
         </View>
 
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant, fontSize: p(16) }]}>
-          Serial: {gear.serial} | Model: {gear.model} | Year: {gear.year}
+          Serial: {currentGear.serial_number} | Type: {currentGear.gear_type.gear_type}
         </Text>
 
         <Divider style={{ marginVertical: p(12) }} />
@@ -160,52 +154,35 @@ const GearDetailScreen = ({ navigation }: any) => {
                   <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
                     Assigned Fire Fighter
                   </Text>
-                  <Menu
-                    visible={menuVisible}
-                    onDismiss={() => setMenuVisible(false)}
-                    anchor={
-                      <Button 
-                        mode="text" 
-                        onPress={() => setMenuVisible(true)}
-                        compact
-                      >
-                        <Icon source="dots-vertical" size={p(20)} color={colors.onSurface} />
-                      </Button>
-                    }
+                  {/* Disabled menu button */}
+                  <Button 
+                    mode="text" 
+                    onPress={() => setMenuVisible(true)}
+                    compact
+                    disabled={true}
                   >
-                    <Menu.Item 
-                      onPress={handleUpdateRoster} 
-                      title="Update Roster" 
-                      leadingIcon="account-edit"
-                    />
-                    {assignedRoster && (
-                      <Menu.Item 
-                        onPress={handleRemoveRoster} 
-                        title="Remove Roster" 
-                        leadingIcon="account-remove"
-                      />
-                    )}
-                  </Menu>
+                    <Icon source="dots-vertical" size={p(20)} color={colors.onSurfaceVariant} />
+                  </Button>
                 </View>
                 <Divider style={{ marginBottom: p(12) }} />
 
-                {assignedRoster ? (
+                {currentGear.roster ? (
                   <View style={styles.rosterContainer}>
                     <View style={styles.rosterAvatar}>
                       <Icon source="account" size={p(40)} color={colors.primary} />
                     </View>
                     <View style={styles.rosterDetails}>
                       <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>
-                        {assignedRoster.roster_name}
+                        {currentGear.roster.first_name} {currentGear.roster.middle_name} {currentGear.roster.last_name}
                       </Text>
                       <Text style={[styles.rosterInfo, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                        {assignedRoster.firestation.fire_station_name}
+                        {currentGear.firestation.name}
                       </Text>
                       <Text style={[styles.rosterInfo, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                        {assignedRoster.email}
+                        {currentGear.roster.email}
                       </Text>
                       <Text style={[styles.rosterInfo, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                        {assignedRoster.phone}
+                        {currentGear.roster.phone}
                       </Text>
                     </View>
                   </View>
@@ -222,7 +199,7 @@ const GearDetailScreen = ({ navigation }: any) => {
                       textColor={colors.surface}
                       style={styles.assignButton}
                       icon="account-plus"
-                      labelStyle={{ fontSize: p(14), fontWeight: '600',color:"#fff" }}
+                      labelStyle={{ fontSize: p(14), fontWeight: '600', color: "#fff" }}
                     >
                       Assign Fire Fighter
                     </Button>
@@ -238,27 +215,51 @@ const GearDetailScreen = ({ navigation }: any) => {
                   Manufacturer Info
                 </Text>
                 <Divider style={{ marginBottom: p(12) }} />
+                
                 <View style={styles.infoRow}>
                   <Icon source="factory" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    {manufacturer.name}
+                    {currentGear.manufacturer.manufacturer_name}
                   </Text>
                 </View>
-                <View style={styles.infoRow}>
-                  <Icon source="map-marker" size={p(18)} color={colors.primary} />
-                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    {manufacturer.country}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Icon source="web" size={p(18)} color={colors.primary} />
-                  <Text
-                    style={[styles.infoText, { color: colors.primary, fontSize: p(16) }]}
-                    onPress={() => Linking.openURL(manufacturer.website)}
-                  >
-                    Visit Website
-                  </Text>
-                </View>
+                
+                {currentGear.manufacturer.email && (
+                  <View style={styles.infoRow}>
+                    <Icon source="email" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      {currentGear.manufacturer.email}
+                    </Text>
+                  </View>
+                )}
+                
+                {currentGear.manufacturer.phone && (
+                  <View style={styles.infoRow}>
+                    <Icon source="phone" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      {currentGear.manufacturer.phone}
+                    </Text>
+                  </View>
+                )}
+                
+                {currentGear?.manufacturer?.address && (
+                  <View style={styles.infoRow}>
+                    <Icon source="map-marker" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      {currentGear.manufacturer.address}
+                    </Text>
+                  </View>
+                )}
+                
+                {(currentGear?.manufacturer?.city || currentGear?.manufacturer?.state || currentGear.manufacturer?.country) && (
+                  <View style={styles.infoRow}>
+                    <Icon source="earth" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      {[currentGear?.manufacturer?.city, currentGear.manufacturer?.state, currentGear.manufacturer?.country]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </Text>
+                  </View>
+                )}
               </Card.Content>
             </Card>
           </View>
@@ -275,60 +276,58 @@ const GearDetailScreen = ({ navigation }: any) => {
                 <View style={styles.infoRow}>
                   <Icon source="tag" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    {gear.type}
+                    {currentGear.gear_type.gear_type}
                   </Text>
                 </View>
                 
                 <View style={styles.infoRow}>
                   <Icon source="certificate" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    {gear.name}
+                    {currentGear.gear_name}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
                   <Icon source="barcode" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    {gear.serial}
-                  </Text>
-                  <Icon source="camera" size={p(16)} color={colors.primary} />
-                </View>
-
-                {/* Gear Images */}
-                <View style={styles.imagesContainer}>
-                  <Text style={[styles.imagesTitle, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                    Gear Images:
-                  </Text>
-                  <View style={styles.imagesRow}>
-                    {[require('../../assets/jacket1.png'),
-                      require('../../assets/jacket2.png'),
-                      require('../../assets/jacket3.png')].map((img, idx) => (
-                      <Image key={idx} source={img} style={styles.thumbSmall} />
-                    ))}
-                    <Button mode="outlined" compact icon="plus" style={styles.addImageBtn}>
-                      Add
-                    </Button>
-                  </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Icon source="calendar-check" size={p(18)} color={colors.primary} />
-                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    Last Inspection: {gear.lastInspection}
+                    {currentGear.serial_number}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon source="calendar-alert" size={p(18)} color={colors.primary} />
+                  <Icon source="calendar" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    Next Inspection: {gear.nextInspection}
+                    Manufacturing Date: {formatDate(currentGear.manufacturing_date)}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon source="clipboard-text" size={p(18)} color={colors.primary} />
+                  <Icon source="shield-check" size={p(18)} color={colors.primary} />
                   <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
-                    Notes: {gear.notes}
+                    Status: {currentGear.active_status ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+
+                {/* General Remarks */}
+                <View style={styles.infoRow}>
+                  <Icon source="note-text" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Remarks: Gear is in good condition, regular maintenance required.
+                  </Text>
+                </View>
+
+                {/* Created/Updated Info */}
+                <View style={styles.infoRow}>
+                  <Icon source="calendar-plus" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Created: {formatDate(currentGear.created_at)} by {currentGear.created_by}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="calendar-edit" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Updated: {formatDate(currentGear.updated_at)} by {currentGear.updated_by}
                   </Text>
                 </View>
               </Card.Content>
@@ -395,12 +394,12 @@ const GearDetailScreen = ({ navigation }: any) => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('UpadateInspection')}
+          onPress={() => navigation.navigate('UpdateInspection')}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
           icon="clipboard-check"
-          labelStyle={{ fontWeight: '700', fontSize: p(16), color:"#fff" }}
+          labelStyle={{ fontWeight: '700', fontSize: p(16), color: "#fff" }}
           contentStyle={{ paddingVertical: p(8) }}
         >
           START GEAR INSPECTION
@@ -506,28 +505,6 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
   },
-  imagesContainer: {
-    marginTop: p(8),
-    marginBottom: p(12),
-  },
-  imagesTitle: {
-    marginBottom: p(8),
-    fontWeight: '600',
-  },
-  imagesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: p(8),
-  },
-  thumbSmall: {
-    width: p(60),
-    height: p(60),
-    borderRadius: p(8),
-  },
-  addImageBtn: {
-    height: p(60),
-    width: p(60),
-  },
   tableHeader: {
     flexDirection: 'row',
     marginBottom: p(8),
@@ -549,6 +526,22 @@ const styles = StyleSheet.create({
   ctaButton: {
     marginTop: p(20),
     borderRadius: p(12),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: p(32),
+  },
+  errorText: {
+    fontSize: p(18),
+    marginBottom: p(16),
+    textAlign: 'center',
   },
 });
 
