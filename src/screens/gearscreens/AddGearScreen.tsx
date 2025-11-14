@@ -168,7 +168,7 @@ const AddGearScreen = () => {
   };
 
   const handleSave = async () => {
-    // if (!validateForm()) return;
+    if (!validateForm()) return;
 
     if (!currentLead) {
       showSnackbar('No current lead found');
@@ -198,7 +198,7 @@ const AddGearScreen = () => {
       active_status: true,
       firestation_id: currentLead?.firestation?.id || assignedRoster?.firestation.id,
       franchise_id: currentLead?.franchise?.id || assignedRoster?.franchise.id,
-      // firestation_id : 11,
+      // firestation_id :11,
       // franchise_id : 22,
       gear_type_id: selectedGearType?.gear_type_id,
       // manufacturing_date: formatDateForAPI(manufacturingDate), // Add manufacturing date
@@ -210,8 +210,7 @@ const AddGearScreen = () => {
     try {
       // const success:any = await createGear(payload);
       // console.log("success-Gear_added successfully",success)'
-    // const createdGear = await createGear(payload);
-    const createdGear = { success : true};
+    const createdGear = await createGear(payload);
     console.log("success-Gear_added successfully", createdGear);
       if (createdGear) {
             Toast.show({
@@ -222,8 +221,7 @@ const AddGearScreen = () => {
         setTimeout(() => {
         resetForm();
           // navigation.goBack();
-        // navigation.navigate('GearDetail', {  gear_id: 22 });
-        navigation.navigate('GearDetail', {  gear_id: 22 });
+        navigation.navigate('GearDetail', {  gear_id: createdGear.gear_id });
         }, 1500);
       } else {
         // showSnackbar('Failed to add gear. Please try again.');
