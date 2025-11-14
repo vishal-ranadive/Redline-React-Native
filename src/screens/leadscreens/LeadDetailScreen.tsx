@@ -32,6 +32,7 @@ import {
   formatStatus,
   type LeadStatus 
 } from '../../constants/leadStatuses';
+import { useLeadStore } from '../../store/leadStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow' >;
 
@@ -80,8 +81,11 @@ const LeadDetailScreen = () => {
   const { colors } = useTheme();
   const { top } = useSafeAreaInsets();
   const { user } = useAuthStore();
+  const { fetchLeadById, currentLead } = useLeadStore();
+
   
   const { lead: initialLead } = route.params as any;
+  printTable("initialLead",initialLead)
   const [lead, setLead] = useState<LeadDetail>(initialLead);
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
@@ -131,12 +135,16 @@ const LeadDetailScreen = () => {
   const fetchLeadDetail = async () => {
     try {
       setLoading(true);
-      const leadDetail = await leadApi.getLeadById(lead.lead_id);
-
-      console.log("Lead detail fetched:", leadDetail);
+      // const leadDetail = await leadApi.getLeadById(lead.lead_id);
+      const leadDetail:any =   await fetchLeadById(lead?.lead_id);
       printTable('Lead Details', leadDetail);
-      setLead(leadDetail);
-      setCurrentStatus(leadDetail.lead_status);
+      if(leadDetail){
+        setLead(leadDetail);
+        setCurrentStatus(leadDetail?.lead_status);        
+      }
+
+      printTable("currentLead",currentLead)
+
     } catch (error) {
       console.error('Error fetching lead details:', error);
       Alert.alert('Error', 'Failed to fetch lead details');

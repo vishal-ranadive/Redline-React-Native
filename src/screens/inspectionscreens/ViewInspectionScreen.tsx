@@ -51,14 +51,14 @@ export default function ViewInspectionScreen() {
 
   return (
     <SafeAreaView style={[styles.container, ]}>
-      <LinearGradient
+      {/* <LinearGradient
         colors={
           dark
             ? [colors.background, '#0b0c10', '#0d1117']
             : ['#f8f9fa', colors.background, '#e3f2fd']
         }
         style={StyleSheet.absoluteFill}
-      />
+      /> */}
       <Header title="Choose Inspection Flow" showBackButton={true} />
 
       <View style={styles.content}>

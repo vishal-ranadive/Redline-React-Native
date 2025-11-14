@@ -24,42 +24,42 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BinsScreen'
 const MOCK_LOADS: Load[] = [
   {
     id: 'L1',
-    name: 'Load 1 - Emergency Response',
+    name: 'Load 1',
     status: 'Sorting',
     binCount: 2,
     createdDate: '2025-11-10'
   },
   {
     id: 'L2',
-    name: 'Load 2 - Training Equipment',
+    name: 'Load 2',
     status: 'Cleaning',
     binCount: 1,
     createdDate: '2025-11-09'
   },
   {
     id: 'L3',
-    name: 'Load 3 - Rescue Operations',
+    name: 'Load 3',
     status: 'Complete',
     binCount: 1,
     createdDate: '2025-11-08'
   },
   {
     id: 'L4',
-    name: 'Load 4 - Fire Suppression',
+    name: 'Load 4',
     status: 'Hand Over',
     binCount: 1,
     createdDate: '2025-11-07'
   },
   {
     id: 'L5',
-    name: 'Load 5 - Medical Supplies',
+    name: 'Load 5',
     status: 'Sorting',
     binCount: 3,
     createdDate: '2025-11-06'
   },
   {
     id: 'L6',
-    name: 'Load 6 - Safety Gear',
+    name: 'Load 6',
     status: 'Cleaning',
     binCount: 2,
     createdDate: '2025-11-05'
@@ -157,13 +157,13 @@ export default function LoadsScreen() {
             </View>
             
             <View style={styles.loadMeta}>
-              <Chip 
+              <View 
                 style={[styles.statusChip, { backgroundColor: getLoadStatusColor(load.status) }]}
-                textStyle={styles.statusChipText}
-                compact
+                // textStyle={styles.statusChipText}
+                // compact
               >
-                {load.status}
-              </Chip>
+                <Text style={styles.statusChipText}>{load.status}</Text>
+              </View>
               <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />
             </View>
           </View>
@@ -362,12 +362,17 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     height: p(24),
+    width:p(75),
+    borderRadius:p(4),
+    padding:p(4),
+    textAlign:'center',
   },
   statusChipText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: p(10),
+    fontSize: p(14),
     lineHeight: p(14),
+    margin:'auto',
   },
   binCountContainer: {
     flexDirection: 'row',

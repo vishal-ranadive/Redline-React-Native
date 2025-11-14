@@ -43,7 +43,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScreen'
 const MOCK_BINS: Bin[] = [
   {
     id: 'B1',
-    name: 'Helmet Bin A',
+    name: 'Bin B1',
     gearType: 'Helmet',
     gearCount: 2,
     maxCapacity: 8,
@@ -51,7 +51,7 @@ const MOCK_BINS: Bin[] = [
   },
   {
     id: 'B2',
-    name: 'Gloves Bin A',
+    name: 'Bin B2',
     gearType: 'Gloves',
     gearCount: 1,
     maxCapacity: 8,
@@ -59,7 +59,7 @@ const MOCK_BINS: Bin[] = [
   },
   {
     id: 'B3',
-    name: 'Boots Bin A',
+    name: 'Bin B3',
     gearType: 'Boots',
     gearCount: 5,
     maxCapacity: 8,
@@ -67,7 +67,7 @@ const MOCK_BINS: Bin[] = [
   },
   {
     id: 'B4',
-    name: 'Jacket Bin A',
+    name: 'Bin B4',
     gearType: 'Jacket',
     gearCount: 3,
     maxCapacity: 8,
@@ -75,7 +75,7 @@ const MOCK_BINS: Bin[] = [
   },
   {
     id: 'B5',
-    name: 'Mask Bin A',
+    name: 'Bin B5',
     gearType: 'Mask',
     gearCount: 4,
     maxCapacity: 8,

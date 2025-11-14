@@ -1,5 +1,7 @@
 // src/constants/leadStatuses.ts
 
+import { printTable } from "../utils/printTable";
+
 /**
  * Lead Status Constants
  * 
@@ -136,6 +138,8 @@ export const getStatusColor = (status: LeadStatus): string => {
  * @returns Formatted display text
  */
 export const formatStatus = (status: LeadStatus): string => {
+  
+  printTable("status", status)
   return status
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase())

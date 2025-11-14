@@ -20,10 +20,11 @@ const PhScale = ({
   };
 
   const updatePh = (newValue: number) => {
-    const rounded = Math.min(10, Math.max(1, Math.round(newValue * 10) / 10));
+    // Clamp 0–10 and fix float precision
+    const rounded = Math.min(10, Math.max(0, Math.round(newValue * 10) / 10));
     setPh(rounded);
     if (onChange) onChange(rounded);
-    setExpandedBase(null); // hide decimals after selecting one
+    setExpandedBase(null);
   };
 
   const handleInput = (text: string) => {
@@ -32,17 +33,16 @@ const PhScale = ({
   };
 
   const handleSubmit = () => {
-    if (ph < 1 || ph > 10) {
-      Alert.alert('Invalid Value', 'Please enter a value between 1.0 and 10.0');
+    if (ph < 0 || ph > 10) {
+      Alert.alert('Invalid Value', 'Please enter a value between 0.0 and 10.0');
       return;
     }
     updatePh(ph);
   };
 
   const handleWholeClick = (num: number) => {
-    // select the number and toggle decimals
-    updatePh(num); // set pH to this whole number
-    setExpandedBase(expandedBase === num ? null : num); // toggle
+    updatePh(num);
+    setExpandedBase(expandedBase === num ? null : num);
   };
 
   return (
@@ -53,9 +53,7 @@ const PhScale = ({
           pH of Water:
         </Text>
 
-        <Button mode="outlined" onPress={() => updatePh(ph - 0.1)} compact>
-          −
-        </Button>
+        <Button mode="outlined" onPress={() => updatePh(ph - 0.1)} compact>−</Button>
 
         <TextInput
           value={ph.toFixed(1)}
@@ -69,18 +67,16 @@ const PhScale = ({
           textAlign="center"
         />
 
-        <Button mode="outlined" onPress={() => updatePh(ph + 0.1)} compact>
-          +
-        </Button>
+        <Button mode="outlined" onPress={() => updatePh(ph + 0.1)} compact>+</Button>
 
         <Text style={[styles.phType, { color: colors.primary }]}>
           ({getPhLabel(ph)})
         </Text>
       </View>
 
-      {/* Whole number buttons */}
+      {/* Whole number buttons 0-10 */}
       <View style={styles.wholeRow}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => {
+        {Array.from({ length: 11 }, (_, i) => i).map((num) => {
           const isActive = Math.floor(ph) === num;
           return (
             <Button
@@ -103,8 +99,8 @@ const PhScale = ({
         })}
       </View>
 
-      {/* Decimal buttons */}
-      {expandedBase && (
+      {/* Decimal numbers */}
+      {expandedBase !== null && (
         <View style={styles.decimalRow}>
           {Array.from({ length: 9 }, (_, j) => j + 1).map((dec) => {
             const value = parseFloat(`${expandedBase}.${dec}`);
@@ -135,11 +131,7 @@ const PhScale = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    width: '100%',
-  },
+  container: { paddingVertical: 16, alignItems: 'center', width: '100%' },
   inlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -148,14 +140,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  inlineLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  phType: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  inlineLabel: { fontSize: 16, fontWeight: '600' },
+  phType: { fontSize: 14, fontWeight: '500' },
   input: {
     borderWidth: 1,
     borderRadius: 8,
@@ -177,13 +163,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
-  quickButton: {
-    minWidth: 40,
-  },
-  subButton: {
-    paddingHorizontal: 4,
-    minWidth: 40,
-  },
+  quickButton: { minWidth: 40 },
+  subButton: { paddingHorizontal: 4, minWidth: 40 },
 });
 
 export default PhScale;
