@@ -574,7 +574,7 @@ const LeadDetailScreen = () => {
         </Card>
 
         {/* Remarks Section */}
-        <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
+        {/* <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
               Remarks
@@ -587,7 +587,7 @@ const LeadDetailScreen = () => {
               </Text>
             </View>
           </Card.Content>
-        </Card>
+        </Card> */}
 
         {/* Action Buttons */}
         <View
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     paddingVertical: p(12),
     marginHorizontal: p(10),
     borderRadius: p(12),
-    marginBottom: p(26),
+    marginBottom: p(46),
   },
 });
 

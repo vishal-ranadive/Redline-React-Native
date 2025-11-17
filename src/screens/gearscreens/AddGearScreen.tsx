@@ -36,6 +36,7 @@ import { printTable } from '../../utils/printTable';
 
 import dayjs from 'dayjs';
 import Toast from 'react-native-toast-message';
+import BarcodeScannerModal from '../../components/common/Modal/BarcodeScannerModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddGear', 'GearSearch'>;
 
@@ -106,6 +107,9 @@ const AddGearScreen = () => {
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
+  // NEW: Barcode scanner state
+  const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
+
   // mock images
   const gearImages = [
     require('../../assets/jacket1.png'),
@@ -137,6 +141,15 @@ const AddGearScreen = () => {
   }, []);
 
   const isLandscape = orientation === 'LANDSCAPE';
+
+    // NEW: Handle barcode scan result
+    const handleBarcodeScanned = (barcode: string) => {
+      setSerialNumber(barcode);
+      Toast.show({
+        type: 'success',
+        text1: 'Barcode scanned successfully!',
+      });
+    };
 
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
@@ -447,6 +460,43 @@ const AddGearScreen = () => {
             <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Information</Text>
             <Divider style={{ marginVertical: p(8) }} />
 
+                        {/* Fire Fighter & Manufacturer side-by-side */}
+                        <View style={[styles.inputRow, { marginTop: p(8), alignItems: 'flex-start', gap: p(6) }]}>
+              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter *</Text>
+                {renderSelectedRosterCard()}
+                {!assignedRoster && (
+                  <TextInput
+                    mode="outlined"
+                    value=""
+                    placeholder="Search fire fighter..."
+                    onFocus={() => setRosterModalVisible(true)}
+                    style={[styles.input, { marginTop: p(6) }]}
+                    right={<TextInput.Icon icon="magnify" />}
+                    dense
+                  />
+                )}
+              </View>
+
+              <View style={{ width: isLandscape ? p(12) : 0, height: isLandscape ? undefined : p(12) }} />
+
+              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturer *</Text>
+                {renderSelectedManufacturerCard()}
+                {!manufacturer && (
+                  <TextInput
+                    mode="outlined"
+                    value=""
+                    placeholder="Select manufacturer..."
+                    onFocus={() => setManufacturerModalVisible(true)}
+                    style={[styles.input, { marginTop: p(6) }]}
+                    right={<TextInput.Icon icon="magnify" />}
+                    dense
+                  />
+                )}
+              </View>
+            </View>
+
             <View style={styles.inputRow}>
               <View style={[styles.inputCol, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.onSurface }]}>Gear Type *</Text>
@@ -508,6 +558,20 @@ const AddGearScreen = () => {
             </View>
 
             <View style={styles.inputRow}>
+              {/* <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>Serial Number *</Text>
+                <TextInput
+                  mode="outlined"
+                  value={serialNumber}
+                  onChangeText={setSerialNumber}
+                  placeholder="Enter serial number"
+                  style={styles.input}
+                  outlineColor={colors.outline}
+                  activeOutlineColor={colors.primary}
+                  dense
+                />
+              </View> */}
+
               <View style={[styles.inputCol, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.onSurface }]}>Serial Number *</Text>
                 <TextInput
@@ -519,6 +583,13 @@ const AddGearScreen = () => {
                   outlineColor={colors.outline}
                   activeOutlineColor={colors.primary}
                   dense
+                  right={
+                    <TextInput.Icon 
+                      icon="barcode-scan" 
+                      onPress={() => setBarcodeScannerVisible(true)}
+                      color={colors.primary}
+                    />
+                  }
                 />
               </View>
 
@@ -570,42 +641,7 @@ const AddGearScreen = () => {
               </View>
             </View>
 
-            {/* Fire Fighter & Manufacturer side-by-side */}
-            <View style={[styles.inputRow, { marginTop: p(8), alignItems: 'flex-start', gap: p(6) }]}>
-              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter *</Text>
-                {renderSelectedRosterCard()}
-                {!assignedRoster && (
-                  <TextInput
-                    mode="outlined"
-                    value=""
-                    placeholder="Search fire fighter..."
-                    onFocus={() => setRosterModalVisible(true)}
-                    style={[styles.input, { marginTop: p(6) }]}
-                    right={<TextInput.Icon icon="magnify" />}
-                    dense
-                  />
-                )}
-              </View>
 
-              <View style={{ width: isLandscape ? p(12) : 0, height: isLandscape ? undefined : p(12) }} />
-
-              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturer *</Text>
-                {renderSelectedManufacturerCard()}
-                {!manufacturer && (
-                  <TextInput
-                    mode="outlined"
-                    value=""
-                    placeholder="Select manufacturer..."
-                    onFocus={() => setManufacturerModalVisible(true)}
-                    style={[styles.input, { marginTop: p(6) }]}
-                    right={<TextInput.Icon icon="magnify" />}
-                    dense
-                  />
-                )}
-              </View>
-            </View>
 
             {/* Manufacturing Date */}
             <View style={{ marginTop: p(10) }}>
@@ -657,7 +693,7 @@ const AddGearScreen = () => {
           <Card style={[styles.card, { backgroundColor: colors.surfaceVariant }]}>
             <Card.Content>
               <Text style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}>
-                Current Lead Information
+                Current Job Information
               </Text>
               <Divider style={{ marginVertical: p(8) }} />
               <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
@@ -702,6 +738,13 @@ const AddGearScreen = () => {
         visible={manufacturerModalVisible}
         onClose={() => setManufacturerModalVisible(false)}
         onSelect={(mfr: any) => { onManufacturerSelect(mfr as ManufacturerItem); setManufacturerModalVisible(false); }}
+      />
+
+            {/* NEW: Barcode Scanner Modal */}
+        <BarcodeScannerModal
+        visible={barcodeScannerVisible}
+        onClose={() => setBarcodeScannerVisible(false)}
+        onBarcodeScanned={handleBarcodeScanned}
       />
 
       {/* Snackbar */}

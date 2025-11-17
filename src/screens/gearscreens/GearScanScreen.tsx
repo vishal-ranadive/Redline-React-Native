@@ -128,7 +128,7 @@ const GearScanScreen = () => {
                 <Button
                   mode="contained"
                   buttonColor={colors.primary}
-                  onPress={() => navigation.navigate('GearDetail')}
+                  onPress={() => navigation.navigate('GearDetail', {gear_id: 22})}
                 >
                   Open Gear
                 </Button>
@@ -216,7 +216,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: p(20),
-    paddingBottom: p(40),
+    // paddingBottom: p(40),
+    marginBottom: p(46),
+
   },
 });
 

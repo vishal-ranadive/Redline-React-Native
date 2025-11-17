@@ -27,20 +27,28 @@
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>34.228.36.8</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-		<string>We need access to your camera to scan barcodes.</string>
-		<key>NSPhotoLibraryUsageDescription</key>
-		<string>For saving photos</string>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>We need access to your microphone to record video.</string>
-		<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>We need access to save photos.</string>
+	<string>We need access to your camera to scan barcodes.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need access to your microphone to record video.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to save photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>For saving photos</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>
