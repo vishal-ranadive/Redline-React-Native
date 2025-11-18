@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/authscreens/LoginScreen';
 import ForgotPasswordScreen from '../screens/authscreens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/authscreens/ResetPasswordScreen';
+import SplashScreen from '../screens/authscreens/SplashScreen';
 import LeadScreen from '../screens/leadscreens/LeadScreen';
 import SettingsScreen from '../screens/settingsscreens/Settings';
 import LeadDetailScreen from '../screens/leadscreens/LeadDetailScreen';
@@ -23,6 +24,7 @@ import ViewInspectionScreen from '../screens/inspectionscreens/ViewInspectionScr
 import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGearsScreen';
 
 export type RootStackParamList = {
+  Splash: undefined;
   Login: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
@@ -59,7 +61,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Login">
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+      <Stack.Screen name="Splash" component={SplashScreen} />
       {/* Auth Screens */}
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />

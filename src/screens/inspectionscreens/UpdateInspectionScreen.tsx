@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  Platform,
+  PermissionsAndroid,
+} from 'react-native';
 import {
   Text,
   TextInput,
@@ -17,6 +27,9 @@ import Header from '../../components/common/Header';
 import CommonDatePicker from '../../components/common/DatePicker';
 import { useLeadStore } from '../../store/leadStore';
 import { printTable } from '../../utils/printTable';
+import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
+import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 // Updated STATUS_OPTIONS as per requirement #7 - all caps
 const STATUS_OPTIONS = [
@@ -211,6 +224,8 @@ export default function UpdateInspectionScreen() {
   // Modal state for image preview
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
 
   // Menu states
   const [serviceMenuVisible, setServiceMenuVisible] = useState(false);
@@ -285,9 +300,52 @@ export default function UpdateInspectionScreen() {
   };
 
   const addNewImage = () => {
-    // In a real app, this would open the image picker
-    const newImage = 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg';
-    setImages(prev => [...prev, newImage]);
+    setShowImageSourceModal(true);
+  };
+
+  const handleCameraCaptured = (uri: string) => {
+    setImages(prev => [...prev, uri]);
+  };
+
+  const requestGalleryPermission = async () => {
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+
+    const permission =
+      Platform.Version >= 33
+        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+
+    const result = await PermissionsAndroid.request(permission);
+    return result === PermissionsAndroid.RESULTS.GRANTED;
+  };
+
+  const handlePickFromGallery = async () => {
+    const granted = await requestGalleryPermission();
+    if (!granted) {
+      Alert.alert('Permission required', 'Please allow gallery access to pick images.');
+      return;
+    }
+
+    try {
+      const response = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+        includeBase64: false,
+      });
+
+      if (response.didCancel) {
+        return;
+      }
+
+      const uri = response.assets?.[0]?.uri;
+      if (uri) {
+        setImages(prev => [...prev, uri]);
+      }
+    } catch (error) {
+      Alert.alert('Image picker error', 'Unable to select image from gallery.');
+    }
   };
 
   return (
@@ -700,6 +758,26 @@ export default function UpdateInspectionScreen() {
           </Button>
         </View>
       </Modal>
+      <ImageSourcePickerModal
+        visible={showImageSourceModal}
+        onDismiss={() => setShowImageSourceModal(false)}
+        onPickCamera={() => {
+          setShowImageSourceModal(false);
+          setShowCameraModal(true);
+        }}
+        onPickGallery={() => {
+          setShowImageSourceModal(false);
+          handlePickFromGallery();
+        }}
+      />
+      <CameraCaptureModal
+        visible={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onPhotoCaptured={uri => {
+          handleCameraCaptured(uri);
+          setShowCameraModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
