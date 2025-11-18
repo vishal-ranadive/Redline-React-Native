@@ -15,6 +15,8 @@ import { useGearStore } from '../../store/gearStore';
 import  GearCard  from '../../components/GearCard';
 import  BarcodeScannerModal  from '../../components/common/Modal/BarcodeScannerModal';
 import { Button } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Header from '../../components/common/Header';
 
 export const GearScanScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -97,10 +99,14 @@ export const GearScanScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header Section */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Scan Gear</Text>
+      <View >
+        {/* <Text style={styles.title}>Scan Gear</Text> */}
+        <Header 
+          title={`Scan Gears`}
+          showBackButton={true}
+        />
         <Text style={styles.subtitle}>
           Scan a barcode or manually enter a serial number to search for gear
         </Text>
@@ -252,7 +258,7 @@ export const GearScanScreen: React.FC = () => {
         onClose={() => setIsScannerVisible(false)}
         onBarcodeScanned={handleBarcodeScanned}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
