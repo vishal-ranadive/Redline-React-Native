@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   PermissionsAndroid,
+  PanResponder,
+  GestureResponderEvent,
 } from 'react-native';
 import {
   Text,
@@ -17,8 +19,8 @@ import {
   Chip,
   Switch,
   Menu,
-  Divider,
   useTheme,
+  IconButton,
 } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
@@ -30,6 +32,8 @@ import { printTable } from '../../utils/printTable';
 import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
 import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal';
 import { launchImageLibrary } from 'react-native-image-picker';
+import Svg, { Path } from 'react-native-svg';
+import ViewShot from 'react-native-view-shot';
 
 // Updated STATUS_OPTIONS as per requirement #7 - all caps
 const STATUS_OPTIONS = [
@@ -224,8 +228,13 @@ export default function UpdateInspectionScreen() {
   // Modal state for image preview
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [paths, setPaths] = useState<string[]>([]);
+  const [currentPath, setCurrentPath] = useState('');
+  const drawingViewRef = useRef<ViewShot | null>(null);
 
   // Menu states
   const [serviceMenuVisible, setServiceMenuVisible] = useState(false);
@@ -294,9 +303,13 @@ export default function UpdateInspectionScreen() {
     return finding?.label || 'Select Helmet Finding';
   };
 
-  const handleImagePress = (imageUri: string) => {
+  const handleImagePress = (imageUri: string, index: number) => {
     setSelectedImage(imageUri);
+    setSelectedImageIndex(index);
     setModalVisible(true);
+    setPaths([]);
+    setCurrentPath('');
+    setIsDrawingMode(false);
   };
 
   const addNewImage = () => {
@@ -347,6 +360,89 @@ export default function UpdateInspectionScreen() {
       Alert.alert('Image picker error', 'Unable to select image from gallery.');
     }
   };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setIsDrawingMode(false);
+    setCurrentPath('');
+    setSelectedImageIndex(null);
+    setPaths([]);
+  };
+
+  const handleUndoDrawing = () => {
+    setPaths(prev => prev.slice(0, -1));
+  };
+
+  const handleSaveDrawing = async () => {
+    if (!drawingViewRef.current || selectedImageIndex === null) {
+      handleCloseModal();
+      return;
+    }
+
+    try {
+      const uri = await drawingViewRef.current.capture?.();
+
+      if (uri) {
+        setImages(prev => {
+          const updated = [...prev];
+          updated[selectedImageIndex] = uri;
+          return updated;
+        });
+      }
+    } catch (error) {
+      Alert.alert('Save error', 'Unable to save annotated image.');
+    } finally {
+      handleCloseModal();
+    }
+  };
+
+  const startDrawing = useCallback(
+    (event: GestureResponderEvent) => {
+      if (!isDrawingMode) {
+        return;
+      }
+      const { locationX, locationY } = event.nativeEvent;
+      setCurrentPath(`M${locationX} ${locationY}`);
+    },
+    [isDrawingMode],
+  );
+
+  const moveDrawing = useCallback(
+    (event: GestureResponderEvent) => {
+      if (!isDrawingMode) {
+        return;
+      }
+      const { locationX, locationY } = event.nativeEvent;
+      setCurrentPath(prev => (prev ? `${prev} L${locationX} ${locationY}` : `M${locationX} ${locationY}`));
+    },
+    [isDrawingMode],
+  );
+
+  const endDrawing = useCallback(() => {
+    if (!isDrawingMode) {
+      return;
+    }
+    setCurrentPath(prev => {
+      if (!prev) {
+        return prev;
+      }
+      setPaths(pathList => [...pathList, prev]);
+      return '';
+    });
+  }, [isDrawingMode]);
+
+  const drawingResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => isDrawingMode,
+        onMoveShouldSetPanResponder: () => isDrawingMode,
+        onPanResponderGrant: startDrawing,
+        onPanResponderMove: moveDrawing,
+        onPanResponderRelease: endDrawing,
+        onPanResponderTerminate: endDrawing,
+      }),
+    [isDrawingMode, startDrawing, moveDrawing, endDrawing],
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -697,7 +793,7 @@ export default function UpdateInspectionScreen() {
                   <TouchableOpacity 
                     key={index} 
                     style={styles.imageBox}
-                    onPress={() => handleImagePress(imageUri)}
+                    onPress={() => handleImagePress(imageUri, index)}
                   >
                     <Image source={{ uri: imageUri }} style={styles.previewImage} />
                   </TouchableOpacity>
@@ -739,23 +835,92 @@ export default function UpdateInspectionScreen() {
         visible={modalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={handleCloseModal}
       >
         <View style={styles.modalContainer}>
-          <TouchableOpacity 
-            style={styles.modalBackground}
-            onPress={() => setModalVisible(false)}
-            activeOpacity={1}
-          >
-            <Image source={{ uri: selectedImage }} style={styles.enlargedImage} />
-          </TouchableOpacity>
-          <Button 
-            mode="contained" 
-            onPress={() => setModalVisible(false)}
-            style={styles.closeButton}
-          >
-            Close
-          </Button>
+          <View style={styles.modalContent}>
+            <View style={styles.modalToolbar}>
+              <IconButton
+                icon="undo"
+                size={26}
+                onPress={handleUndoDrawing}
+                disabled={!paths.length}
+                accessibilityLabel="Undo drawing"
+              />
+              <IconButton
+                icon={isDrawingMode ? 'pencil' : 'pencil-outline'}
+                size={26}
+                onPress={() => setIsDrawingMode(prev => !prev)}
+                accessibilityLabel="Toggle drawing"
+              />
+            </View>
+            <ViewShot
+              ref={drawingViewRef}
+              style={styles.drawingWrapper}
+              options={{ format: 'png', quality: 1, result: 'data-uri' }}
+            >
+              <View
+                style={styles.drawingContent}
+                {...(isDrawingMode ? drawingResponder.panHandlers : {})}
+              >
+                <Image source={{ uri: selectedImage }} style={styles.enlargedImage} />
+                <Svg style={StyleSheet.absoluteFill}>
+                  {paths.map((pathData, index) => (
+                    <Path
+                      key={`path-${index}`}
+                      d={pathData}
+                      stroke="red"
+                      strokeWidth={4}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                  {currentPath ? (
+                    <Path
+                      d={currentPath}
+                      stroke="red"
+                      strokeWidth={4}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ) : null}
+                </Svg>
+              </View>
+            </ViewShot>
+            {isDrawingMode ? (
+              <View style={styles.modalActions}>
+                <Button
+                  mode="contained"
+                  buttonColor="#EA4335"
+                  textColor="#fff"
+                  onPress={handleCloseModal}
+                  style={styles.modalActionButton}
+                >
+                  Close
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleSaveDrawing}
+                  disabled={!paths.length}
+                  style={styles.modalActionButton}
+                >
+                  Save
+                </Button>
+              </View>
+            ) : (
+              <Button 
+                mode="contained" 
+                buttonColor="#EA4335"
+                textColor="#fff"
+                onPress={handleCloseModal}
+                style={styles.closeButton}
+              >
+                Close
+              </Button>
+            )}
+          </View>
         </View>
       </Modal>
       <ImageSourcePickerModal
@@ -899,20 +1064,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalBackground: {
+  modalContent: {
+    width: '90%',
+    alignItems: 'center',
+  },
+  modalToolbar: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  drawingWrapper: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  drawingContent: {
     flex: 1,
     width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   enlargedImage: {
-    width: '90%',
-    height: '70%',
+    width: '100%',
+    height: '100%',
     resizeMode: 'contain',
   },
   closeButton: {
-    position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
+    marginTop: 16,
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 16,
+  },
+  modalActionButton: {
+    flex: 1,
+    marginHorizontal: 6,
   },
 });
