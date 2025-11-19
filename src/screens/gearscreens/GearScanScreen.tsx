@@ -1,482 +1,502 @@
 // src/screens/gearscreens/GearScanScreen.tsx
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  PermissionsAndroid, 
+  Platform, 
   ActivityIndicator,
-  RefreshControl,
+  Modal,
+  FlatList,
+  TouchableOpacity,
+  Image 
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useGearStore } from '../../store/gearStore';
-import  GearCard  from '../../components/GearCard';
-import  BarcodeScannerModal  from '../../components/common/Modal/BarcodeScannerModal';
-import { Button } from 'react-native-paper';
+import { Text, Button, Icon, Card, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Header from '../../components/common/Header';
+import { useNavigation } from '@react-navigation/native';
+import { Camera } from 'react-native-camera-kit';
+import { p } from '../../utils/responsive';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useGearStore } from '../../store/gearStore';
+import { printTable } from '../../utils/printTable';
 
-export const GearScanScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const {
-    gears,
-    loading,
-    error,
-    pagination,
-    searchGears,
-    clearError,
-    clearGears,
-  } = useGearStore();
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail' | 'AddGear' | 'UpadateInspection'>;
 
-  const [isScannerVisible, setIsScannerVisible] = useState(false);
-  const [scannedSerialNumber, setScannedSerialNumber] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+interface ScannedGear {
+  gear_id: number;
+  gear_name: string;
+  serial_number: string;
+  gear_type: {
+    gear_type: string;
+  };
+  roster: {
+    first_name: string;
+    last_name: string;
+  };
+  gear_image_url: string | null;
+}
 
-  // Clear gears when component unmounts
+const GearScanScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTheme();
+  const { searchGears, gears, loading } = useGearStore();
+
+  const [scannedData, setScannedData] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showNotFoundModal, setShowNotFoundModal] = useState(false);
+  const [scannedGears, setScannedGears] = useState<ScannedGear[]>([]);
+  const [isScanningActive, setIsScanningActive] = useState(true);
+  // @ts-ignore
+  const scanTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Request Camera Permission (Android)
   useEffect(() => {
+    const requestPermission = async () => {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA
+        );
+        setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
+      } else {
+        setHasPermission(true);
+      }
+    };
+    requestPermission();
+
+    // Start scanning when component mounts
+    startScanning();
+
     return () => {
-      clearGears();
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
     };
   }, []);
 
-  // Handle scan result
-  const handleBarcodeScanned = (serialNumber: string = "SN-") => {
-    setScannedSerialNumber(serialNumber);
-    setIsScannerVisible(false);
-    searchBySerialNumber(serialNumber);
+  const startScanning = () => {
+    setIsScanningActive(true);
+    setScannedData(null);
+    setScannedGears([]);
+    setShowNotFoundModal(false);
   };
 
-  // Search gears by serial number
-  const searchBySerialNumber = async (serialNumber: string) => {
-    if (!serialNumber.trim()) {
-      Alert.alert('Error', 'Please enter a serial number');
-      return;
-    }
+  // Handle API call when barcode is scanned
+  const handleBarcodeScan = async (scannedValue: string) => {
+    setScannedData(scannedValue);
+    setIsLoading(true);
+    setIsScanningActive(false);
 
-    setIsSearching(true);
     try {
-      await searchGears({ serial_number: serialNumber });
+      // Search gears by serial number
+      const result = await searchGears({ serial_number: scannedValue });
+      printTable("searchGears result", result);
+      printTable("scannedValue", scannedValue);
+      printTable("gears from store", gears);
+
+      if (result.success && gears && gears.length > 0) {
+        // Gears found successfully
+        setScannedGears(gears);
+      } else {
+        // No gears found or API returned error
+        printTable("No gears found, showing modal", result);
+        setShowNotFoundModal(true);
+      }
     } catch (err) {
-      console.error('Search error:', err);
+      console.log('API error:', err);
+      printTable("API error caught", err);
+      setShowNotFoundModal(true);
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
     }
   };
 
-  // Handle manual serial number input
-  const handleManualSearch = () => {
-    if (scannedSerialNumber.trim()) {
-      searchBySerialNumber(scannedSerialNumber);
-    }
+  const handleScanAgain = () => {
+    setShowNotFoundModal(false);
+    startScanning();
   };
 
-  // Refresh search
-  const onRefresh = async () => {
-    if (scannedSerialNumber) {
-      setRefreshing(true);
-      await searchBySerialNumber(scannedSerialNumber);
-      setRefreshing(false);
-    }
-  };
-
-  // Navigate to gear details
-  const handleGearPress = (gear: any) => {
-    // navigation.navigate('GearDetail', { gearId: gear.gear_id });
-  };
-
-  // Navigate to add new gear with scanned serial number
   const handleAddNewGear = () => {
-    // navigation.navigate('AddGear', { serialNumber: scannedSerialNumber });
+    setShowNotFoundModal(false);
+    navigation.navigate('AddGear');
   };
 
-  // Clear current search
-  const handleClearSearch = () => {
-    setScannedSerialNumber('');
-    clearGears();
+  const handleSearchGear = () => {
+    setShowNotFoundModal(false);
+    navigation.navigate('GearSearch');
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header Section */}
-      <View >
-        {/* <Text style={styles.title}>Scan Gear</Text> */}
-        <Header 
-          title={`Scan Gears`}
-          showBackButton={true}
-        />
-        <Text style={styles.subtitle}>
-          Scan a barcode or manually enter a serial number to search for gear
-        </Text>
-      </View>
+  const handleGearPress = (gear: ScannedGear) => {
+    // navigation.navigate('UpadateInspection', { gear_id: gear.gear_id });
+    navigation.navigate('UpadateInspection');
+  };
 
-      {/* Scan Button */}
-      <View style={styles.scanSection}>
-       <Button
-        mode="contained"
-        onPress={() => setIsScannerVisible(true)}
-        style={styles.scanButton}
-        labelStyle={styles.scanButtonText}
-        icon="camera"
-      >
-        Scan Barcode
-      </Button>
-        
-        {/* Serial Number Display */}
-        {scannedSerialNumber ? (
-          <View style={styles.serialNumberContainer}>
-            <Text style={styles.serialNumberLabel}>Scanned Serial Number:</Text>
-            <Text style={styles.serialNumber}>{scannedSerialNumber}</Text>
-          </View>
-        ) : null}
-      </View>
+  printTable("scannedGears state", scannedGears);
 
-      {/* Manual Search Section */}
-      <View style={styles.manualSearchSection}>
-        <Text style={styles.sectionTitle}>Manual Search</Text>
-        <View style={styles.searchRow}>
-          <TouchableOpacity
-            style={styles.manualInput}
-            onPress={() => setIsScannerVisible(true)}
-          >
-            <Text style={scannedSerialNumber ? styles.manualInputText : styles.manualInputPlaceholder}>
-              {scannedSerialNumber || 'Tap to scan or enter serial number'}
-            </Text>
-          </TouchableOpacity>
-          <Button
-            mode="contained"
-            onPress={handleManualSearch}
-            disabled={!scannedSerialNumber || isSearching}
-            style={styles.searchButton}
-            labelStyle={styles.searchButtonText}
-            loading={isSearching}
-          >
-            Search
-          </Button>
-        </View>
-      </View>
-
-      {/* Results Section */}
-      <View style={styles.resultsSection}>
-        {loading || isSearching ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={styles.loadingText}>Searching for gear...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Button
-              mode="contained"
-              onPress={handleManualSearch}
-              style={styles.retryButton}
-              labelStyle={styles.retryButtonText}
-            >
-              Try Again
-            </Button>
-          </View>
-        ) : gears.length > 0 ? (
-          <>
-            <View style={styles.resultsHeader}>
-              <Text style={styles.resultsTitle}>
-                Found {pagination?.total || gears.length} gear(s)
-              </Text>
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Text style={styles.clearText}>Clear</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView
-              style={styles.gearsList}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={['#007AFF']}
-                />
-              }
-            >
-              {gears.map((gear, index) => (
-                <View key={gear.gear_id} style={styles.gearItem}>
-                  <GearCard
-                    gear={gear}
-                    onPress={() => handleGearPress(gear)}
-                    // showDetails={true}
-                  />
-                  {index < gears.length - 1 && <View style={styles.separator} />}
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Add New Gear Option */}
-            <View style={styles.addNewSection}>
-              <Text style={styles.addNewText}>
-                Don't see the gear you're looking for?
-              </Text>
-              <Button
-                mode="outlined"
-                onPress={handleAddNewGear}
-                style={styles.addNewButton}
-                labelStyle={styles.addNewButtonText}
-                icon="plus"
-              >
-                Add New Gear
-              </Button>
-            </View>
-          </>
-        ) : scannedSerialNumber ? (
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>
-              No gear found with serial number:
-            </Text>
-            <Text style={styles.noResultsSerial}>{scannedSerialNumber}</Text>
-            <Button
-              mode="outlined"
-              onPress={handleAddNewGear}
-              style={styles.addNewButton}
-              labelStyle={styles.addNewButtonText}
-              icon="plus"
-            >
-              Add New Gear
-            </Button>
-          </View>
+  const renderGearItem = ({ item }: { item: ScannedGear }) => (
+    <TouchableOpacity 
+      style={styles.gearItem}
+      onPress={() => handleGearPress(item)}
+    >
+      <View style={styles.gearImageContainer}>
+        {item.gear_image_url ? (
+          <Image 
+            source={{ uri: item.gear_image_url }} 
+            style={styles.gearImage}
+            resizeMode="cover"
+          />
         ) : (
-          <View style={styles.initialStateContainer}>
-            <Text style={styles.initialStateText}>
-              Scan a barcode or enter a serial number to search for gear
-            </Text>
+          <View style={styles.placeholderImage}>
+            <Icon source="image" size={p(24)} color="#666" />
           </View>
         )}
       </View>
+      
+      <View style={styles.gearInfo}>
+        <Text style={styles.gearType}>{item?.gear_type?.gear_type}</Text>
+        <Text style={styles.gearName}>
+          {item?.gear_name || 'Unnamed Gear'}
+        </Text>
+        <Text style={styles.rosterName}>
+          {item?.roster?.first_name} {item?.roster?.last_name}
+        </Text>
+        <Text style={styles.serialNumber}>{item.serial_number}</Text>
+      </View>
 
-      {/* Barcode Scanner Modal */}
-      <BarcodeScannerModal
-        visible={isScannerVisible}
-        onClose={() => setIsScannerVisible(false)}
-        onBarcodeScanned={handleBarcodeScanned}
-      />
+      <TouchableOpacity style={styles.shareButton}>
+        <Icon source="share" size={p(16)} color="#fff" />
+      </TouchableOpacity>
+
+      <Icon source="chevron-right" size={p(20)} color="#666" />
+    </TouchableOpacity>
+  );
+
+  if (!hasPermission) {
+    return (
+      <SafeAreaView style={styles.permissionContainer}>
+        <Text style={{ fontSize: p(16), textAlign: 'center' }}>
+          Please allow camera access to scan gear.
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Button mode="text" onPress={() => navigation.goBack()}>
+          <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
+        </Button>
+        <Text style={[styles.title, { color: colors.onSurface }]}>
+          {isScanningActive ? 'Scanning...' : 'Scan Gear'}
+        </Text>
+        <Button mode="text" onPress={() => setFlashOn(!flashOn)}>
+          <Icon
+            source={flashOn ? 'flash' : 'flash-off'}
+            size={p(22)}
+            color={flashOn ? colors.primary : colors.onSurface}
+          />
+        </Button>
+      </View>
+
+      {/* Camera View - Show when scanning is active and no results */}
+      {isScanningActive && scannedGears.length === 0 && !isLoading && (
+        <View style={styles.cameraContainer}>
+          <Camera
+            style={styles.camera}
+            scanBarcode={true}
+            showFrame={true}
+            laserColor={colors.primary}
+            frameColor={colors.primary}
+            torchMode={flashOn ? 'on' : 'off'}
+            onReadCode={(event: any) => {
+              const value = event?.nativeEvent?.codeStringValue;
+              if (value && isScanningActive) {
+                handleBarcodeScan(value);
+              }
+            }}
+          />
+          <View style={styles.scanningOverlay}>
+            <Text style={[styles.scanningText, { color: colors.onSurface }]}>
+              Point camera at gear barcode to scan
+            </Text>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        </View>
+      )}
+
+      {/* Loader */}
+      {isLoading && (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: p(12), fontSize: p(16), color: colors.onSurface }}>
+            Searching for gear...
+          </Text>
+        </View>
+      )}
+
+      {/* Scanned Gears List */}
+      {scannedGears.length > 0 && !isLoading && (
+        <View style={styles.resultsContainer}>
+          <Text style={[styles.resultsTitle, { color: colors.onSurface }]}>
+            Found {scannedGears.length} Gear(s)
+          </Text>
+          <FlatList
+            data={scannedGears}
+            renderItem={renderGearItem}
+            keyExtractor={(item) => item.gear_id.toString()}
+            style={styles.resultsList}
+          />
+          
+          <Button
+            mode="contained"
+            buttonColor={colors.primary}
+            style={styles.scanAgainButton}
+            onPress={handleScanAgain}
+          >
+            Scan Again
+          </Button>
+        </View>
+      )}
+
+      {/* Not Found Modal */}
+      <Modal
+        visible={showNotFoundModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotFoundModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Card style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Card.Content>
+              <View style={styles.modalHeader}>
+                <Icon source="alert-circle" size={p(32)} color={colors.error} />
+                <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+                  Gear Not Found
+                </Text>
+              </View>
+              
+              <Text style={[styles.modalMessage, { color: colors.onSurface }]}>
+                No gear was found with the scanned serial number "{scannedData}". What would you like to do?
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <Button
+                  mode="contained"
+                  buttonColor={colors.primary}
+                  style={styles.modalButton}
+                  onPress={handleAddNewGear}
+                  icon="plus"
+                >
+                  Add New Gear
+                </Button>
+                
+                <Button
+                  mode="outlined"
+                  style={styles.modalButton}
+                  onPress={handleSearchGear}
+                  icon="magnify"
+                >
+                  Search Gear
+                </Button>
+                
+                <Button
+                  mode="contained"
+                  buttonColor={colors.secondary}
+                  style={styles.modalButton}
+                  onPress={handleScanAgain}
+                  icon="camera"
+                >
+                  Scan Again
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        </View>
+      </Modal>
+
+      {/* Bottom Buttons - Only show when not scanning or loading */}
+      {!isScanningActive && scannedGears.length === 0 && !isLoading && (
+        <View style={styles.bottomButtons}>
+          {[
+            { label: 'Manual Add Gear', icon: 'pencil', action: () => navigation.navigate('AddGear') },
+            { label: 'Gallery', icon: 'image', action: () => {} },
+            { label: 'Close', icon: 'close', action: () => navigation.goBack() },
+          ].map((btn, i) => (
+            <Button
+              key={i}
+              mode="contained"
+              icon={btn.icon}
+              onPress={btn.action}
+              buttonColor={colors.primary}
+              labelStyle={{ fontSize: p(14), fontWeight: '600', color:'#fff' }}
+              style={{ borderRadius: p(10), marginHorizontal: p(4), elevation: 4 }}
+            >
+              {btn.label}
+            </Button>
+          ))}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
 
+// ... keep the same styles ...
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, paddingBottom: p(45), },
+  permissionContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: p(20),
   },
   header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 20,
-  },
-  scanSection: {
-    padding: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  scanButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  scanButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  serialNumberContainer: {
-    alignItems: 'center',
-  },
-  serialNumberLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  serialNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  manualSearchSection: {
-    padding: 20,
-    backgroundColor: '#fff',
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  manualInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginRight: 12,
-    backgroundColor: '#f9f9f9',
-  },
-  manualInputText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  manualInputPlaceholder: {
-    fontSize: 16,
-    color: '#999',
-  },
-  searchButton: {
-    backgroundColor: '#34C759',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  resultsSection: {
-    flex: 1,
-    marginTop: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 20,
-  },
-  resultsHeader: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: p(12),
+    paddingTop: p(10),
+  },
+  title: { fontSize: p(18), fontWeight: 'bold' },
+  cameraContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  camera: { 
+    flex: 1, 
+    width: '100%' 
+  },
+  scanningOverlay: {
+    position: 'absolute',
+    bottom: p(20),
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  },
+  scanningText: {
+    fontSize: p(16),
+    marginBottom: p(8),
+    fontWeight: '600',
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultsContainer: {
+    flex: 1,
+    padding: p(16),
   },
   resultsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: p(20),
+    fontWeight: 'bold',
+    marginBottom: p(16),
+    textAlign: 'center',
   },
-  clearText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  gearsList: {
+  resultsList: {
     flex: 1,
   },
   gearItem: {
-    backgroundColor: '#fff',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 20,
-  },
-  addNewSection: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    flexDirection: 'row',
+    backgroundColor: '#f8f8f8',
+    borderRadius: p(12),
+    padding: p(12),
+    marginBottom: p(12),
     alignItems: 'center',
   },
-  addNewText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-    textAlign: 'center',
+  gearImageContainer: {
+    marginRight: p(12),
   },
-  addNewButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    paddingHorizontal: 24,
+  gearImage: {
+    width: p(60),
+    height: p(60),
+    borderRadius: p(30),
   },
-  addNewButtonText: {
-    color: '#007AFF',
-  },
-  noResultsContainer: {
-    flex: 1,
+  placeholderImage: {
+    width: p(60),
+    height: p(60),
+    borderRadius: p(30),
+    backgroundColor: '#e1e1e1',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
   },
-  noResultsText: {
-    fontSize: 18,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 8,
+  gearInfo: {
+    flex: 1,
   },
-  noResultsSerial: {
-    fontSize: 20,
-    fontWeight: '600',
+  gearType: {
+    fontSize: p(16),
+    fontWeight: 'bold',
     color: '#333',
-    textAlign: 'center',
-    marginBottom: 24,
   },
-  initialStateContainer: {
+  gearName: {
+    fontSize: p(14),
+    color: '#666',
+    marginTop: p(2),
+  },
+  rosterName: {
+    fontSize: p(14),
+    color: '#666',
+    marginTop: p(2),
+  },
+  serialNumber: {
+    fontSize: p(12),
+    color: '#999',
+    marginTop: p(2),
+  },
+  shareButton: {
+    padding: p(8),
+    backgroundColor: '#34C759',
+    borderRadius: p(20),
+    marginRight: p(8),
+  },
+  scanAgainButton: {
+    marginTop: p(16),
+    borderRadius: p(25),
+  },
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: p(20),
   },
-  initialStateText: {
-    fontSize: 18,
-    color: '#999',
+  modalCard: {
+    width: '100%',
+    maxWidth: p(320),
+    borderRadius: p(16),
+    padding: p(16),
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: p(16),
+  },
+  modalTitle: {
+    fontSize: p(20),
+    fontWeight: 'bold',
+    marginTop: p(8),
     textAlign: 'center',
-    lineHeight: 24,
   },
-
-searchButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '600',
-},
-
-retryButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '600',
-},
-
+  modalMessage: {
+    fontSize: p(16),
+    textAlign: 'center',
+    marginBottom: p(24),
+    lineHeight: p(22),
+  },
+  modalButtons: {
+    gap: p(12),
+  },
+  modalButton: {
+    borderRadius: p(25),
+  },
+  bottomButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: p(20),
+    marginBottom: p(46),
+  },
 });
 
 export default GearScanScreen;

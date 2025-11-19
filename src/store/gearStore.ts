@@ -1,3 +1,4 @@
+// src/store/gearStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { gearApi } from '../services/gearApi';
@@ -55,7 +56,7 @@ interface Gear {
 interface GearState {
   // State
   gearTypes: GearType[];
-  gears: Gear[]; // Added for search results
+  gears: Gear[];
   currentGear: Gear | null;
   loading: boolean;
   error: string | null;
@@ -69,13 +70,14 @@ interface GearState {
   fetchGearTypes: () => Promise<void>;
   createGear: (gearData: any) => Promise<Gear | null>;
   fetchGearById: (id: number) => Promise<Gear | null>;
-  searchGears: (params?: any) => Promise<void>; // Added search function
+  searchGears: (params?: any) => Promise<{success: boolean, message?: string}>;
+  ScanGearsWithBarcode: (params?: any) => Promise<void>;
   
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
   clearCurrentGear: () => void;
-  clearGears: () => void; // Added to clear search results
+  clearGears: () => void;
 }
 
 export const useGearStore = create<GearState>()(
@@ -115,7 +117,7 @@ export const useGearStore = create<GearState>()(
         }
       },
 
-      // Create new gear - now returns the created gear
+      // Create new gear
       createGear: async (gearData: any) => {
         set({ loading: true, error: null });
         try {
@@ -173,8 +175,49 @@ export const useGearStore = create<GearState>()(
         }
       },
 
-      // Search gears by name (gear_name parameter)
+      // Search gears by serial number - UPDATED to handle 404 properly
       searchGears: async (params: any = {}) => {
+        set({ loading: true, error: null, gears: [] });
+        try {
+          const response = await gearApi.getGears(params);
+          if (response.status) {
+            set({
+              gears: response.gears || [],
+              pagination: response.pagination || null,
+              loading: false,
+              error: null,
+            });
+            return { success: true };
+          } else {
+            set({
+              gears: [],
+              error: response.message || 'No gears found',
+              loading: false,
+            });
+            return { success: false, message: response.message };
+          }
+        } catch (error: any) {
+          // Handle 404 specifically
+          if (error.response?.status === 404) {
+            set({
+              gears: [],
+              error: error.response?.data?.message || 'No gears found',
+              loading: false,
+            });
+            return { success: false, message: error.response?.data?.message || 'No gears found' };
+          } else {
+            set({
+              gears: [],
+              error: error.message || 'Network error',
+              loading: false,
+            });
+            return { success: false, message: error.message || 'Network error' };
+          }
+        }
+      },
+
+      // Scan gears with barcode
+      ScanGearsWithBarcode: async (params: any = {}) => {
         set({ loading: true, error: null });
         try {
           const response = await gearApi.getGears(params);

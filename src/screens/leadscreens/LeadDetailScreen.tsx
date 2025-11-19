@@ -600,9 +600,10 @@ const LeadDetailScreen = () => {
           ]}
         >
           {[
-            { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
-            { label: 'Search Gear', icon: 'magnify', action: () => navigation.navigate('GearSearch') },
-            { label: 'Add Gear', icon: 'plus-circle-outline', action: () => navigation.navigate('AddGear') },
+            // { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
+            { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
+            // { label: 'Search Gear', icon: 'magnify', action: () => navigation.navigate('GearSearch') },
+            // { label: 'Add Gear', icon: 'plus-circle-outline', action: () => navigation.navigate('AddGear') },
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
