@@ -38,7 +38,7 @@ export type RootStackParamList = {
 
   GearDetail: {gear_id:any};
 
-  UpadateInspection: undefined;
+  UpadateInspection:  { gearId: number };
 
   //Profile
    UpdateProfile: undefined;

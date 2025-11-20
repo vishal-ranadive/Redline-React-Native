@@ -130,7 +130,8 @@ const GearScanScreen = () => {
 
   const handleGearPress = (gear: ScannedGear) => {
     // navigation.navigate('UpadateInspection', { gear_id: gear.gear_id });
-    navigation.navigate('UpadateInspection');
+    navigation.navigate('UpadateInspection', { gearId:  gear.gear_id  })
+    // navigation.navigate('UpadateInspection');
   };
 
   printTable("scannedGears state", scannedGears);

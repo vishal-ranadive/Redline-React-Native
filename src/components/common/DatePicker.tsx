@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Button, useTheme } from 'react-native-paper';
-import DatePicker from 'react-native-date-picker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { p } from '../../utils/responsive';
-import { useThemeStore } from '../../store/themeStore'; // ✅ If you're storing theme manually
+import { useThemeStore } from '../../store/themeStore';
 
 interface CommonDatePickerProps {
   label?: string;
@@ -18,35 +18,37 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
   value,
   onChange,
   mode = 'date',
-  placeholder = 'Select date'
+  placeholder = 'Select date',
 }) => {
   const { colors } = useTheme();
-  const appTheme = useThemeStore(state => state.theme); // 'light' | 'dark'
-  
+  const appTheme = useThemeStore(state => state.theme);
+
   const [visible, setVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : new Date());
-
-  const handleConfirm = (date: Date) => {
-    setSelectedDate(date);
-    const formattedDate = mode === 'time' 
-      ? date.toTimeString()
-      : date.toISOString().split('T')[0];
-    onChange(formattedDate);
-    setVisible(false);
-  };
-
-  const handleCancel = () => {
-    setVisible(false);
-  };
+  const [selectedDate, setSelectedDate] = useState(
+    value ? new Date(value) : new Date()
+  );
 
   const formatDisplayDate = (dateString: string) => {
     if (!dateString) return placeholder;
     const date = new Date(dateString);
+
     return mode === 'time'
       ? date.toLocaleTimeString()
       : mode === 'datetime'
       ? date.toLocaleString()
       : date.toLocaleDateString();
+  };
+
+  const handleConfirm = (date: Date) => {
+    setSelectedDate(date);
+
+    const formatted =
+      mode === 'time'
+        ? date.toTimeString()
+        : date.toISOString().split('T')[0];
+
+    onChange(formatted);
+    setVisible(false);
   };
 
   return (
@@ -78,14 +80,14 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
         {formatDisplayDate(value)}
       </Button>
 
-      <DatePicker
-        modal
-        open={visible}
+      <DateTimePickerModal
+        isVisible={visible}
+        mode={mode}
         date={selectedDate}
         onConfirm={handleConfirm}
-        onCancel={handleCancel}
-        mode={mode}
-        theme={appTheme === 'dark' ? 'dark' : 'light'} // ✅ adds dark mode support
+        onCancel={() => setVisible(false)}
+        themeVariant={appTheme === 'dark' ? 'dark' : 'light'}
+        display={Platform.OS === 'ios' ? 'inline' : 'calendar'} // 👈 TAP CALENDAR
       />
     </View>
   );

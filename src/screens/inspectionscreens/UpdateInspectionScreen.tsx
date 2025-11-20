@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -21,6 +21,7 @@ import {
   Menu,
   useTheme,
   IconButton,
+  ActivityIndicator,
 } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
@@ -34,6 +35,7 @@ import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal
 import { launchImageLibrary } from 'react-native-image-picker';
 import Svg, { Path } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
+import { useGearStore } from '../../store/gearStore';
 
 // Updated STATUS_OPTIONS as per requirement #7 - all caps
 const STATUS_OPTIONS = [
@@ -103,127 +105,239 @@ const HELMET_FINDINGS = [
   { value: 'OTHER', label: 'Other' }
 ];
 
-
 type Gear = {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  isHydrotestPerformed: boolean;
-  roster: { 
-    id: number; 
-    name: string;
+  gear_id: number;
+  gear_name: string;
+  gear_type: {
+        gear_type_id: number,
+        gear_type: string
+    };
+  gear_size: string | null;
+  active_status: boolean;
+  serial_number: string;
+  gear_image_url?: string;
+  manufacturing_date: string | null;
+  roster?: {
+    roster_id: number;
     first_name: string;
+    middle_name: string;
     last_name: string;
     email: string;
     phone: string;
   };
   firestation: {
-    id: string;
+    id: number;
     name: string;
   };
   franchise: {
+    id: number;
+    name: string;
+  };
+  manufacturer?: {
+    manufacturer_id?: number;
+    manufacturer_name?: string;
+  };
+  load?: {
     id: string;
     name: string;
   };
-  manufacturer: {
-    manufacturer_id: string;
-    manufacturer_name: string;
-  };
-  load: {
+  bin?: {
     id: string;
     name: string;
   };
-  bin: {
-    id: string;
-    name: string;
-  };
-  gear_type: string;
-  gear_size: string;
   remarks?: string;
-  imageUrl?: string;
-  serialNumber?: string;
-  date?: string;
   hydrotestResult?: string;
   condition?: string;
 };
 
-
+// Dummy gear data as fallback
+const dummyGear: Gear = {
+  gear_id: 1,
+  gear_name: 'Fire Helmet Pro',
+  gear_type:  {
+        "gear_type_id": 2,
+        "gear_type": "HELMET"
+    },
+  gear_size: 'L',
+  active_status: true,
+  serial_number: 'SN-FH-001-2024',
+  gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+  manufacturing_date: '2024-01-01',
+  roster: {
+    roster_id: 1,
+    first_name: 'John',
+    middle_name: 'M',
+    last_name: 'Doe',
+    email: 'john.doe@firestation.com',
+    phone: '555-123-4567'
+  },
+  firestation: {
+    id: 10,
+    name: 'Central Fire Station'
+  },
+  franchise: {
+    id: 19,
+    name: 'Beta Motors Franchise - test'
+  },
+  manufacturer: {
+    manufacturer_id: 50,
+    manufacturer_name: 'Fire Safety Equipment Inc.'
+  },
+  load: {
+    id: 'L001',
+    name: 'Engine 1 - Primary Response'
+  },
+  bin: {
+    id: 'B001',
+    name: 'Helmet Storage Bin A'
+  },
+  remarks: 'Minor scratches on visor',
+  condition: 'Used - Good'
+};
 
 export default function UpdateInspectionScreen() {
   const { colors } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { currentLead } = useLeadStore()
+  const { currentLead } = useLeadStore();
+  const {fetchGearById} = useGearStore();
   
-  // Dummy gear data with all required information
-  const gear: Gear = {
-    id: 'G001',
-    name: 'Fire Helmet Pro',
-    type: 'Helmet',
-    status: 'PASS',
-    isHydrotestPerformed: false,
-    roster: {
-      id: 1,
-      name: 'John M Doe',
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'john.doe@firestation.com',
-      phone: '555-123-4567'
-    },
-    firestation: {
-      id: 'FS001',
-      name: 'Central Fire Station'
-    },
-    franchise: {
-      id: 'FR001',
-      name: 'Beta Motors Franchise - test'
-    },
-    manufacturer: {
-      manufacturer_id: 'M001',
-      manufacturer_name: 'Fire Safety Equipment Inc.'
-    },
-    load: {
-      id: 'L001',
-      name: 'Engine 1 - Primary Response'
-    },
-    bin: {
-      id: 'B001',
-      name: 'Helmet Storage Bin A'
-    },
-    gear_type: 'Helmet',
-    gear_size: 'L',
-    remarks: 'Minor scratches on visor',
-    imageUrl: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serialNumber: 'SN-FH-001-2024',
-    date: '2025-11-15',
-    condition: 'Used - Good'
-  };
+  // State for gear data
+  const [gear, setGear] = useState<Gear | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Local editable state
-  const [status, setStatus] = useState(gear?.status ?? 'PASS');
+  // Get gear ID from route params
+  const gearId = route.params?.gearId;
+  
+  // Fetch gear data when component mounts or gearId changes
+  useEffect(() => {
+    const fetchGear = async () => {
+      if (!gearId) {
+        // If no gear ID provided, use dummy data
+        setGear(dummyGear);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Replace with your actual API call
+        const response = await fetchGearById(gearId);
+        if (response) {
+          printTable("responsefetchGearById",response)
+          const Gear = response; 
+          // @ts-ignore
+          setGear(Gear);
+        } else {
+          setError('Failed to fetch gear data');
+          setGear(dummyGear); // Fallback to dummy data
+        }
+      } catch (err) {
+        setError('Error fetching gear data');
+        setGear(dummyGear); // Fallback to dummy data
+        console.error('Error fetching gear:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGear();
+  }, [gearId]);
+
+  // // Mock API function - replace with your actual API call
+  // const fetchGearById = async (id: number): Promise<Gear | null> => {
+  //   try {
+  //     // Simulate API call
+  //     const mockResponse = {
+  //       status: true,
+  //       message: "Gear fetched successfully",
+  //       gear: {
+  //         gear_id: id,
+  //         gear_name: 'Fire Helmet Pro',
+  //         gear_type: 'Helmet',
+  //         gear_size: 'L',
+  //         active_status: true,
+  //         serial_number: 'SN-001-2025',
+  //         gear_image_url: 'https://example.com/images/helmet-pro.jpg',
+  //         manufacturing_date: '2024-01-01',
+  //         roster: {
+  //           roster_id: 1,
+  //           first_name: 'Jane',
+  //           middle_name: 'M',
+  //           last_name: 'Doe',
+  //           email: 'jane.doe@fire.com',
+  //           phone: '5551234567'
+  //         },
+  //         firestation: {
+  //           id: 10,
+  //           name: 'Central Fire Station'
+  //         },
+  //         franchise: {
+  //           id: 19,
+  //           name: 'Beta Motors Franchise - test'
+  //         },
+  //         manufacturer: {
+  //           manufacturer_id: 50,
+  //           manufacturer_name: 'Fire Safety Equipment Inc.'
+  //         }
+  //       }
+  //     };
+      
+  //     // Simulate network delay
+  //     await new Promise((resolve:any) => setTimeout(resolve, 1000));
+      
+  //     return mockResponse.gear;
+  //   } catch (error) {
+  //     console.error('API Error:', error);
+  //     return null;
+  //   }
+  // };
+
+  // Local editable state - initialize with gear data when available
+  const [status, setStatus] = useState('PASS');
   const [serviceType, setServiceType] = useState('CLEANED_AND_INSPECTED');
   const [harnessType, setHarnessType] = useState('CLASS_3');
   const [size, setSize] = useState(gear?.gear_size ?? 'L');
   const [helmetFinding, setHelmetFinding] = useState('');
-  const [serialNumber, setSerial] = useState(gear?.serialNumber ?? 'SN-FH-001-2024');
+  const [serialNumber, setSerial] = useState(gear?.serial_number ?? '');
   
-  const [hydroPerformed, setHydroPerformed] = useState(!!gear?.isHydrotestPerformed);
-  const [hydroResult, setHydroResult] = useState<string | undefined>(gear?.hydrotestResult);
-  const [startDate, setStartDate] = useState<string>(gear?.date ?? '2025-11-15');
+  const [hydroPerformed, setHydroPerformed] = useState(false);
+  const [hydroResult, setHydroResult] = useState<string | undefined>(undefined);
+  const [startDate, setStartDate] = useState<string>('2025-11-15');
   const [endDate, setEndDate] = useState<string>('2025-11-20');
   const [condition, setCondition] = useState<string | undefined>(gear?.condition ?? 'Used - Good');
   const [repairNeeded, setRepairNeeded] = useState(false);
   const [cost, setCost] = useState<string>('125.00');
-  const [remarks, setRemarks] = useState<string>(gear?.remarks ?? 'Minor scratches on visor');
+  const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
   
+  // Update form fields when gear data loads
+  useEffect(() => {
+    if (gear) {
+      setSize(gear.gear_size || 'L');
+      setSerial(gear.serial_number || '');
+      setCondition(gear.condition || 'Used - Good');
+      setRemarks(gear.remarks || '');
+    }
+  }, [gear]);
+
   // Multiple images state
-  const [images, setImages] = useState([
-    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg'
-  ]);
+  const [images, setImages] = useState<string[]>([]);
+
+  // Update images when gear image URL is available
+  useEffect(() => {
+    if (gear?.gear_image_url) {
+      setImages([gear.gear_image_url]);
+    } else {
+      setImages([
+        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg'
+      ]);
+    }
+  }, [gear]);
 
   // Modal state for image preview
   const [modalVisible, setModalVisible] = useState(false);
@@ -243,8 +357,13 @@ export default function UpdateInspectionScreen() {
   const [helmetFindingMenuVisible, setHelmetFindingMenuVisible] = useState(false);
 
   const saveChanges = () => {
-    // TODO: persist changes to backend / store
+    if (!gear) {
+      Alert.alert('Error', 'No gear data available');
+      return;
+    }
+
     console.log('Save', { 
+      gearId: gear.gear_id,
       status, 
       serviceType, 
       harnessType, 
@@ -260,23 +379,8 @@ export default function UpdateInspectionScreen() {
       remarks 
     });
     
-    let item = {        
-      id: '423456',
-      name: 'Emma Scott',
-      phone: '555-444-4567',
-      email: 'emma.scott@gmail.com',
-      station: 'Community Volunteer Fire Department',
-      status: 'Scheduled',
-      leadType: 'Inspection',
-      technicianDetails: [{ name: 'Mike Ross', id: 'T004' }],
-      department: 'Community Volunteer Fire Department',
-      appointmentDate: '12 Nov 2025',
-    }
-    
-    
-    navigation.navigate('LeadDetail', {lead : currentLead});
+    navigation.navigate('LeadDetail', { lead: currentLead });
   };
-  // printTable("currentLead-updateStatuspage",currentLead)
 
   const getStatusColor = (statusValue: string) => {
     const statusOption = STATUS_OPTIONS.find(option => option.value === statusValue);
@@ -444,6 +548,76 @@ export default function UpdateInspectionScreen() {
     [isDrawingMode, startDrawing, moveDrawing, endDrawing],
   );
 
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <Header 
+          title="Update Gear Status"
+          showBackButton={true}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading gear data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error && !gear) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <Header 
+          title="Update Gear Status"
+          showBackButton={true}
+        />
+        <View style={styles.errorContainer}>
+          <IconButton
+            icon="alert-circle-outline"
+            size={48}
+            iconColor={colors.error}
+          />
+          <Text style={styles.errorText}>{error}</Text>
+          <Button 
+            mode="contained" 
+            onPress={() => navigation.goBack()}
+            style={styles.errorButton}
+          >
+            Go Back
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Don't render main content if no gear data
+  if (!gear) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <Header 
+          title="Update Gear Status"
+          showBackButton={true}
+        />
+        <View style={styles.errorContainer}>
+          <IconButton
+            icon="package-variant-closed"
+            size={48}
+            iconColor={colors.onSurfaceDisabled}
+          />
+          <Text style={styles.errorText}>No gear data available</Text>
+          <Button 
+            mode="contained" 
+            onPress={() => navigation.goBack()}
+            style={styles.errorButton}
+          >
+            Go Back
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView>
@@ -452,13 +626,27 @@ export default function UpdateInspectionScreen() {
           showBackButton={true}
         />
 
+        {/* Error banner */}
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: colors.errorContainer }]}>
+            <IconButton
+              icon="alert-circle"
+              size={20}
+              iconColor={colors.error}
+            />
+            <Text style={[styles.errorBannerText, { color: colors.error }]}>
+              Using fallback data: {error}
+            </Text>
+          </View>
+        )}
+
         {/* Top summary */}
         <View style={[styles.topCard, { backgroundColor: colors.surface }]}>
           <View style={styles.topLeft}>
             <Text style={styles.smallLabel}>Gear Information</Text>
-            <Text style={styles.infoText}>Type: {gear.gear_type}</Text>
+            <Text style={styles.infoText}>Type: {gear.gear_type.gear_type || 'N/A'}</Text>
             <Text style={styles.infoText}>Serial: {serialNumber}</Text>
-            <Text style={styles.infoText}>Manufacturer: {gear.manufacturer.manufacturer_name}</Text>
+            <Text style={styles.infoText}>Manufacturer: {gear?.manufacturer?.manufacturer_name}</Text>
           </View>
 
           <View style={styles.topRight}>
@@ -472,8 +660,12 @@ export default function UpdateInspectionScreen() {
 
             <Text style={[styles.smallLabel, { marginTop: 8 }]}>Assignment</Text>
             <Text style={styles.infoText}>{gear.firestation.name}</Text>
-            <Text style={styles.infoText}>Load No: L1</Text>
-            <Text style={styles.infoText}>Bin No: B1</Text>
+            <Text style={styles.infoText}>
+              Load No: {gear.load?.name || 'L1'}
+            </Text>
+            <Text style={styles.infoText}>
+              Bin No: {gear.bin?.name || 'B1'}
+            </Text>
           </View>
         </View>
 
@@ -483,7 +675,9 @@ export default function UpdateInspectionScreen() {
           <View style={styles.rosterInfo}>
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Name</Text>
-              <Text style={styles.infoText}>{gear.roster.name}</Text>
+              <Text style={styles.infoText}>
+                {gear.roster.first_name} {gear.roster.middle_name} {gear.roster.last_name}
+              </Text>
             </View>
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Email</Text>
@@ -645,7 +839,7 @@ export default function UpdateInspectionScreen() {
                 <Switch value={hydroPerformed} onValueChange={setHydroPerformed} />
               </View>
 
-                            <View style={styles.rowSpace}>
+              <View style={styles.rowSpace}>
                 <Text style={styles.fieldLabel}>Hydro Test Result</Text>
                 <View style={styles.rowWrap}>
                   <Chip
@@ -682,7 +876,6 @@ export default function UpdateInspectionScreen() {
                   </Chip>
                 </View>
               </View>
-
 
               <View style={{ flex: 1 }}>
                 <View style={{ marginTop: p(10) }}>
@@ -727,7 +920,6 @@ export default function UpdateInspectionScreen() {
           <View style={styles.col}>
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <Text style={styles.cardTitle}>Condition & Repair</Text>
-
 
               <Text style={styles.fieldLabel}>Cost (USD)</Text>
               <TextInput
@@ -965,6 +1157,49 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: { fontSize: 18, fontWeight: '700' },
+  
+  // Loading and error styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: p(16),
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: p(16),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorButton: {
+    marginTop: 12,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 14,
+    marginTop: 8,
+    borderRadius: 8,
+    padding: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: p(12),
+    marginLeft: 8,
+  },
+
   topCard: {
     marginHorizontal: 14,
     marginTop: 8,
