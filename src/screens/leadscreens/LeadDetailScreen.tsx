@@ -355,6 +355,8 @@ const LeadDetailScreen = () => {
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
+                // { icon: 'account', label: 'Sales Person', value: lead?.lead?.salePersonName },
+                { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -385,7 +387,7 @@ const LeadDetailScreen = () => {
         </Card>
 
         {/* Sales Person Info */}
-        <Card style={[
+        {/* <Card style={[
           styles.card, 
           { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
         ]}>
@@ -431,7 +433,7 @@ const LeadDetailScreen = () => {
               ))}
             </View>
           </Card.Content>
-        </Card>
+        </Card> */}
 
         {/* Technician Information */}
         <Card
@@ -531,7 +533,7 @@ const LeadDetailScreen = () => {
           <Card.Content>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
-                PH of Water
+                Hardness of Water
               </Text>
 
               {/* Tap area to expand slider */}
@@ -548,7 +550,7 @@ const LeadDetailScreen = () => {
                 }}
               >
                 <Text style={{ color: getPhColor(phValue), fontWeight: '700', fontSize: p(18) }}>
-                  {phValue} ({getPhLabel(phValue)})
+                  {/* {phValue} ({getPhLabel(phValue)}) */} {phValue}
                 </Text>
                 <Icon
                   source={showPhSlider ? 'chevron-up' : 'chevron-down'}
@@ -574,7 +576,7 @@ const LeadDetailScreen = () => {
         </Card>
 
         {/* Remarks Section */}
-        {/* <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
+        <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
               Remarks
@@ -587,7 +589,7 @@ const LeadDetailScreen = () => {
               </Text>
             </View>
           </Card.Content>
-        </Card> */}
+        </Card>
 
         {/* Action Buttons */}
         <View

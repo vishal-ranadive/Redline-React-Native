@@ -74,6 +74,19 @@ const SIZE_OPTIONS = [
   { value: 'ONE_SIZE', label: 'One Size' },
 ];
 
+const LOAD_OPTIONS = [
+  { value: '1', label: 'Load 1', color: '#FF6B6B' },
+  { value: '2', label: 'Load 2', color: '#4ECDC4' },
+  { value: '3', label: 'Load 3', color: '#45B7D1' },
+  { value: '4', label: 'Load 4', color: '#96CEB4' },
+  { value: '5', label: 'Load 5', color: '#FFEAA7' },
+  { value: '6', label: 'Load 6', color: '#DDA0DD' },
+  { value: '7', label: 'Load 7', color: '#98D8C8' },
+  { value: '8', label: 'Load 8', color: '#F7DC6F' },
+  { value: '9', label: 'Load 9', color: '#BB8FCE' },
+  { value: '10', label: 'Load 10', color: '#85C1E9' },
+];
+
 // Helmet Findings options
 const HELMET_FINDINGS = [
   { value: 'MFR_LABEL_DAMAGED_LOOSE', label: 'Mfr. Info Label Damaged/Loose' },
@@ -311,6 +324,8 @@ export default function UpdateInspectionScreen() {
   const [repairNeeded, setRepairNeeded] = useState(false);
   const [cost, setCost] = useState<string>('125.00');
   const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
+  // Add this state variable with other state declarations
+const [selectedLoad, setSelectedLoad] = useState('1');
   
   // Update form fields when gear data loads
   useEffect(() => {
@@ -338,6 +353,19 @@ export default function UpdateInspectionScreen() {
       ]);
     }
   }, [gear]);
+
+  // Add this function with other helper functions
+const getLoadLabel = (loadValue: string) => {
+  const load = LOAD_OPTIONS.find(option => option.value === loadValue);
+  return load?.label || 'Select Load';
+};
+const getLoadColor = (loadValue: string) => {
+  const load = LOAD_OPTIONS.find(option => option.value === loadValue);
+  return load?.color || '#666';
+};
+
+// Add this menu state with other menu states
+const [loadMenuVisible, setLoadMenuVisible] = useState(false);
 
   // Modal state for image preview
   const [modalVisible, setModalVisible] = useState(false);
@@ -672,27 +700,32 @@ export default function UpdateInspectionScreen() {
         {/* Roster Information */}
         <View style={[styles.rosterCard, { backgroundColor: colors.surface }]}>
           <Text style={styles.cardTitle}>Firefighter Information</Text>
+
           <View style={styles.rosterInfo}>
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Name</Text>
               <Text style={styles.infoText}>
-                {gear.roster.first_name} {gear.roster.middle_name} {gear.roster.last_name}
+                {gear?.roster?.first_name ?? "-"} {gear?.roster?.middle_name ?? ""} {gear?.roster?.last_name ?? ""}
               </Text>
             </View>
+
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Email</Text>
-              <Text style={styles.infoText}>{gear.roster.email}</Text>
+              <Text style={styles.infoText}>{gear?.roster?.email ?? "-"}</Text>
             </View>
+
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Phone</Text>
-              <Text style={styles.infoText}>{gear.roster.phone}</Text>
+              <Text style={styles.infoText}>{gear?.roster?.phone ?? "-"}</Text>
             </View>
+
             <View style={styles.rosterDetail}>
               <Text style={styles.fieldLabel}>Franchise</Text>
-              <Text style={styles.infoText}>{gear.franchise.name}</Text>
+              <Text style={styles.infoText}>{gear?.franchise?.name ?? "-"}</Text>
             </View>
           </View>
         </View>
+
 
         {/* Main form grid */}
         <View style={styles.row}>
@@ -979,6 +1012,66 @@ export default function UpdateInspectionScreen() {
                 style={[styles.input, { fontSize: p(14) }]}
               />
 
+              {/* <View style={[styles.rowSpace, { marginTop: 8 }]}>
+<Text style={styles.fieldLabel}>Load Number</Text>
+<Menu
+  visible={loadMenuVisible}
+  onDismiss={() => setLoadMenuVisible(false)}
+  anchor={
+    <Button
+      mode="outlined"
+      onPress={() => setLoadMenuVisible(true)}
+      style={styles.menuButton}
+      contentStyle={styles.menuButtonContent}
+    >
+      {getLoadLabel(selectedLoad)}
+    </Button>
+  }
+>
+  {LOAD_OPTIONS.map((load) => (
+    <Menu.Item
+      key={load.value}
+      onPress={() => {
+        setSelectedLoad(load.value);
+        setLoadMenuVisible(false);
+      }}
+      title={load.label}
+      titleStyle={{ fontSize: p(14) }}
+      style={{ backgroundColor: load.color, margin: 2, borderRadius: 4 }}
+    />
+  ))}
+</Menu>
+
+              </View> */}
+
+
+              {/* Optional: Display the selected load with color chips */}
+<Text style={styles.fieldLabel}>Select Load</Text>
+<View style={styles.rowWrap}>
+  {LOAD_OPTIONS.map((load) => (
+    <Chip
+      key={load.value}
+      selected={selectedLoad === load.value}
+      onPress={() => setSelectedLoad(load.value)}
+      style={[
+        styles.loadChip,
+        { 
+          backgroundColor: selectedLoad === load.value ? load.color : "red",
+          borderColor: load.color,
+          borderWidth: 1,
+        }
+      ]}
+      textStyle={{ 
+        color: selectedLoad === load.value ? '#fff' : colors.onSurfaceVariant,
+        fontSize: p(12),
+        fontWeight: 'bold'
+      }}
+    >
+      {load.label}
+    </Chip>
+  ))}
+</View>
+
               <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Gear Images</Text>
               <View style={styles.imagesContainer}>
                 {images.map((imageUri, index) => (
@@ -1157,7 +1250,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: { fontSize: 18, fontWeight: '700' },
-  
+  loadChip: { 
+  marginRight: 6, 
+  marginBottom: 6,
+},
   // Loading and error styles
   loadingContainer: {
     flex: 1,

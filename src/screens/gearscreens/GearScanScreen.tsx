@@ -37,6 +37,36 @@ interface ScannedGear {
   gear_image_url: string | null;
 }
 
+// Mock gears data for simulation
+const MOCK_GEARS: ScannedGear[] = [
+  {
+    "gear_id": 15,
+    "gear_name": "fire extenwisher",
+    "serial_number": "SN-001-2025",
+    "gear_type": {
+      "gear_type": "JACKET LINER"
+    },
+    "roster": {
+      "first_name": "Jane",
+      "last_name": "Doe"
+    },
+    "gear_image_url": "https://example.com/images/helmet-pro.jpg"
+  },
+  {
+    "gear_id": 17,
+    "gear_name": "gloves fire profe",
+    "serial_number": "SN-001-2025",
+    "gear_type": {
+      "gear_type": "HELMET"
+    },
+    "roster": {
+      "first_name": "DemoRosterAA",
+      "last_name": "AA"
+    },
+    "gear_image_url": "https://example.com/images/helmet-pro.jpg"
+  }
+];
+
 const GearScanScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
@@ -49,8 +79,12 @@ const GearScanScreen = () => {
   const [showNotFoundModal, setShowNotFoundModal] = useState(false);
   const [scannedGears, setScannedGears] = useState<ScannedGear[]>([]);
   const [isScanningActive, setIsScanningActive] = useState(true);
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [simulationCountdown, setSimulationCountdown] = useState(3);
   // @ts-ignore
   const scanTimeoutRef = useRef<NodeJS.Timeout>();
+  // @ts-ignore
+  const countdownRef = useRef<NodeJS.Timeout>();
 
   // Request Camera Permission (Android)
   useEffect(() => {
@@ -73,6 +107,9 @@ const GearScanScreen = () => {
       if (scanTimeoutRef.current) {
         clearTimeout(scanTimeoutRef.current);
       }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
     };
   }, []);
 
@@ -81,6 +118,87 @@ const GearScanScreen = () => {
     setScannedData(null);
     setScannedGears([]);
     setShowNotFoundModal(false);
+    setIsSimulationMode(false);
+    setSimulationCountdown(simulationCountdown);
+    
+    // Clear any existing timers
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+  };
+
+const stopScanning = () => {
+  setIsScanningActive(false);
+  
+  // Always show the modal when stopping scanning
+  setShowNotFoundModal(true);
+  
+  setIsSimulationMode(false);
+  setSimulationCountdown(simulationCountdown);
+  
+  // Clear timers
+  if (scanTimeoutRef.current) {
+    clearTimeout(scanTimeoutRef.current);
+  }
+  if (countdownRef.current) {
+    clearInterval(countdownRef.current);
+  }
+};
+
+  const startSimulation = () => {
+    setIsScanningActive(false);
+    setIsSimulationMode(true);
+    setScannedGears([]);
+    setShowNotFoundModal(false);
+    setSimulationCountdown(simulationCountdown);
+    
+    // Start countdown
+    countdownRef.current = setInterval(() => {
+      setSimulationCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          simulateBarcodeScan();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Simulate scanning after 5 seconds
+    scanTimeoutRef.current = setTimeout(() => {
+      simulateBarcodeScan();
+    }, 5000);
+  };
+
+  const simulateBarcodeScan = () => {
+    const simulatedSerialNumber = "SN-001-2025";
+    setScannedData(simulatedSerialNumber);
+    setIsLoading(true);
+
+    // Clear countdown
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+    setSimulationCountdown(0);
+
+    // Simulate API call delay
+    setTimeout(() => {
+      // For simulation, we'll use mock data
+      const foundGears = MOCK_GEARS.filter(gear => 
+        gear.serial_number === simulatedSerialNumber
+      );
+
+      if (foundGears.length > 0) {
+        setScannedGears(foundGears);
+      } else {
+        setShowNotFoundModal(true);
+      }
+      setIsLoading(false);
+      setIsSimulationMode(false);
+    }, 1000);
   };
 
   // Handle API call when barcode is scanned
@@ -88,6 +206,7 @@ const GearScanScreen = () => {
     setScannedData(scannedValue);
     setIsLoading(true);
     setIsScanningActive(false);
+    setIsSimulationMode(false);
 
     try {
       // Search gears by serial number
@@ -129,9 +248,7 @@ const GearScanScreen = () => {
   };
 
   const handleGearPress = (gear: ScannedGear) => {
-    // navigation.navigate('UpadateInspection', { gear_id: gear.gear_id });
-    navigation.navigate('UpadateInspection', { gearId:  gear.gear_id  })
-    // navigation.navigate('UpadateInspection');
+    navigation.navigate('UpadateInspection', { gearId: gear.gear_id })
   };
 
   printTable("scannedGears state", scannedGears);
@@ -192,7 +309,9 @@ const GearScanScreen = () => {
           <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
         </Button>
         <Text style={[styles.title, { color: colors.onSurface }]}>
-          {isScanningActive ? 'Scanning...' : 'Scan Gear'}
+          {isScanningActive ? 'Scanning...' : 
+           isSimulationMode ? `Simulating... ${simulationCountdown}s` : 
+           'Scan Gear'}
         </Text>
         <Button mode="text" onPress={() => setFlashOn(!flashOn)}>
           <Icon
@@ -203,8 +322,26 @@ const GearScanScreen = () => {
         </Button>
       </View>
 
+      {/* Simulation Countdown */}
+      {isSimulationMode && (
+        <View style={[styles.simulationBanner, { backgroundColor: colors.primaryContainer }]}>
+          <Icon source="test-tube" size={p(16)} color={colors.primary} />
+          <Text style={[styles.simulationText, { color: colors.primary }]}>
+            Simulation scanning in: {simulationCountdown} seconds
+          </Text>
+          <Button 
+            mode="text" 
+            compact 
+            onPress={stopScanning}
+            textColor={colors.primary}
+          >
+            Stop
+          </Button>
+        </View>
+      )}
+
       {/* Camera View - Show when scanning is active and no results */}
-      {isScanningActive && scannedGears.length === 0 && !isLoading && (
+      {isScanningActive && scannedGears.length === 0 && !isLoading && !isSimulationMode && (
         <View style={styles.cameraContainer}>
           <Camera
             style={styles.camera}
@@ -220,12 +357,28 @@ const GearScanScreen = () => {
               }
             }}
           />
-          <View style={styles.scanningOverlay}>
+          {/* <View style={styles.scanningOverlay}>
             <Text style={[styles.scanningText, { color: colors.onSurface }]}>
               Point camera at gear barcode to scan
             </Text>
             <ActivityIndicator size="small" color={colors.primary} />
+          </View> */}
+        </View>
+      )}
+
+      {/* Simulation View - Show when simulating */}
+      {isSimulationMode && (
+        <View style={styles.simulationContainer}>
+          <View style={styles.simulationAnimation}>
+            <Icon source="barcode-scan" size={p(80)} color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} style={styles.simulationSpinner} />
           </View>
+          <Text style={[styles.simulationCountdownText, { color: colors.onSurface }]}>
+            Scanning in {simulationCountdown} seconds...
+          </Text>
+          <Text style={[styles.simulationHint, { color: colors.onSurfaceVariant }]}>
+            Simulation mode - This will automatically find matching gears
+          </Text>
         </View>
       )}
 
@@ -234,7 +387,7 @@ const GearScanScreen = () => {
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ marginTop: p(12), fontSize: p(16), color: colors.onSurface }}>
-            Searching for gear...
+            {isSimulationMode ? 'Simulating search...' : 'Searching for gear...'}
           </Text>
         </View>
       )}
@@ -320,7 +473,7 @@ const GearScanScreen = () => {
       </Modal>
 
       {/* Bottom Buttons - Only show when not scanning or loading */}
-      {!isScanningActive && scannedGears.length === 0 && !isLoading && (
+      {/* {!isScanningActive && scannedGears.length === 0 && !isLoading && !isSimulationMode && (
         <View style={styles.bottomButtons}>
           {[
             { label: 'Manual Add Gear', icon: 'pencil', action: () => navigation.navigate('AddGear') },
@@ -340,12 +493,41 @@ const GearScanScreen = () => {
             </Button>
           ))}
         </View>
-      )}
+      )} */}
+
+{/* Simulation Button - Only show when not active */}
+{!isSimulationMode && isScanningActive && (
+  <View style={styles.simulationButtonContainer}>
+    <Button
+      mode="outlined"
+      icon="test-tube"
+      onPress={startSimulation}
+      style={styles.simulationButton}
+      textColor={colors.primary}
+    >
+      Simulate Scan
+    </Button>
+  </View>
+)}
+
+{/* Stop Scanning Button - Show when scanning is active */}
+{isScanningActive && !isSimulationMode && (
+  <View style={styles.stopButtonContainer}>
+    <Button
+      mode="contained"
+      buttonColor={colors.error}
+      onPress={stopScanning}
+      style={styles.stopButton}
+      icon="stop"
+    >
+      Stop Scanning
+    </Button>
+  </View>
+)}
     </SafeAreaView>
   );
 };
 
-// ... keep the same styles ...
 const styles = StyleSheet.create({
   container: { flex: 1, paddingBottom: p(45), },
   permissionContainer: {
@@ -497,6 +679,65 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     padding: p(20),
     marginBottom: p(46),
+  },
+  simulationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: p(12),
+    marginHorizontal: p(16),
+    borderRadius: p(8),
+    marginTop: p(8),
+  },
+  simulationText: {
+    fontSize: p(14),
+    fontWeight: '600',
+    marginLeft: p(8),
+    marginRight: p(8),
+  },
+  simulationButtonContainer: {
+    position: 'absolute',
+    bottom: p(160),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  simulationButton: {
+    borderRadius: p(25),
+    borderColor: '#34C759',
+  },
+  stopButtonContainer: {
+    position: 'absolute',
+    bottom: p(100),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  stopButton: {
+    borderRadius: p(25),
+  },
+  simulationContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: p(40),
+  },
+  simulationAnimation: {
+    alignItems: 'center',
+    marginBottom: p(20),
+  },
+  simulationSpinner: {
+    marginTop: p(20),
+  },
+  simulationCountdownText: {
+    fontSize: p(18),
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: p(8),
+  },
+  simulationHint: {
+    fontSize: p(14),
+    textAlign: 'center',
   },
 });
 

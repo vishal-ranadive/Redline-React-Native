@@ -403,7 +403,7 @@ const GearDetailScreen = () => {
         {/* CTA Button */}
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('UpadateInspection')}
+          onPress={() => navigation.navigate('UpadateInspection',{gearId: gear_id} )}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
