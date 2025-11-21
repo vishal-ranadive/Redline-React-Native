@@ -14,13 +14,13 @@ import {
   Badge,
   Dialog,
   Portal,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput
 } from 'react-native-paper';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
-import PhScale from './components/PhScale';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
 
@@ -59,6 +59,7 @@ interface LeadDetail {
   firestation: {
     id: number;
     name: string;
+    address?: string
   };
   assigned_technicians: Technician[];
   type: 'REPAIR' | 'INSPECTION';
@@ -70,6 +71,35 @@ interface LeadDetail {
   createdBy: string;
   updatedBy: string;
 }
+
+/**
+ * Get water hardness category based on ppm value
+ */
+const getWaterHardnessCategory = (ppm: number): string => {
+  if (ppm <= 25) return 'Soft';
+  if (ppm <= 75) return 'Still Soft';
+  if (ppm <= 150) return 'Hard';
+  if (ppm <= 250) return 'Hard';
+  return 'Very Hard';
+};
+
+/**
+ * Get color for water hardness category
+ */
+const getHardnessColor = (category: string): string => {
+  switch (category) {
+    case 'Soft':
+      return '#4CAF50'; // Green
+    case 'Still Soft':
+      return '#8BC34A'; // Light Green
+    case 'Hard':
+      return '#FF9800'; // Orange
+    case 'Very Hard':
+      return '#F44336'; // Red
+    default:
+      return '#757575'; // Gray
+  }
+};
 
 /**
  * LeadDetailScreen - Detailed view for a single lead
@@ -92,9 +122,14 @@ const LeadDetailScreen = () => {
   const [loading, setLoading] = React.useState(false);
   const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.lead_status);
 
-  // pH value state
-  const [showPhSlider, setShowPhSlider] = useState(false);
-  const [phValue, setPhValue] = useState(7); // default neutral
+  // Water hardness state
+  const [showHardnessInput, setShowHardnessInput] = useState(false);
+  const [hardnessValue, setHardnessValue] = useState('');
+  const [isEditingHardness, setIsEditingHardness] = useState(false);
+
+  // Remarks editing state
+  const [isEditingRemarks, setIsEditingRemarks] = useState(false);
+  const [remarksValue, setRemarksValue] = useState(initialLead?.remarks || '');
 
   /**
    * Get available statuses based on lead type
@@ -104,30 +139,25 @@ const LeadDetailScreen = () => {
     return getStatusesByType(lead.type);
   }, [lead.type]);
 
-  /**
-   * Get pH label based on value
-   */
-  const getPhLabel = (value: number) => {
-    if (value < 7) return 'Acidic';
-    if (value === 7) return 'Neutral';
-    return 'Alkaline';
-  };
+  // Get current water hardness category and color
+  const currentHardnessCategory = useMemo(() => {
+    const ppm = parseInt(hardnessValue) || 0;
+    return getWaterHardnessCategory(ppm);
+  }, [hardnessValue]);
 
-  /**
-   * Get pH color based on value
-   */
-  const getPhColor = (value: number) => {
-    if (value < 4) return '#ff3b30'; // red
-    if (value < 7) return '#ff9500'; // yellow/orange
-    if (value === 7) return '#00cc66'; // green (neutral)
-    if (value <= 9) return '#007aff'; // blue
-    return '#4b0082'; // deep violet
-  };
+  const currentHardnessColor = useMemo(() => {
+    return getHardnessColor(currentHardnessCategory);
+  }, [currentHardnessCategory]);
 
   // Fetch latest lead data when screen focuses
   useEffect(() => {
     fetchLeadDetail();
   }, []);
+
+  // Update remarks value when lead data changes
+  useEffect(() => {
+    setRemarksValue(lead?.remarks || '');
+  }, [lead?.remarks]);
 
   /**
    * Fetch detailed lead information from API
@@ -135,16 +165,13 @@ const LeadDetailScreen = () => {
   const fetchLeadDetail = async () => {
     try {
       setLoading(true);
-      // const leadDetail = await leadApi.getLeadById(lead.lead_id);
-      const leadDetail:any =   await fetchLeadById(lead?.lead_id);
+      const leadDetail:any = await fetchLeadById(lead?.lead_id);
       printTable('Lead Details', leadDetail);
       if(leadDetail){
         setLead(leadDetail);
         setCurrentStatus(leadDetail?.lead_status);        
       }
-
       printTable("currentLead",currentLead)
-
     } catch (error) {
       console.error('Error fetching lead details:', error);
       Alert.alert('Error', 'Failed to fetch lead details');
@@ -165,7 +192,7 @@ const LeadDetailScreen = () => {
       }
 
       setLoading(true);
-      await leadApi.updateLeadStatus(lead.lead_id, newStatus);
+      await leadApi.updateLead(lead.lead_id, {status: newStatus});
       setCurrentStatus(newStatus);
       setStatusDialogVisible(false);
       
@@ -182,6 +209,39 @@ const LeadDetailScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Update lead remarks
+   */
+  const handleUpdateRemarks = async () => {
+    try {
+      setLoading(true);
+      
+      await leadApi.updateLead(lead.lead_id, { remarks: remarksValue, status: currentStatus } );
+      
+      // Update local lead state
+      setLead(prev => ({
+        ...prev,
+        remarks: remarksValue
+      }));
+      
+      setIsEditingRemarks(false);
+      Alert.alert('Success', 'Remarks updated successfully');
+    } catch (error) {
+      console.error('Error updating remarks:', error);
+      Alert.alert('Error', 'Failed to update remarks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Cancel remarks editing
+   */
+  const handleCancelRemarksEdit = () => {
+    setRemarksValue(lead?.remarks || '');
+    setIsEditingRemarks(false);
   };
 
   /**
@@ -227,6 +287,52 @@ const LeadDetailScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  /**
+   * Save water hardness value
+   */
+  const handleSaveHardness = async () => {
+    try {
+      const ppm = parseInt(hardnessValue);
+      
+      if (isNaN(ppm) || ppm < 0) {
+        Alert.alert('Error', 'Please enter a valid positive number for water hardness');
+        return;
+      }
+
+      setLoading(true);
+      
+      // API call to save water hardness
+      await leadApi.updateLead(lead.lead_id, { water_hardness: ppm ,status: currentStatus});
+      
+      setIsEditingHardness(false);
+      setShowHardnessInput(false);
+      
+      Alert.alert('Success', 'Water hardness saved successfully');
+    } catch (error) {
+      console.error('Error saving water hardness:', error);
+      Alert.alert('Error', 'Failed to save water hardness');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Start editing water hardness
+   */
+  const handleEditHardness = () => {
+    setIsEditingHardness(true);
+    setShowHardnessInput(true);
+  };
+
+  /**
+   * Cancel editing water hardness
+   */
+  const handleCancelEditHardness = () => {
+    setIsEditingHardness(false);
+    setShowHardnessInput(false);
+    // Reset to previous value if needed, or keep current
   };
 
   // Check if current user is already assigned as technician
@@ -342,7 +448,7 @@ const LeadDetailScreen = () => {
             <Text
               style={[
                 styles.sectionTitle,
-                { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
+                { color: colors.onSurface, fontSize: p(16), marginBottom: p(10) },
               ]}
             >
               Details
@@ -355,8 +461,8 @@ const LeadDetailScreen = () => {
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
-                // { icon: 'account', label: 'Sales Person', value: lead?.lead?.salePersonName },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
+                { icon: 'map-marker', label: 'Address', value: lead?.firestation?.address },
               ].map((item, index) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellLeft}>
@@ -364,7 +470,7 @@ const LeadDetailScreen = () => {
                     <Text
                       style={[
                         styles.tableLabel,
-                        { color: colors.onSurface, fontSize: p(18)},
+                        { color: colors.onSurface, fontSize: p(14)},
                       ]}
                       numberOfLines={1}
                     >
@@ -374,7 +480,7 @@ const LeadDetailScreen = () => {
                   <Text
                     style={[
                       styles.tableValue,
-                      { color: colors.onSurface, fontSize: p(18) },
+                      { color: colors.onSurface, fontSize: p(14) },
                     ]}
                     numberOfLines={1}
                   >
@@ -386,55 +492,6 @@ const LeadDetailScreen = () => {
           </Card.Content>
         </Card>
 
-        {/* Sales Person Info */}
-        {/* <Card style={[
-          styles.card, 
-          { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
-        ]}>
-          <Card.Content>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: colors.onSurface, fontSize: p(20), marginBottom: p(10) },
-              ]}
-            >
-              Sales Information
-            </Text>
-            <Divider style={{ marginBottom: p(10) }} />
-
-            <View style={styles.tableContainer}>
-              {[
-                { icon: 'account', label: 'Sales Person', value: lead?.lead?.salePersonName },
-                { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
-              ].map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <View style={styles.tableCellLeft}>
-                    <Icon source={item.icon} size={p(16)} color={colors.primary} />
-                    <Text
-                      style={[
-                        styles.tableLabel,
-                        { color: colors.onSurface, fontSize: p(18)},
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.label}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.tableValue,
-                      { color: colors.onSurface, fontSize: p(18) },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.value}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Card.Content>
-        </Card> */}
-
         {/* Technician Information */}
         <Card
           style={[
@@ -444,7 +501,7 @@ const LeadDetailScreen = () => {
         >
           <Card.Content>
             <View style={styles.technicianHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
+              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
                 Assigned Technicians
               </Text>
               {canAssignSelf && (
@@ -469,9 +526,8 @@ const LeadDetailScreen = () => {
                   <View style={[styles.techCard, { borderColor: colors.outline }]}>
                     <View style={styles.techInfo}>
                       <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                      <Text style={[styles.techText, { fontSize: p(18) }]}>
+                      <Text style={[styles.techText, { fontSize: p(14) }]}>
                         {lead.lead.technicianName}
-                        {/* <Text style={{ color: colors.outline }}> (from Odoo)</Text> */}
                       </Text>
                     </View>
                   </View>
@@ -490,7 +546,7 @@ const LeadDetailScreen = () => {
                       >
                         <View style={styles.techInfo}>
                           <Icon source="account-wrench" size={p(18)} color={colors.primary} />
-                          <Text style={[styles.techText, { fontSize: p(18) }]}>
+                          <Text style={[styles.techText, { fontSize: p(14) }]}>
                             {tech.name} (ID: {tech.id})
                             {tech.id === user?.id && (
                               <Text style={{ color: colors.primary, fontWeight: 'bold' }}> • You</Text>
@@ -523,7 +579,7 @@ const LeadDetailScreen = () => {
           </Card.Content>
         </Card>
 
-        {/* pH of Water Section */}
+        {/* Water Hardness Section */}
         <Card
           style={[
             styles.card,
@@ -532,44 +588,92 @@ const LeadDetailScreen = () => {
         >
           <Card.Content>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(20) }]}>
-                Hardness of Water
+              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
+                Water Hardness
               </Text>
 
-              {/* Tap area to expand slider */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setShowPhSlider(!showPhSlider);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: p(6),
-                }}
-              >
-                <Text style={{ color: getPhColor(phValue), fontWeight: '700', fontSize: p(18) }}>
-                  {/* {phValue} ({getPhLabel(phValue)}) */} {phValue}
-                </Text>
-                <Icon
-                  source={showPhSlider ? 'chevron-up' : 'chevron-down'}
-                  size={p(22)}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
+              {/* Display current hardness or edit button */}
+              {!isEditingHardness ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleEditHardness}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: p(6),
+                  }}
+                >
+                  <Text style={{ color: currentHardnessColor, fontWeight: '700', fontSize: p(14) }}>
+                    {hardnessValue ? `${hardnessValue} ppm (${currentHardnessCategory})` : ''}
+                  </Text>
+                  <Icon
+                    source="pencil"
+                    size={p(20)}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(8) }}>
+                  <Button
+                    mode="text"
+                    compact
+                    onPress={handleCancelEditHardness}
+                    textColor={colors.error}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    mode="contained"
+                    compact
+                    onPress={handleSaveHardness}
+                    disabled={!hardnessValue}
+                  >
+                    Save
+                  </Button>
+                </View>
+              )}
             </View>
 
-            {/* Expandable gradient slider */}
-            {showPhSlider && (
-              <View style={{ marginTop: p(10) }}>
-                <PhScale
-                  initialValue={phValue}
-                  onChange={(val) => {
-                    setPhValue(val);
-                    console.log('✅ Selected pH:', val);
-                  }}
+            {/* Expandable input field */}
+            {(showHardnessInput || isEditingHardness) && (
+              <View style={{ marginTop: p(16) }}>
+                <TextInput
+                  label="Water Hardness (ppm)"
+                  value={hardnessValue}
+                  onChangeText={setHardnessValue}
+                  keyboardType="numeric"
+                  mode="outlined"
+                  placeholder="Enter ppm value (0-425+)"
+                  style={{ fontSize: p(16) }}
+                  right={
+                    <TextInput.Affix text="ppm" />
+                  }
                 />
+                
+                {/* Hardness scale guide */}
+                <View style={styles.hardnessGuide}>
+                  <Text style={[styles.guideTitle, { color: colors.onSurface }]}>
+                    Hardness Scale:
+                  </Text>
+                  <View style={styles.guideItems}>
+                    <View style={styles.guideItem}>
+                      <View style={[styles.colorDot, { backgroundColor: '#4CAF50' }]} />
+                      <Text style={[styles.guideText, { color: colors.onSurface }]}>0-25 ppm: Soft</Text>
+                    </View>
+                    <View style={styles.guideItem}>
+                      <View style={[styles.colorDot, { backgroundColor: '#8BC34A' }]} />
+                      <Text style={[styles.guideText, { color: colors.onSurface }]}>26-75 ppm: Still Soft</Text>
+                    </View>
+                    <View style={styles.guideItem}>
+                      <View style={[styles.colorDot, { backgroundColor: '#FF9800' }]} />
+                      <Text style={[styles.guideText, { color: colors.onSurface }]}>76-250 ppm: Hard</Text>
+                    </View>
+                    <View style={styles.guideItem}>
+                      <View style={[styles.colorDot, { backgroundColor: '#F44336' }]} />
+                      <Text style={[styles.guideText, { color: colors.onSurface }]}>251+ ppm: Very Hard</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
             )}
           </Card.Content>
@@ -578,16 +682,70 @@ const LeadDetailScreen = () => {
         {/* Remarks Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
           <Card.Content>
-            <Text style={[styles.sectionTitle, { color: colors.onSurface , fontSize: p(20)}]}>
-              Remarks
-            </Text>
-            <Divider style={{ marginVertical: p(6) }} />
-            <View style={styles.remarksBox}>
-              <Icon source="clipboard-text" size={p(18)} color={colors.primary} />
-              <Text style={[styles.remarksText, { color: colors.onSurface, fontSize: p(18) }]}>
-                {lead.remarks || 'No remarks available.'}
+            <View style={styles.remarksHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
+                Remarks
               </Text>
+              {!isEditingRemarks ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setIsEditingRemarks(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: p(6),
+                  }}
+                >
+                 
+                  <Icon
+                    source="pencil"
+                    size={p(20)}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(8) }}>
+                  <Button
+                    mode="text"
+                    compact
+                    onPress={handleCancelRemarksEdit}
+                    textColor={colors.error}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    mode="contained"
+                    compact
+                    onPress={handleUpdateRemarks}
+                    disabled={!remarksValue.trim()}
+                  >
+                    Save
+                  </Button>
+                </View>
+              )}
             </View>
+            <Divider style={{ marginVertical: p(6) }} />
+            
+            {!isEditingRemarks ? (
+              <View style={styles.remarksBox}>
+                <Icon source="clipboard-text" size={p(18)} color={colors.primary} />
+                <Text style={[styles.remarksText, { color: colors.onSurface, fontSize: p(14) }]}>
+                  {lead.remarks || 'No remarks available.'}
+                </Text>
+              </View>
+            ) : (
+              <TextInput
+                label="Remarks"
+                value={remarksValue}
+                onChangeText={setRemarksValue}
+                mode="outlined"
+                multiline
+                numberOfLines={4}
+                placeholder="Enter remarks..."
+                style={{ fontSize: p(16) }}
+              />
+            )}
           </Card.Content>
         </Card>
 
@@ -602,10 +760,7 @@ const LeadDetailScreen = () => {
           ]}
         >
           {[
-            // { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
             { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
-            // { label: 'Search Gear', icon: 'magnify', action: () => navigation.navigate('GearSearch') },
-            // { label: 'Add Gear', icon: 'plus-circle-outline', action: () => navigation.navigate('AddGear') },
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
@@ -818,6 +973,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: p(16),
   },
+  remarksHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   remarksBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -836,6 +996,33 @@ const styles = StyleSheet.create({
     marginHorizontal: p(10),
     borderRadius: p(12),
     marginBottom: p(46),
+  },
+  hardnessGuide: {
+    marginTop: p(16),
+    padding: p(12),
+    borderRadius: p(8),
+    backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  guideTitle: {
+    fontSize: p(14),
+    fontWeight: '600',
+    marginBottom: p(8),
+  },
+  guideItems: {
+    gap: p(6),
+  },
+  guideItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(8),
+  },
+  colorDot: {
+    width: p(12),
+    height: p(12),
+    borderRadius: p(6),
+  },
+  guideText: {
+    fontSize: p(12),
   },
 });
 

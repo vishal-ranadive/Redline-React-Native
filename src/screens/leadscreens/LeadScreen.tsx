@@ -33,6 +33,7 @@ import {
 } from '../../constants/leadStatuses';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import BottomNavBar from '../../navigation/BottomNavBar';
+import { printTable } from '../../utils/printTable';
 
 // Responsive utility placeholder
 const p = (size: number): number => size;
@@ -152,9 +153,10 @@ const LeadScreen = () => {
     return leads.map((lead: any) => ({
       lead_id: lead?.lead_id?.toString() || 'Unknown',
       name: lead?.lead?.salePersonName || 'Unknown Customer',
-      phone: '555-000-0000', // Placeholder - update with actual data if available
-      email: 'customer@example.com', // Placeholder - update with actual data if available
+      // phone: '555-000-0000', // Placeholder - update with actual data if available
+      // email: 'customer@example.com', // Placeholder - update with actual data if available
       station: lead?.firestation?.name || 'Unknown Station',
+      address: lead?.firestation?.address || 'Unknown Address',
       status: lead?.lead_status || 'Unknown',
       leadType: lead?.type, // Keep as 'REPAIR' or 'INSPECTION'
       technicianDetails: [],
@@ -179,7 +181,10 @@ const LeadScreen = () => {
   /**
    * Render individual lead card
    */
-  const renderLead = useCallback(({ item }: { item: any }) => (
+  const renderLead = useCallback(({ item }: { item: any }) => {
+
+    printTable("renderLead-item", item)
+    return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('LeadDetail', { lead: item })}
@@ -210,22 +215,22 @@ const LeadScreen = () => {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
             <View>
               {/* Customer Name */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Icon source="account" size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }}>{item.name}</Text>
-              </View>
+              </View> */}
 
               {/* Phone Number */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+              {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="phone" size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }}>{item.phone}</Text>
-              </View>
+              </View> */}
 
               {/* Email */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+              {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="email-outline" size={18} color="#555"  />
                 <Text style={{ marginLeft: 6 }}>{item.email}</Text>
-              </View>
+              </View> */}
 
               {/* Appointment Date */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
@@ -234,7 +239,7 @@ const LeadScreen = () => {
               </View>
 
               {/* Station/Department */}
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 6, }}>
                 <Icon source='office-building' size={18} color="#555" />
                 <Text style={{ marginLeft: 6 }} ellipsizeMode="tail"> 
                   {item.station?.length > 28
@@ -242,6 +247,30 @@ const LeadScreen = () => {
                   : item.station}
                 </Text>
               </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                <Icon source="map-marker" size={18} color="#555" />
+                <Text style={{ marginLeft: 6 }}>
+                  {item.address}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                <Icon source="truck" size={18} color="#555" />
+                <Text style={{ marginLeft: 6 }}>
+                  MEU : {item.lead.meu}
+                </Text>
+              </View>
+
+              {/* Assigned Technician */}
+              {/* {item.assigned_technicians?.length > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Icon source="account-wrench" size={18} color="#555" />
+                  <Text style={{ marginLeft: 6 }}>
+                    {item.assigned_technicians.map((t:any) => t.name).join(', ')}
+                  </Text>
+                </View>
+              )} */}
             </View>
             
             {/* Lead Type Badge */}
@@ -271,7 +300,7 @@ const LeadScreen = () => {
         </Card.Content>
       </Card>
     </TouchableOpacity> 
-  ), [colors, navigation]);
+  )}, [colors, navigation]);
 
   /**
    * Render status dropdown with grouped sections

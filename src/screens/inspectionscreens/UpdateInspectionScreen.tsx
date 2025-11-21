@@ -322,7 +322,7 @@ export default function UpdateInspectionScreen() {
   const [endDate, setEndDate] = useState<string>('2025-11-20');
   const [condition, setCondition] = useState<string | undefined>(gear?.condition ?? 'Used - Good');
   const [repairNeeded, setRepairNeeded] = useState(false);
-  const [cost, setCost] = useState<string>('125.00');
+  const [cost, setCost] = useState<string>('0');
   const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
   // Add this state variable with other state declarations
 const [selectedLoad, setSelectedLoad] = useState('1');
@@ -691,9 +691,7 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
             <Text style={styles.infoText}>
               Load No: {gear.load?.name || 'L1'}
             </Text>
-            <Text style={styles.infoText}>
-              Bin No: {gear.bin?.name || 'B1'}
-            </Text>
+
           </View>
         </View>
 
@@ -1072,7 +1070,7 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
   ))}
 </View>
 
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Gear Images</Text>
+              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Gear Inspection Images</Text>
               <View style={styles.imagesContainer}>
                 {images.map((imageUri, index) => (
                   <TouchableOpacity 

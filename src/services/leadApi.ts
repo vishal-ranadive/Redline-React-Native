@@ -15,8 +15,11 @@ export const leadApi = {
     return response.data;
   },
 
-  updateLeadStatus: async (id: number, status: string): Promise<void> => {
-    await axiosInstance.put(`/leads/${id}/`, { status });
+  // updateLeadStatus: async (id: number, status: string): Promise<void> => {
+  //   await axiosInstance.put(`/leads/${id}/`, { status });
+  // },
+  updateLead: async (id: number, updateData: any): Promise<void> => {
+    await axiosInstance.put(`/leads/${id}/`, updateData);
   },
 
   assignTechnician: async (leadId: number, technicianId: number): Promise<void> => {
