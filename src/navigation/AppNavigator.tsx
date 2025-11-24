@@ -22,6 +22,7 @@ import ProfileScreen from '../screens/settingsscreens/Profile';
 import FirefighterListScreen from '../screens/inspectionscreens/FirefighterListScreen';
 import ViewInspectionScreen from '../screens/inspectionscreens/ViewInspectionScreen';
 import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGearsScreen';
+import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlowScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -37,6 +38,8 @@ export type RootStackParamList = {
   AddGear: undefined;
 
   GearDetail: {gear_id:any};
+    FirefighterFlow: undefined;
+
 
   UpadateInspection:  { gearId: number };
 
@@ -80,6 +83,8 @@ export default function AppNavigator() {
       <Stack.Screen name="AddGear" component={withMainLayout(AddGearScreen)} options={{ headerShown: false }}/>
 
       <Stack.Screen name="GearDetail" component={withMainLayout(GearDetailScreen)} options={{ headerShown: false }}/>
+      <Stack.Screen name="FirefighterFlow" component={withMainLayout(FirefighterFlowScreen)} />
+
 
       {/* Profile Screen */}
       <Stack.Screen name="UpdateProfile" component={withMainLayout(UpdateProfileScreen)} />

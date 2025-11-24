@@ -459,6 +459,7 @@ const LeadDetailScreen = () => {
               {[
                 { icon: 'calendar', label: 'Appointment Date', value: useFormattedDate(lead.schedule_date) },
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
+                // { icon: 'office-building', label: 'Department', value:'Sarasota County Fire Department'},
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
@@ -589,7 +590,7 @@ const LeadDetailScreen = () => {
           <Card.Content>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
-                Water Hardness
+                Water Hardness <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12) }]}>(Must be below 60 ppm. Over 60 ppm needs treatment)</Text>
               </Text>
 
               {/* Display current hardness or edit button */}
@@ -760,7 +761,8 @@ const LeadDetailScreen = () => {
           ]}
         >
           {[
-            { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
+            // { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
+            { label: 'Start Inspection', icon: 'barcode-scan',  action:() => navigation.navigate('FirefighterFlow') },
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',

@@ -11,6 +11,7 @@ import {
   PermissionsAndroid,
   PanResponder,
   GestureResponderEvent,
+  Animated,
 } from 'react-native';
 import {
   Text,
@@ -27,7 +28,6 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/common/Header';
-import CommonDatePicker from '../../components/common/DatePicker';
 import { useLeadStore } from '../../store/leadStore';
 import { printTable } from '../../utils/printTable';
 import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
@@ -37,17 +37,17 @@ import Svg, { Path } from 'react-native-svg';
 import ViewShot from 'react-native-view-shot';
 import { useGearStore } from '../../store/gearStore';
 
-// Updated STATUS_OPTIONS as per requirement #7 - all caps
+// Updated STATUS_OPTIONS with correct colors and order
 const STATUS_OPTIONS = [
   { value: 'PASS', label: 'PASS', color: '#34A853' },
-  { value: 'EXPIRED', label: 'EXPIRED', color: '#F9A825' },
-  { value: 'RECOMMENDED OOS', label: 'RECOMMENDED OOS', color: '#EA4335' },
-  { value: 'CORRECTIVE ACTION REQUIRED', label: 'CORRECTIVE ACTION REQUIRED', color: '#9a25f9ff' },
+  { value: 'CORRECTIVE_ACTION_REQUIRED', label: 'CORRECTIVE ACTION REQUIRED', color: '#F9A825' },
+  { value: 'RECOMMENDED_OOS', label: 'RECOMMENDED OOS', color: '#ff4800ff' },
+  { value: 'EXPIRED', label: 'EXPIRED', color: '#EA4335' },
 ];
 
-// Service types as per requirement #6
+// Service types - updated order
 const SERVICE_TYPES = [
-  { value: 'CLEANED_AND_INSPECTED', label: 'Cleaned and Inspected' },
+  { value: 'INSPECTED_AND_CLEANED', label: 'Inspected and Cleaned' },
   { value: 'CLEANED_ONLY', label: 'Cleaned Only' },
   { value: 'INSPECTED_ONLY', label: 'Inspected Only' },
   { value: 'SPECIALIZED_CLEANING', label: 'Specialized Cleaning' },
@@ -74,57 +74,78 @@ const SIZE_OPTIONS = [
   { value: 'ONE_SIZE', label: 'One Size' },
 ];
 
+// Load options - 25 loads with vibrant colors
 const LOAD_OPTIONS = [
-  { value: '1', label: 'Load 1', color: '#FF6B6B' },
-  { value: '2', label: 'Load 2', color: '#4ECDC4' },
-  { value: '3', label: 'Load 3', color: '#45B7D1' },
-  { value: '4', label: 'Load 4', color: '#96CEB4' },
-  { value: '5', label: 'Load 5', color: '#FFEAA7' },
-  { value: '6', label: 'Load 6', color: '#DDA0DD' },
-  { value: '7', label: 'Load 7', color: '#98D8C8' },
-  { value: '8', label: 'Load 8', color: '#F7DC6F' },
-  { value: '9', label: 'Load 9', color: '#BB8FCE' },
-  { value: '10', label: 'Load 10', color: '#85C1E9' },
+  { value: '1', label: 'Load 1' },
+  { value: '2', label: 'Load 2' },
+  { value: '3', label: 'Load 3' },
+  { value: '4', label: 'Load 4' },
+  { value: '5', label: 'Load 5' },
+  { value: '6', label: 'Load 6' },
+  { value: '7', label: 'Load 7' },
+  { value: '8', label: 'Load 8' },
+  { value: '9', label: 'Load 9' },
+  { value: '10', label: 'Load 10' },
+  { value: '11', label: 'Load 11' },
+  { value: '12', label: 'Load 12' },
+  { value: '13', label: 'Load 13' },
+  { value: '14', label: 'Load 14' },
+  { value: '15', label: 'Load 15' },
+  { value: '16', label: 'Load 16' },
+  { value: '17', label: 'Load 17' },
+  { value: '18', label: 'Load 18' },
+  { value: '19', label: 'Load 19' },
+  { value: '20', label: 'Load 20' },
+  { value: '21', label: 'Load 21' },
+  { value: '22', label: 'Load 22' },
+  { value: '23', label: 'Load 23' },
+  { value: '24', label: 'Load 24' },
+  { value: '25', label: 'Load 25' },
 ];
 
-// Helmet Findings options
-const HELMET_FINDINGS = [
+// Gear Findings options (renamed from Helmet Findings)
+const GEAR_FINDINGS = [
   { value: 'MFR_LABEL_DAMAGED_LOOSE', label: 'Mfr. Info Label Damaged/Loose' },
   { value: 'MFR_LABEL_MISSING_UNREADABLE', label: 'Mfr. Info Label Missing/Unreadable (Critical Fail)' },
-
-  { value: 'HELMET_SHELL_DAMAGED', label: 'Helmet Shell Damaged' },
+  { value: 'GEAR_SHELL_DAMAGED', label: 'Gear Shell Damaged' },
   { value: 'IMPACT_CAP_DAMAGED', label: 'Impact Cap Damaged' },
-
   { value: 'SUSPENSION_SYSTEM_DAMAGED', label: 'Suspension System Damaged' },
   { value: 'SUSPENSION_SYSTEM_MISSING', label: 'Suspension System Missing (Critical Fail)' },
-
   { value: 'RATCHETING_STRAP_DAMAGED', label: 'Ratcheting Strap Damaged' },
-
   { value: 'EAR_COVER_STAINING', label: 'Ear Cover/Shroud Staining' },
   { value: 'EAR_COVER_MISSING', label: 'Ear Cover/Shroud Missing' },
   { value: 'EAR_COVER_DAMAGED', label: 'Ear Cover/Shroud Damaged' },
-
   { value: 'EYE_PROTECTION_DAMAGED', label: 'Eye Protection Damaged' },
   { value: 'EYE_PROTECTION_MISSING', label: 'Eye Protection Missing (Critical Fail)' },
-
   { value: 'CHIN_STRAP_DAMAGED', label: 'Chin Strap Damaged' },
   { value: 'CHIN_STRAP_MISSING', label: 'Chin Strap Missing' },
-
   { value: 'REFLECTIVE_TRIM_DAMAGED_FADED', label: 'Reflective Trim Damaged/Faded' },
   { value: 'REFLECTIVE_TRIM_MISSING', label: 'Reflective Trim Missing' },
-
   { value: 'D_RING_MISSING_DAMAGED', label: 'D-Ring Missing/Damaged' },
-
   { value: 'OTHER', label: 'Other' }
+];
+
+// Color options with vibrant colors
+const COLOR_OPTIONS = [
+  { value: 'RED', label: 'Red', color: '#FF4444' },
+  { value: 'BLUE', label: 'Blue', color: '#4444FF' },
+  { value: 'GREEN', label: 'Green', color: '#44FF44' },
+  { value: 'YELLOW', label: 'Yellow', color: '#FFFF44' },
+  { value: 'ORANGE', label: 'Orange', color: '#FF8844' },
+  { value: 'PURPLE', label: 'Purple', color: '#8844FF' },
+  { value: 'PINK', label: 'Pink', color: '#FF44FF' },
+  { value: 'CYAN', label: 'Cyan', color: '#44FFFF' },
+  { value: 'LIME', label: 'Lime', color: '#88FF44' },
+  { value: 'TEAL', label: 'Teal', color: '#44FF88' },
 ];
 
 type Gear = {
   gear_id: number;
   gear_name: string;
   gear_type: {
-        gear_type_id: number,
-        gear_type: string
-    };
+    gear_type_id: number,
+    gear_type: string
+  };
   gear_size: string | null;
   active_status: boolean;
   serial_number: string;
@@ -163,49 +184,238 @@ type Gear = {
   condition?: string;
 };
 
-// Dummy gear data as fallback
-const dummyGear: Gear = {
-  gear_id: 1,
-  gear_name: 'Fire Helmet Pro',
-  gear_type:  {
-        "gear_type_id": 2,
-        "gear_type": "HELMET"
-    },
-  gear_size: 'L',
-  active_status: true,
-  serial_number: 'SN-FH-001-2024',
-  gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-  manufacturing_date: '2024-01-01',
-  roster: {
-    roster_id: 1,
-    first_name: 'John',
-    middle_name: 'M',
-    last_name: 'Doe',
-    email: 'john.doe@firestation.com',
-    phone: '555-123-4567'
-  },
-  firestation: {
-    id: 10,
-    name: 'Central Fire Station'
-  },
-  franchise: {
-    id: 19,
-    name: 'Beta Motors Franchise - test'
-  },
-  manufacturer: {
-    manufacturer_id: 50,
-    manufacturer_name: 'Fire Safety Equipment Inc.'
-  },
-  load: {
-    id: 'L001',
-    name: 'Engine 1 - Primary Response'
-  },
-  bin: {
-    id: 'B001',
-    name: 'Helmet Storage Bin A'
-  },
-  remarks: 'Minor scratches on visor',
-  condition: 'Used - Good'
+// Custom Dropdown Component
+const CustomDropdown = ({ 
+  options, 
+  selectedValue, 
+  onSelect, 
+  placeholder, 
+  getLabel, 
+  style 
+}: any) => {
+  const [visible, setVisible] = useState(false);
+  const { colors } = useTheme();
+
+  return (
+    <View style={style}>
+      <TouchableOpacity
+        style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+        onPress={() => setVisible(true)}
+      >
+        <Text style={[styles.dropdownButtonText, { color: colors.onSurface }]}>
+          {selectedValue ? getLabel(selectedValue) : placeholder}
+        </Text>
+        <IconButton
+          icon={visible ? "menu-up" : "menu-down"}
+          size={20}
+          iconColor={colors.onSurfaceVariant}
+        />
+      </TouchableOpacity>
+
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setVisible(false)}
+        >
+          <View style={[styles.dropdownModal, { backgroundColor: colors.surface }]}>
+            <ScrollView style={styles.dropdownScroll}>
+              {options.map((option: any) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.dropdownOption,
+                    { 
+                      backgroundColor: selectedValue === option.value ? colors.primaryContainer : 'transparent',
+                      borderBottomColor: colors.outline 
+                    }
+                  ]}
+                  onPress={() => {
+                    onSelect(option.value);
+                    setVisible(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.dropdownOptionText, 
+                    { 
+                      color: selectedValue === option.value ? colors.onPrimaryContainer : colors.onSurface 
+                    }
+                  ]}>
+                    {getLabel(option.value)}
+                  </Text>
+                  {selectedValue === option.value && (
+                    <IconButton
+                      icon="check"
+                      size={20}
+                      iconColor={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
+
+// MultiSelect Modal Component
+const MultiSelectModal = ({ 
+  visible, 
+  onClose, 
+  options, 
+  selectedValues, 
+  onSelectionChange, 
+  title 
+}: any) => {
+  const { colors } = useTheme();
+
+  const toggleSelection = (value: string) => {
+    const newSelection = selectedValues.includes(value)
+      ? selectedValues.filter((v: string) => v !== value)
+      : [...selectedValues, value];
+    onSelectionChange(newSelection);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={[styles.multiSelectContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.multiSelectHeader, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.multiSelectTitle, { color: colors.onSurface }]}>
+            {title}
+          </Text>
+          <IconButton
+            icon="close"
+            size={24}
+            onPress={onClose}
+            iconColor={colors.onSurface}
+          />
+        </View>
+
+        <ScrollView style={styles.multiSelectScroll}>
+          {options.map((option: any) => (
+            <TouchableOpacity
+              key={option.value}
+              style={[
+                styles.multiSelectOption,
+                { 
+                  backgroundColor: selectedValues.includes(option.value) 
+                    ? colors.primaryContainer 
+                    : colors.surface,
+                  borderBottomColor: colors.outline
+                }
+              ]}
+              onPress={() => toggleSelection(option.value)}
+            >
+              <Text style={[
+                styles.multiSelectOptionText,
+                { 
+                  color: selectedValues.includes(option.value) 
+                    ? colors.onPrimaryContainer 
+                    : colors.onSurface 
+                }
+              ]}>
+                {option.label}
+              </Text>
+              {selectedValues.includes(option.value) && (
+                <IconButton
+                  icon="check-circle"
+                  size={20}
+                  iconColor={colors.primary}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={[styles.multiSelectFooter, { backgroundColor: colors.surface }]}>
+          <Button
+            mode="contained"
+            onPress={onClose}
+            style={styles.multiSelectDoneButton}
+          >
+            Done
+          </Button>
+        </View>
+      </SafeAreaView>
+    </Modal>
+  );
+};
+
+
+
+// Color Picker Modal Component
+const ColorPickerModal = ({ visible, onClose, selectedColor, onColorSelect }: any) => {
+  const { colors } = useTheme();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.colorPickerOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}>
+          <View style={styles.colorPickerHeader}>
+            <Text style={[styles.colorPickerTitle, { color: colors.onSurface }]}>
+              Select Color
+            </Text>
+            <IconButton
+              icon="close"
+              size={24}
+              onPress={onClose}
+              iconColor={colors.onSurface}
+            />
+          </View>
+          
+          <View style={styles.colorGrid}>
+            {COLOR_OPTIONS.map((colorOption) => (
+              <TouchableOpacity
+                key={colorOption.value}
+                style={[
+                  styles.colorCircle,
+                  { 
+                    backgroundColor: colorOption.color,
+                    borderColor: selectedColor === colorOption.value ? colors.primary : 'transparent',
+                    borderWidth: 3,
+                  }
+                ]}
+                onPress={() => {
+                  onColorSelect(colorOption.value);
+                  onClose();
+                }}
+              >
+                {selectedColor === colorOption.value && (
+                  <IconButton
+                    icon="check"
+                    size={16}
+                    iconColor="#fff"
+                    style={styles.colorCheckIcon}
+                  />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 };
 
 export default function UpdateInspectionScreen() {
@@ -213,7 +423,7 @@ export default function UpdateInspectionScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { currentLead } = useLeadStore();
-  const {fetchGearById} = useGearStore();
+  const { fetchGearById } = useGearStore();
   
   // State for gear data
   const [gear, setGear] = useState<Gear | null>(null);
@@ -227,8 +437,6 @@ export default function UpdateInspectionScreen() {
   useEffect(() => {
     const fetchGear = async () => {
       if (!gearId) {
-        // If no gear ID provided, use dummy data
-        setGear(dummyGear);
         return;
       }
 
@@ -236,20 +444,16 @@ export default function UpdateInspectionScreen() {
       setError(null);
       
       try {
-        // Replace with your actual API call
         const response = await fetchGearById(gearId);
         if (response) {
-          printTable("responsefetchGearById",response)
-          const Gear = response; 
+          printTable("responsefetchGearById", response);
           // @ts-ignore
-          setGear(Gear);
+          setGear(response);
         } else {
           setError('Failed to fetch gear data');
-          setGear(dummyGear); // Fallback to dummy data
         }
       } catch (err) {
         setError('Error fetching gear data');
-        setGear(dummyGear); // Fallback to dummy data
         console.error('Error fetching gear:', err);
       } finally {
         setLoading(false);
@@ -259,130 +463,52 @@ export default function UpdateInspectionScreen() {
     fetchGear();
   }, [gearId]);
 
-  // // Mock API function - replace with your actual API call
-  // const fetchGearById = async (id: number): Promise<Gear | null> => {
-  //   try {
-  //     // Simulate API call
-  //     const mockResponse = {
-  //       status: true,
-  //       message: "Gear fetched successfully",
-  //       gear: {
-  //         gear_id: id,
-  //         gear_name: 'Fire Helmet Pro',
-  //         gear_type: 'Helmet',
-  //         gear_size: 'L',
-  //         active_status: true,
-  //         serial_number: 'SN-001-2025',
-  //         gear_image_url: 'https://example.com/images/helmet-pro.jpg',
-  //         manufacturing_date: '2024-01-01',
-  //         roster: {
-  //           roster_id: 1,
-  //           first_name: 'Jane',
-  //           middle_name: 'M',
-  //           last_name: 'Doe',
-  //           email: 'jane.doe@fire.com',
-  //           phone: '5551234567'
-  //         },
-  //         firestation: {
-  //           id: 10,
-  //           name: 'Central Fire Station'
-  //         },
-  //         franchise: {
-  //           id: 19,
-  //           name: 'Beta Motors Franchise - test'
-  //         },
-  //         manufacturer: {
-  //           manufacturer_id: 50,
-  //           manufacturer_name: 'Fire Safety Equipment Inc.'
-  //         }
-  //       }
-  //     };
-      
-  //     // Simulate network delay
-  //     await new Promise((resolve:any) => setTimeout(resolve, 1000));
-      
-  //     return mockResponse.gear;
-  //   } catch (error) {
-  //     console.error('API Error:', error);
-  //     return null;
-  //   }
-  // };
-
-  // Local editable state - initialize with gear data when available
+  // Local editable state
   const [status, setStatus] = useState('PASS');
-  const [serviceType, setServiceType] = useState('CLEANED_AND_INSPECTED');
+  const [serviceType, setServiceType] = useState('INSPECTED_AND_CLEANED');
   const [harnessType, setHarnessType] = useState('CLASS_3');
   const [size, setSize] = useState(gear?.gear_size ?? 'L');
-  const [helmetFinding, setHelmetFinding] = useState('');
+  const [selectedGearFindings, setSelectedGearFindings] = useState<string[]>([]);
   const [serialNumber, setSerial] = useState(gear?.serial_number ?? '');
-  
   const [hydroPerformed, setHydroPerformed] = useState(false);
   const [hydroResult, setHydroResult] = useState<string | undefined>(undefined);
-  const [startDate, setStartDate] = useState<string>('2025-11-15');
-  const [endDate, setEndDate] = useState<string>('2025-11-20');
-  const [condition, setCondition] = useState<string | undefined>(gear?.condition ?? 'Used - Good');
   const [repairNeeded, setRepairNeeded] = useState(false);
   const [cost, setCost] = useState<string>('0');
   const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
-  // Add this state variable with other state declarations
-const [selectedLoad, setSelectedLoad] = useState('1');
+  const [selectedLoad, setSelectedLoad] = useState('1');
+
+  const [selectedColor, setSelectedColor] = useState('RED');
+const [colorPickerVisible, setColorPickerVisible] = useState(false);
   
+  // Modal states
+  const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
+  const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Multiple images state
+  const [images, setImages] = useState<string[]>([]);
+
   // Update form fields when gear data loads
   useEffect(() => {
     if (gear) {
       setSize(gear.gear_size || 'L');
       setSerial(gear.serial_number || '');
-      setCondition(gear.condition || 'Used - Good');
       setRemarks(gear.remarks || '');
     }
   }, [gear]);
-
-  // Multiple images state
-  const [images, setImages] = useState<string[]>([]);
 
   // Update images when gear image URL is available
   useEffect(() => {
     if (gear?.gear_image_url) {
       setImages([gear.gear_image_url]);
-    } else {
-      setImages([
-        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-        'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg'
-      ]);
     }
   }, [gear]);
 
-  // Add this function with other helper functions
-const getLoadLabel = (loadValue: string) => {
-  const load = LOAD_OPTIONS.find(option => option.value === loadValue);
-  return load?.label || 'Select Load';
-};
-const getLoadColor = (loadValue: string) => {
-  const load = LOAD_OPTIONS.find(option => option.value === loadValue);
-  return load?.color || '#666';
-};
-
-// Add this menu state with other menu states
-const [loadMenuVisible, setLoadMenuVisible] = useState(false);
-
-  // Modal state for image preview
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
-  const [showCameraModal, setShowCameraModal] = useState(false);
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [paths, setPaths] = useState<string[]>([]);
-  const [currentPath, setCurrentPath] = useState('');
-  const drawingViewRef = useRef<ViewShot | null>(null);
-
-  // Menu states
-  const [serviceMenuVisible, setServiceMenuVisible] = useState(false);
-  const [harnessMenuVisible, setHarnessMenuVisible] = useState(false);
-  const [sizeMenuVisible, setSizeMenuVisible] = useState(false);
-  const [helmetFindingMenuVisible, setHelmetFindingMenuVisible] = useState(false);
+  // Handle scroll for sticky header
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
+  );
 
   const saveChanges = () => {
     if (!gear) {
@@ -396,19 +522,24 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
       serviceType, 
       harnessType, 
       size,
-      helmetFinding,
+      selectedGearFindings,
       hydroPerformed, 
       hydroResult, 
-      startDate, 
-      endDate, 
-      condition, 
       repairNeeded, 
       cost, 
-      remarks 
+      remarks,
+      selectedLoad
     });
     
-    navigation.navigate('LeadDetail', { lead: currentLead });
+    // navigation.navigate('LeadDetail', { lead: currentLead });
+    navigation.navigate('FirefighterFlow');
   };
+
+
+const getColorLabel = (colorValue: string) => {
+  const color = COLOR_OPTIONS.find(option => option.value === colorValue);
+  return color?.label || 'Select Color';
+};
 
   const getStatusColor = (statusValue: string) => {
     const statusOption = STATUS_OPTIONS.find(option => option.value === statusValue);
@@ -430,151 +561,17 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
     return sizeOption?.label || 'Select Size';
   };
 
-  const getHelmetFindingLabel = (findingValue: string) => {
-    const finding = HELMET_FINDINGS.find(option => option.value === findingValue);
-    return finding?.label || 'Select Helmet Finding';
+  const getLoadLabel = (loadValue: string) => {
+    const load = LOAD_OPTIONS.find(option => option.value === loadValue);
+    return load?.label || 'Select Load';
   };
 
-  const handleImagePress = (imageUri: string, index: number) => {
-    setSelectedImage(imageUri);
-    setSelectedImageIndex(index);
-    setModalVisible(true);
-    setPaths([]);
-    setCurrentPath('');
-    setIsDrawingMode(false);
-  };
-
-  const addNewImage = () => {
-    setShowImageSourceModal(true);
-  };
-
-  const handleCameraCaptured = (uri: string) => {
-    setImages(prev => [...prev, uri]);
-  };
-
-  const requestGalleryPermission = async () => {
-    if (Platform.OS !== 'android') {
-      return true;
-    }
-
-    const permission =
-      Platform.Version >= 33
-        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
-        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
-
-    const result = await PermissionsAndroid.request(permission);
-    return result === PermissionsAndroid.RESULTS.GRANTED;
-  };
-
-  const handlePickFromGallery = async () => {
-    const granted = await requestGalleryPermission();
-    if (!granted) {
-      Alert.alert('Permission required', 'Please allow gallery access to pick images.');
-      return;
-    }
-
-    try {
-      const response = await launchImageLibrary({
-        mediaType: 'photo',
-        selectionLimit: 1,
-        includeBase64: false,
-      });
-
-      if (response.didCancel) {
-        return;
-      }
-
-      const uri = response.assets?.[0]?.uri;
-      if (uri) {
-        setImages(prev => [...prev, uri]);
-      }
-    } catch (error) {
-      Alert.alert('Image picker error', 'Unable to select image from gallery.');
-    }
-  };
-
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setIsDrawingMode(false);
-    setCurrentPath('');
-    setSelectedImageIndex(null);
-    setPaths([]);
-  };
-
-  const handleUndoDrawing = () => {
-    setPaths(prev => prev.slice(0, -1));
-  };
-
-  const handleSaveDrawing = async () => {
-    if (!drawingViewRef.current || selectedImageIndex === null) {
-      handleCloseModal();
-      return;
-    }
-
-    try {
-      const uri = await drawingViewRef.current.capture?.();
-
-      if (uri) {
-        setImages(prev => {
-          const updated = [...prev];
-          updated[selectedImageIndex] = uri;
-          return updated;
-        });
-      }
-    } catch (error) {
-      Alert.alert('Save error', 'Unable to save annotated image.');
-    } finally {
-      handleCloseModal();
-    }
-  };
-
-  const startDrawing = useCallback(
-    (event: GestureResponderEvent) => {
-      if (!isDrawingMode) {
-        return;
-      }
-      const { locationX, locationY } = event.nativeEvent;
-      setCurrentPath(`M${locationX} ${locationY}`);
-    },
-    [isDrawingMode],
-  );
-
-  const moveDrawing = useCallback(
-    (event: GestureResponderEvent) => {
-      if (!isDrawingMode) {
-        return;
-      }
-      const { locationX, locationY } = event.nativeEvent;
-      setCurrentPath(prev => (prev ? `${prev} L${locationX} ${locationY}` : `M${locationX} ${locationY}`));
-    },
-    [isDrawingMode],
-  );
-
-  const endDrawing = useCallback(() => {
-    if (!isDrawingMode) {
-      return;
-    }
-    setCurrentPath(prev => {
-      if (!prev) {
-        return prev;
-      }
-      setPaths(pathList => [...pathList, prev]);
-      return '';
+  const getSelectedGearFindingsLabels = () => {
+    return selectedGearFindings.map(finding => {
+      const found = GEAR_FINDINGS.find(option => option.value === finding);
+      return found?.label || finding;
     });
-  }, [isDrawingMode]);
-
-  const drawingResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => isDrawingMode,
-        onMoveShouldSetPanResponder: () => isDrawingMode,
-        onPanResponderGrant: startDrawing,
-        onPanResponderMove: moveDrawing,
-        onPanResponderRelease: endDrawing,
-        onPanResponderTerminate: endDrawing,
-      }),
-    [isDrawingMode, startDrawing, moveDrawing, endDrawing],
-  );
+  };
 
   // Show loading state
   if (loading) {
@@ -648,12 +645,97 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView>
-        <Header 
-          title="Update Gear Status"
-          showBackButton={true}
-        />
+      <Header 
+        title="Update Gear Status"
+        showBackButton={true}
+      />
 
+      {/* Sticky Gear Information */}
+      <Animated.View 
+        style={[
+          styles.stickyGearInfo,
+          { 
+            backgroundColor: colors.surface,
+            transform: [{
+              translateY: scrollY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [0, -100],
+                extrapolate: 'clamp'
+              })
+            }]
+          }
+        ]}
+      >
+        <TouchableOpacity 
+          style={styles.gearInfoHeader}
+          onPress={() => setIsGearInfoCollapsed(!isGearInfoCollapsed)}
+        >
+          <View style={styles.gearInfoLeft}>
+            <View style={styles.rosterAvatar}>
+              <IconButton
+                icon="account"
+                size={24}
+                iconColor={colors.primary}
+              />
+            </View>
+            <View style={styles.gearInfoText}>
+              <Text style={[styles.gearInfoName, { color: colors.onSurface }]}>
+                {gear?.roster ? `${gear.roster.first_name} ${gear.roster.last_name}` : 'Unassigned'}
+              </Text>
+              <Text style={[styles.gearInfoDetail, { color: colors.onSurfaceVariant }]}>
+                {gear.gear_type.gear_type} • {gear.serial_number}
+              </Text>
+            </View>
+          </View>
+          <IconButton
+            icon={isGearInfoCollapsed ? "chevron-down" : "chevron-up"}
+            size={20}
+            iconColor={colors.onSurfaceVariant}
+          />
+        </TouchableOpacity>
+
+        {!isGearInfoCollapsed && (
+          <View style={styles.expandedGearInfo}>
+            <View style={styles.gearInfoRow}>
+              <View style={styles.gearInfoColumn}>
+                <Text style={[styles.gearInfoLabel, { color: colors.onSurfaceVariant }]}>Firefighter</Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  {gear?.roster ? `${gear.roster.first_name} ${gear.roster.middle_name} ${gear.roster.last_name}` : 'Not assigned'}
+                </Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  {gear?.roster?.email || '-'}
+                </Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  {gear?.roster?.phone || '-'}
+                </Text>
+              </View>
+              
+              <View style={styles.gearInfoColumn}>
+                <Text style={[styles.gearInfoLabel, { color: colors.onSurfaceVariant }]}>Gear Details</Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  Type: {gear.gear_type.gear_type}
+                </Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  Serial: {gear.serial_number}
+                </Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  Manufacturer: {gear.manufacturer?.manufacturer_name || '-'}
+                </Text>
+                <Text style={[styles.gearInfoValue, { color: colors.onSurface }]}>
+                  Station: {gear.firestation.name}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </Animated.View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Error banner */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: colors.errorContainer }]}>
@@ -663,67 +745,10 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
               iconColor={colors.error}
             />
             <Text style={[styles.errorBannerText, { color: colors.error }]}>
-              Using fallback data: {error}
+              {error}
             </Text>
           </View>
         )}
-
-        {/* Top summary */}
-        <View style={[styles.topCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.topLeft}>
-            <Text style={styles.smallLabel}>Gear Information</Text>
-            <Text style={styles.infoText}>Type: {gear.gear_type.gear_type || 'N/A'}</Text>
-            <Text style={styles.infoText}>Serial: {serialNumber}</Text>
-            <Text style={styles.infoText}>Manufacturer: {gear?.manufacturer?.manufacturer_name}</Text>
-          </View>
-
-          <View style={styles.topRight}>
-            <Text style={styles.smallLabel}>Current Status</Text>
-            <Chip 
-              style={[styles.statusChip, { backgroundColor: getStatusColor(status) }]}
-              textStyle={{ color: '#fff', fontSize: p(12) }}
-            >
-              {status}
-            </Chip>
-
-            <Text style={[styles.smallLabel, { marginTop: 8 }]}>Assignment</Text>
-            <Text style={styles.infoText}>{gear.firestation.name}</Text>
-            <Text style={styles.infoText}>
-              Load No: {gear.load?.name || 'L1'}
-            </Text>
-
-          </View>
-        </View>
-
-        {/* Roster Information */}
-        <View style={[styles.rosterCard, { backgroundColor: colors.surface }]}>
-          <Text style={styles.cardTitle}>Firefighter Information</Text>
-
-          <View style={styles.rosterInfo}>
-            <View style={styles.rosterDetail}>
-              <Text style={styles.fieldLabel}>Name</Text>
-              <Text style={styles.infoText}>
-                {gear?.roster?.first_name ?? "-"} {gear?.roster?.middle_name ?? ""} {gear?.roster?.last_name ?? ""}
-              </Text>
-            </View>
-
-            <View style={styles.rosterDetail}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <Text style={styles.infoText}>{gear?.roster?.email ?? "-"}</Text>
-            </View>
-
-            <View style={styles.rosterDetail}>
-              <Text style={styles.fieldLabel}>Phone</Text>
-              <Text style={styles.infoText}>{gear?.roster?.phone ?? "-"}</Text>
-            </View>
-
-            <View style={styles.rosterDetail}>
-              <Text style={styles.fieldLabel}>Franchise</Text>
-              <Text style={styles.infoText}>{gear?.franchise?.name ?? "-"}</Text>
-            </View>
-          </View>
-        </View>
-
 
         {/* Main form grid */}
         <View style={styles.row}>
@@ -754,184 +779,170 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
               </View>
 
               <Text style={styles.fieldLabel}>Service Type</Text>
-              <Menu
-                visible={serviceMenuVisible}
-                onDismiss={() => setServiceMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setServiceMenuVisible(true)}
-                    style={styles.menuButton}
-                    contentStyle={styles.menuButtonContent}
-                  >
-                    {getServiceTypeLabel(serviceType)}
-                  </Button>
-                }
-              >
-                {SERVICE_TYPES.map((service) => (
-                  <Menu.Item
-                    key={service.value}
-                    onPress={() => {
-                      setServiceType(service.value);
-                      setServiceMenuVisible(false);
-                    }}
-                    title={service.label}
-                    titleStyle={{ fontSize: p(14) }}
-                  />
-                ))}
-              </Menu>
+              <CustomDropdown
+                options={SERVICE_TYPES}
+                selectedValue={serviceType}
+                onSelect={setServiceType}
+                placeholder="Select Service Type"
+                getLabel={getServiceTypeLabel}
+                style={styles.dropdownContainer}
+              />
 
               <Text style={styles.fieldLabel}>Harness Type</Text>
-              <Menu
-                visible={harnessMenuVisible}
-                onDismiss={() => setHarnessMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setHarnessMenuVisible(true)}
-                    style={styles.menuButton}
-                    contentStyle={styles.menuButtonContent}
-                  >
-                    {getHarnessTypeLabel(harnessType)}
-                  </Button>
-                }
-              >
-                {HARNESS_TYPES.map((harness) => (
-                  <Menu.Item
-                    key={harness.value}
-                    onPress={() => {
-                      setHarnessType(harness.value);
-                      setHarnessMenuVisible(false);
-                    }}
-                    title={harness.label}
-                    titleStyle={{ fontSize: p(14) }}
-                  />
-                ))}
-              </Menu>
+              <CustomDropdown
+                options={HARNESS_TYPES}
+                selectedValue={harnessType}
+                onSelect={setHarnessType}
+                placeholder="Select Harness Type"
+                getLabel={getHarnessTypeLabel}
+                style={styles.dropdownContainer}
+              />
 
               <Text style={styles.fieldLabel}>Size</Text>
-              <Menu
-                visible={sizeMenuVisible}
-                onDismiss={() => setSizeMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setSizeMenuVisible(true)}
-                    style={styles.menuButton}
-                    contentStyle={styles.menuButtonContent}
-                  >
-                    {getSizeLabel(size)}
-                  </Button>
-                }
-              >
-                {SIZE_OPTIONS.map((sizeOption) => (
-                  <Menu.Item
-                    key={sizeOption.value}
-                    onPress={() => {
-                      setSize(sizeOption.value);
-                      setSizeMenuVisible(false);
-                    }}
-                    title={sizeOption.label}
-                    titleStyle={{ fontSize: p(14) }}
-                  />
-                ))}
-              </Menu>
+              <CustomDropdown
+                options={SIZE_OPTIONS}
+                selectedValue={size}
+                onSelect={setSize}
+                placeholder="Select Size"
+                getLabel={getSizeLabel}
+                style={styles.dropdownContainer}
+              />
 
-              <Text style={styles.fieldLabel}>Helmet Findings</Text>
-              <Menu
-                visible={helmetFindingMenuVisible}
-                onDismiss={() => setHelmetFindingMenuVisible(false)}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setHelmetFindingMenuVisible(true)}
-                    style={styles.menuButton}
-                    contentStyle={styles.menuButtonContent}
-                  >
-                    {getHelmetFindingLabel(helmetFinding)}
-                  </Button>
-                }
+              <Text style={styles.fieldLabel}>Gear Findings</Text>
+              <TouchableOpacity
+                style={[styles.gearFindingsButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+                onPress={() => setGearFindingsModalVisible(true)}
               >
-                {HELMET_FINDINGS.map((finding) => (
-                  <Menu.Item
-                    key={finding.value}
-                    onPress={() => {
-                      setHelmetFinding(finding.value);
-                      setHelmetFindingMenuVisible(false);
-                    }}
-                    title={finding.label}
-                    titleStyle={{ fontSize: p(14) }}
-                  />
-                ))}
-              </Menu>
+                <Text style={[styles.gearFindingsButtonText, { color: colors.onSurface }]}>
+                  {selectedGearFindings.length > 0 
+                    ? `${selectedGearFindings.length} findings selected` 
+                    : 'Select Gear Findings'
+                  }
+                </Text>
+                <IconButton
+                  icon="chevron-right"
+                  size={20}
+                  iconColor={colors.onSurfaceVariant}
+                />
+              </TouchableOpacity>
+
+              {/* Show selected gear findings */}
+              {selectedGearFindings.length > 0 && (
+                <View style={styles.selectedFindingsContainer}>
+                  {getSelectedGearFindingsLabels().slice(0, 2).map((label, index) => (
+                    <Chip
+                      key={index}
+                      style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
+                      textStyle={{ color: colors.onPrimaryContainer, fontSize: p(10) }}
+                      onClose={() => {
+                        const newFindings = [...selectedGearFindings];
+                        newFindings.splice(index, 1);
+                        setSelectedGearFindings(newFindings);
+                      }}
+                    >
+                      {label.length > 30 ? label.substring(0, 30) + '...' : label}
+                    </Chip>
+                  ))}
+                  {selectedGearFindings.length > 2 && (
+                    <Chip
+                      style={[styles.findingChip, { backgroundColor: colors.secondaryContainer }]}
+                      textStyle={{ color: colors.onSecondaryContainer, fontSize: p(10) }}
+                    >
+                      +{selectedGearFindings.length - 2} more
+                    </Chip>
+                  )}
+                </View>
+              )}
 
               <View style={styles.rowSpace}>
                 <Text style={styles.fieldLabel}>Hydro Test Performed</Text>
                 <Switch value={hydroPerformed} onValueChange={setHydroPerformed} />
               </View>
 
-              <View style={styles.rowSpace}>
-                <Text style={styles.fieldLabel}>Hydro Test Result</Text>
-                <View style={styles.rowWrap}>
-                  <Chip
-                    selected={hydroResult === 'Pass'}
-                    onPress={() => setHydroResult('Pass')}
-                    style={[
-                      styles.smallChoice,
-                      { 
-                        backgroundColor: hydroResult === 'Pass' ? '#34A853' : colors.surfaceVariant 
-                      }
-                    ]}
-                    textStyle={{ 
-                      color: hydroResult === 'Pass' ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: p(12)
-                    }}
-                  >
-                    Pass
-                  </Chip>
-                  <Chip
-                    selected={hydroResult === 'Fail'}
-                    onPress={() => setHydroResult('Fail')}
-                    style={[
-                      styles.smallChoice,
-                      { 
-                        backgroundColor: hydroResult === 'Fail' ? '#EA4335' : colors.surfaceVariant 
-                      }
-                    ]}
-                    textStyle={{ 
-                      color: hydroResult === 'Fail' ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: p(12)
-                    }}
-                  >
-                    Fail
-                  </Chip>
+              {hydroPerformed && (
+                <View style={styles.rowSpace}>
+                  <Text style={styles.fieldLabel}>Hydro Test Result</Text>
+                  <View style={styles.rowWrap}>
+                    <Chip
+                      selected={hydroResult === 'Pass'}
+                      onPress={() => setHydroResult('Pass')}
+                      style={[
+                        styles.smallChoice,
+                        { 
+                          backgroundColor: hydroResult === 'Pass' ? '#34A853' : colors.surfaceVariant 
+                        }
+                      ]}
+                      textStyle={{ 
+                        color: hydroResult === 'Pass' ? '#fff' : colors.onSurfaceVariant,
+                        fontSize: p(12)
+                      }}
+                    >
+                      Pass
+                    </Chip>
+                    <Chip
+                      selected={hydroResult === 'Fail'}
+                      onPress={() => setHydroResult('Fail')}
+                      style={[
+                        styles.smallChoice,
+                        { 
+                          backgroundColor: hydroResult === 'Fail' ? '#EA4335' : colors.surfaceVariant 
+                        }
+                      ]}
+                      textStyle={{ 
+                        color: hydroResult === 'Fail' ? '#fff' : colors.onSurfaceVariant,
+                        fontSize: p(12)
+                      }}
+                    >
+                      Fail
+                    </Chip>
+                  </View>
                 </View>
-              </View>
+              )}
 
-              <View style={{ flex: 1 }}>
-                <View style={{ marginTop: p(10) }}>
-                  <Text style={styles.fieldLabel}>Start Date</Text>
-                  <CommonDatePicker
-                    value={startDate}
-                    onChange={setStartDate}
-                    mode="date"
-                    placeholder="Select start date"
-                  />
+              <Text style={styles.fieldLabel}>Select Load</Text>
+              <CustomDropdown
+                options={LOAD_OPTIONS}
+                selectedValue={selectedLoad}
+                onSelect={setSelectedLoad}
+                placeholder="Select Load"
+                getLabel={getLoadLabel}
+                style={styles.dropdownContainer}
+              />
+
+              {/* Show selected load with color */}
+              {/* {selectedLoad && (
+                <View style={styles.selectedLoadContainer}>
+                  <Text style={[styles.fieldLabel, { marginBottom: 4 }]}>Selected Load:</Text>
+                  <View style={[styles.loadColorBox, { backgroundColor: "red"} ]}>
+                    <Text style={styles.loadColorText}>{getLoadLabel(selectedLoad)}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ marginTop: p(10) }}>
-                  <Text style={styles.fieldLabel}>End Date</Text>
-                  <CommonDatePicker
-                    value={endDate}
-                    onChange={setEndDate}
-                    mode="date"
-                    placeholder="Select end date"
-                  />
-                </View>
-              </View>
+              )} */}
             </View>
 
+
+
+            <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
+
+
+              <Text style={styles.fieldLabel}>Color</Text>
+<TouchableOpacity
+  style={[styles.colorPickerButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+  onPress={() => setColorPickerVisible(true)}
+>
+  <View style={styles.colorPickerButtonContent}>
+    <View style={[styles.selectedColorCircle, { backgroundColor: COLOR_OPTIONS.find(c => c.value === selectedColor)?.color }]} />
+    <Text style={[styles.colorPickerButtonText, { color: colors.onSurface }]}>
+      {getColorLabel(selectedColor)}
+    </Text>
+  </View>
+  <IconButton
+    icon="chevron-right"
+    size={20}
+    iconColor={colors.onSurfaceVariant}
+  />
+</TouchableOpacity>
+            </View>
             {/* Remarks */}
             <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
               <Text style={styles.cardTitle}>Remarks</Text>
@@ -947,150 +958,63 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
             </View>
           </View>
 
-          {/* Condition & Repair column */}
-          <View style={styles.col}>
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={styles.cardTitle}>Condition & Repair</Text>
+          {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
+          {status === 'CORRECTIVE_ACTION_REQUIRED' && (
+            <View style={styles.col}>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                <Text style={styles.cardTitle}>Repair & Cost</Text>
 
-              <Text style={styles.fieldLabel}>Cost (USD)</Text>
-              <TextInput
-                mode="outlined"
-                placeholder="$0.00"
-                value={cost}
-                keyboardType="numeric"
-                onChangeText={setCost}
-                style={[styles.input, { fontSize: p(14) }]}
-                left={<TextInput.Affix text="$" />}
-              />
+                <Text style={styles.fieldLabel}>Cost (USD)</Text>
+                <TextInput
+                  mode="outlined"
+                  placeholder="$0.00"
+                  value={cost}
+                  keyboardType="numeric"
+                  onChangeText={setCost}
+                  style={[styles.input, { fontSize: p(14) }]}
+                  left={<TextInput.Affix text="$" />}
+                />
 
-              <View style={[styles.rowSpace, { marginTop: 8 }]}>
-                <Text style={styles.fieldLabel}>Redline Repair</Text>
-                <View style={styles.rowWrap}>
-                  <Chip 
-                    selected={repairNeeded === true} 
-                    onPress={() => setRepairNeeded(true)} 
-                    style={[
-                      styles.smallChoice,
-                      { 
-                        backgroundColor: repairNeeded === true ? '#EA4335' : colors.surfaceVariant 
-                      }
-                    ]}
-                    textStyle={{ 
-                      color: repairNeeded === true ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: p(12)
-                    }}
-                  >
-                    Yes
-                  </Chip>
-                  <Chip 
-                    selected={repairNeeded === false} 
-                    onPress={() => setRepairNeeded(false)} 
-                    style={[
-                      styles.smallChoice,
-                      { 
-                        backgroundColor: repairNeeded === false ? '#34A853' : colors.surfaceVariant 
-                      }
-                    ]}
-                    textStyle={{ 
-                      color: repairNeeded === false ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: p(12)
-                    }}
-                  >
-                    No
-                  </Chip>
+                <View style={[styles.rowSpace, { marginTop: 8 }]}>
+                  <Text style={styles.fieldLabel}>Redline Repair</Text>
+                  <View style={styles.rowWrap}>
+                    <Chip 
+                      selected={repairNeeded === true} 
+                      onPress={() => setRepairNeeded(true)} 
+                      style={[
+                        styles.smallChoice,
+                        { 
+                          backgroundColor: repairNeeded === true ? '#EA4335' : colors.surfaceVariant 
+                        }
+                      ]}
+                      textStyle={{ 
+                        color: repairNeeded === true ? '#fff' : colors.onSurfaceVariant,
+                        fontSize: p(12)
+                      }}
+                    >
+                      Yes
+                    </Chip>
+                    <Chip 
+                      selected={repairNeeded === false} 
+                      onPress={() => setRepairNeeded(false)} 
+                      style={[
+                        styles.smallChoice,
+                        { 
+                          backgroundColor: repairNeeded === false ? '#34A853' : colors.surfaceVariant 
+                        }
+                      ]}
+                      textStyle={{ 
+                        color: repairNeeded === false ? '#fff' : colors.onSurfaceVariant,
+                        fontSize: p(12)
+                      }}
+                    >
+                      No
+                    </Chip>
+                  </View>
                 </View>
               </View>
-
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Condition</Text>
-              <TextInput
-                mode="outlined"
-                placeholder="Used / New / Damaged"
-                value={condition}
-                onChangeText={setCondition}
-                style={[styles.input, { fontSize: p(14) }]}
-              />
-
-              {/* <View style={[styles.rowSpace, { marginTop: 8 }]}>
-<Text style={styles.fieldLabel}>Load Number</Text>
-<Menu
-  visible={loadMenuVisible}
-  onDismiss={() => setLoadMenuVisible(false)}
-  anchor={
-    <Button
-      mode="outlined"
-      onPress={() => setLoadMenuVisible(true)}
-      style={styles.menuButton}
-      contentStyle={styles.menuButtonContent}
-    >
-      {getLoadLabel(selectedLoad)}
-    </Button>
-  }
->
-  {LOAD_OPTIONS.map((load) => (
-    <Menu.Item
-      key={load.value}
-      onPress={() => {
-        setSelectedLoad(load.value);
-        setLoadMenuVisible(false);
-      }}
-      title={load.label}
-      titleStyle={{ fontSize: p(14) }}
-      style={{ backgroundColor: load.color, margin: 2, borderRadius: 4 }}
-    />
-  ))}
-</Menu>
-
-              </View> */}
-
-
-              {/* Optional: Display the selected load with color chips */}
-<Text style={styles.fieldLabel}>Select Load</Text>
-<View style={styles.rowWrap}>
-  {LOAD_OPTIONS.map((load) => (
-    <Chip
-      key={load.value}
-      selected={selectedLoad === load.value}
-      onPress={() => setSelectedLoad(load.value)}
-      style={[
-        styles.loadChip,
-        { 
-          backgroundColor: selectedLoad === load.value ? load.color : "red",
-          borderColor: load.color,
-          borderWidth: 1,
-        }
-      ]}
-      textStyle={{ 
-        color: selectedLoad === load.value ? '#fff' : colors.onSurfaceVariant,
-        fontSize: p(12),
-        fontWeight: 'bold'
-      }}
-    >
-      {load.label}
-    </Chip>
-  ))}
-</View>
-
-              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Gear Inspection Images</Text>
-              <View style={styles.imagesContainer}>
-                {images.map((imageUri, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.imageBox}
-                    onPress={() => handleImagePress(imageUri, index)}
-                  >
-                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity 
-                  style={[styles.imageBox, styles.addImageBox]}
-                  onPress={addNewImage}
-                >
-                  <Text style={styles.addImageText}>+</Text>
-                  <Text style={styles.addImageLabel}>Add Image</Text>
-                </TouchableOpacity>
-              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Actions */}
@@ -1113,145 +1037,32 @@ const [loadMenuVisible, setLoadMenuVisible] = useState(false);
         </View>
       </ScrollView>
 
-      {/* Image Preview Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseModal}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalToolbar}>
-              <IconButton
-                icon="undo"
-                size={26}
-                onPress={handleUndoDrawing}
-                disabled={!paths.length}
-                accessibilityLabel="Undo drawing"
-              />
-              <IconButton
-                icon={isDrawingMode ? 'pencil' : 'pencil-outline'}
-                size={26}
-                onPress={() => setIsDrawingMode(prev => !prev)}
-                accessibilityLabel="Toggle drawing"
-              />
-            </View>
-            <ViewShot
-              ref={drawingViewRef}
-              style={styles.drawingWrapper}
-              options={{ format: 'png', quality: 1, result: 'data-uri' }}
-            >
-              <View
-                style={styles.drawingContent}
-                {...(isDrawingMode ? drawingResponder.panHandlers : {})}
-              >
-                <Image source={{ uri: selectedImage }} style={styles.enlargedImage} />
-                <Svg style={StyleSheet.absoluteFill}>
-                  {paths.map((pathData, index) => (
-                    <Path
-                      key={`path-${index}`}
-                      d={pathData}
-                      stroke="red"
-                      strokeWidth={4}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  ))}
-                  {currentPath ? (
-                    <Path
-                      d={currentPath}
-                      stroke="red"
-                      strokeWidth={4}
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  ) : null}
-                </Svg>
-              </View>
-            </ViewShot>
-            {isDrawingMode ? (
-              <View style={styles.modalActions}>
-                <Button
-                  mode="contained"
-                  buttonColor="#EA4335"
-                  textColor="#fff"
-                  onPress={handleCloseModal}
-                  style={styles.modalActionButton}
-                >
-                  Close
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleSaveDrawing}
-                  disabled={!paths.length}
-                  style={styles.modalActionButton}
-                >
-                  Save
-                </Button>
-              </View>
-            ) : (
-              <Button 
-                mode="contained" 
-                buttonColor="#EA4335"
-                textColor="#fff"
-                onPress={handleCloseModal}
-                style={styles.closeButton}
-              >
-                Close
-              </Button>
-            )}
-          </View>
-        </View>
-      </Modal>
-      <ImageSourcePickerModal
-        visible={showImageSourceModal}
-        onDismiss={() => setShowImageSourceModal(false)}
-        onPickCamera={() => {
-          setShowImageSourceModal(false);
-          setShowCameraModal(true);
-        }}
-        onPickGallery={() => {
-          setShowImageSourceModal(false);
-          handlePickFromGallery();
-        }}
+      {/* Gear Findings MultiSelect Modal */}
+      <MultiSelectModal
+        visible={gearFindingsModalVisible}
+        onClose={() => setGearFindingsModalVisible(false)}
+        options={GEAR_FINDINGS}
+        selectedValues={selectedGearFindings}
+        onSelectionChange={setSelectedGearFindings}
+        title="Gear Findings"
       />
-      <CameraCaptureModal
-        visible={showCameraModal}
-        onClose={() => setShowCameraModal(false)}
-        onPhotoCaptured={uri => {
-          handleCameraCaptured(uri);
-          setShowCameraModal(false);
-        }}
-      />
+<ColorPickerModal
+  visible={colorPickerVisible}
+  onClose={() => setColorPickerVisible(false)}
+  selectedColor={selectedColor}
+  onColorSelect={setSelectedColor}
+/>
+
+      
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, marginBottom: p(40) },
-  title: { fontSize: p(18), fontWeight: 'bold' },
-  statusBadge: {
-    alignSelf: 'center',
-    fontSize: p(20),
-    fontWeight: '700',
-    paddingHorizontal: p(6),
-  },
-  header: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  loadChip: { 
-  marginRight: 6, 
-  marginBottom: 6,
-},
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: p(40) },
+  
   // Loading and error styles
   loadingContainer: {
     flex: 1,
@@ -1294,89 +1105,247 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  topCard: {
-    marginHorizontal: 14,
-    marginTop: 8,
-    borderRadius: 8,
-    padding: 12,
+  // Sticky Gear Information
+  stickyGearInfo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    borderBottomWidth: 1,
+  },
+  gearInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  gearInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  rosterAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  gearInfoText: {
+    flex: 1,
+  },
+  gearInfoName: {
+    fontSize: p(16),
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  gearInfoDetail: {
+    fontSize: p(12),
+  },
+  expandedGearInfo: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+  },
+  gearInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    elevation: 1,
   },
-  rosterCard: {
-    marginHorizontal: 14,
-    marginTop: 12,
-    borderRadius: 8,
-    padding: 12,
-    elevation: 1,
+  gearInfoColumn: {
+    flex: 1,
   },
-  rosterInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  gearInfoLabel: {
+    fontSize: p(12),
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  rosterDetail: {
-    width: '48%',
-    marginBottom: 8,
+  gearInfoValue: {
+    fontSize: p(14),
+    marginBottom: 2,
   },
-  topLeft: {},
-  topRight: { alignItems: 'flex-end' },
-  smallLabel: { fontSize: p(12), color: '#666', marginBottom: 4 },
-  infoText: { fontSize: p(14), fontWeight: '600', marginBottom: 2 },
-  statusChip: { marginTop: 4 },
 
-  row: { flexDirection: 'row', paddingHorizontal: 14, marginTop: 12 },
+  // Form styles
+  row: { 
+    flexDirection: 'row', 
+    paddingHorizontal: 14, 
+    marginTop: 120, // Space for sticky header
+  },
   col: { flex: 1 },
 
   card: {
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
-  cardTitle: { fontSize: p(16), fontWeight: '700', marginBottom: 12 },
+  cardTitle: { 
+    fontSize: p(16), 
+    fontWeight: '700', 
+    marginBottom: 16 
+  },
 
-  fieldLabel: { fontSize: p(14), fontWeight: '700', marginBottom: 6 },
+  fieldLabel: { 
+    fontSize: p(14), 
+    fontWeight: '600', 
+    marginBottom: 8 
+  },
   input: { marginBottom: 12 },
-  menuButton: { marginBottom: 12 },
-  menuButtonContent: { justifyContent: 'space-between' },
-  rowSpace: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  choiceChip: { marginRight: 6, marginBottom: 6 },
-  smallChoice: { marginRight: 6 },
-
-  imagesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
+  rowSpace: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginBottom: 16 
   },
-  imageBox: {
-    width: 80,
-    height: 80,
+  rowWrap: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8 
+  },
+  choiceChip: { 
+    marginRight: 6, 
+    marginBottom: 6 
+  },
+  smallChoice: { 
+    marginRight: 6 
+  },
+
+  // Dropdown styles
+  dropdownContainer: {
+    marginBottom: 16,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
     borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 48,
+  },
+  dropdownButtonText: {
+    fontSize: p(14),
+    flex: 1,
+  },
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    width: '80%',
+    maxHeight: '60%',
+    borderRadius: 12,
     overflow: 'hidden',
   },
-  addImageBox: {
-    backgroundColor: '#f6f6f6',
+  dropdownScroll: {
+    maxHeight: 400,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownOptionText: {
+    fontSize: p(14),
+    flex: 1,
+  },
+
+  // Gear Findings styles
+  gearFindingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minHeight: 48,
+    marginBottom: 12,
+  },
+  gearFindingsButtonText: {
+    fontSize: p(14),
+    flex: 1,
+  },
+  selectedFindingsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  findingChip: {
+    marginRight: 6,
+    marginBottom: 6,
+  },
+
+  // Load styles
+  selectedLoadContainer: {
+    marginTop: 8,
+  },
+  loadColorBox: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
+    minHeight: 44,
   },
-  previewImage: {
+  loadColorText: {
+    fontSize: p(14),
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  // MultiSelect Modal styles
+  multiSelectContainer: {
+    flex: 1,
+  },
+  multiSelectHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  multiSelectTitle: {
+    fontSize: p(18),
+    fontWeight: '700',
+    flex: 1,
+  },
+  multiSelectScroll: {
+    flex: 1,
+  },
+  multiSelectOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  multiSelectOptionText: {
+    fontSize: p(14),
+    flex: 1,
+  },
+  multiSelectFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+  },
+  multiSelectDoneButton: {
     width: '100%',
-    height: '100%',
-  },
-  addImageText: {
-    fontSize: p(20),
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  addImageLabel: {
-    fontSize: p(10),
-    color: '#666',
-    marginTop: 4,
   },
 
   actions: {
@@ -1384,61 +1353,81 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 14,
     paddingVertical: 18,
+    marginTop: 12,
   },
 
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    alignItems: 'center',
-  },
-  modalToolbar: {
-    flexDirection: 'row',
-    alignSelf: 'stretch',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  drawingWrapper: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  drawingContent: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  enlargedImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  closeButton: {
-    marginTop: 16,
-    alignSelf: 'stretch',
-    width: '100%',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 16,
-  },
-  modalActionButton: {
-    flex: 1,
-    marginHorizontal: 6,
-  },
+  //
+
+  // Color Picker Styles
+colorPickerButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  borderWidth: 1,
+  borderRadius: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 12,
+  minHeight: 48,
+  marginBottom: 16,
+},
+colorPickerButtonContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+},
+selectedColorCircle: {
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  marginRight: 12,
+},
+colorPickerButtonText: {
+  fontSize: p(14),
+  flex: 1,
+},
+colorPickerOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: 20,
+},
+colorPickerModal: {
+  width: '100%',
+  borderRadius: 16,
+  padding: 16,
+  maxWidth: 400,
+},
+colorPickerHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 16,
+},
+colorPickerTitle: {
+  fontSize: p(18),
+  fontWeight: '700',
+  flex: 1,
+},
+colorGrid: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  justifyContent: 'center',
+  gap: 12,
+},
+colorCircle: {
+  width: 50,
+  height: 50,
+  borderRadius: 25,
+  justifyContent: 'center',
+  alignItems: 'center',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+},
+colorCheckIcon: {
+  margin: 0,
+},
 });
