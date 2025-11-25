@@ -7,13 +7,19 @@ import {
   Button,
   Card,
   useTheme,
-  Menu,
-  Divider,
   Icon,
   Badge,
-  ActivityIndicator,
-  DataTable
+  DataTable,
+  Menu,
+  Divider,
+  Checkbox,
 } from 'react-native-paper';
+import {
+  MultiSelectDropdown,
+  type Option as DropdownOption,
+  type MultiSelectDropdownItemProps,
+  type DropdownInputProps,
+} from 'react-native-paper-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,6 +46,91 @@ const p = (size: number): number => size;
 
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
+type StatusDropdownOption = DropdownOption & {
+  icon?: string;
+  isHeader?: boolean;
+};
+
+type StatusDropdownItemProps = MultiSelectDropdownItemProps & {
+  option: StatusDropdownOption;
+};
+
+const StatusDropdownInput = ({
+  placeholder,
+  label,
+  rightIcon,
+  mode,
+  disabled,
+  error,
+}: DropdownInputProps) => (
+  <TextInput
+    placeholder={placeholder}
+    label={label}
+    value=""
+    right={rightIcon}
+    mode={mode}
+    editable={false}
+    disabled={disabled}
+    error={error}
+  />
+);
+
+const StatusDropdownItem = ({
+  option,
+  value = [],
+  onSelect,
+  width,
+  isLast,
+  menuItemTestID,
+}: StatusDropdownItemProps) => {
+  const isHeader = option.isHeader;
+
+  if (isHeader) {
+    return (
+      <>
+        <View style={[styles.statusGroupHeader, { minWidth: width }]}>
+          <Text style={styles.statusGroupHeaderText}>{option.label}</Text>
+        </View>
+        {!isLast && <Divider />}
+      </>
+    );
+  }
+
+  const isSelected = value.includes(option.value);
+  const handleToggle = () => {
+    if (isSelected) {
+      onSelect?.(value.filter((currentValue) => currentValue !== option.value));
+    } else {
+      onSelect?.([...value, option.value]);
+    }
+  };
+
+  return (
+    <>
+      <View style={[styles.statusOptionRow, { minWidth: width }]}>
+        <View style={styles.statusMenuItemWrapper}>
+          <Menu.Item
+            testID={menuItemTestID}
+            style={styles.statusMenuItem}
+            title={option.label}
+            titleStyle={[
+              styles.statusOptionLabel,
+              isSelected && styles.statusOptionLabelActive,
+            ]}
+            onPress={handleToggle}
+            leadingIcon={option.icon}
+          />
+        </View>
+        <Checkbox.Android
+          status={isSelected ? 'checked' : 'unchecked'}
+          onPress={handleToggle}
+        />
+      </View>
+      {!isLast && <Divider />}
+    </>
+  );
+};
+
 /**
  * LeadScreen - Main screen for displaying and filtering leads
  * Features dynamic status handling for Repair and Inspection leads
@@ -54,7 +145,6 @@ const LeadScreen = () => {
   // State Hooks
   const [search, setSearch] = useState<string>(''); // Search query
   const [orderTypeFilter, setOrderTypeFilter] = useState<'REPAIR' | 'INSPECTION' | null>(null); // Type filter
-  const [statusMenuVisible, setStatusMenuVisible] = useState<boolean>(false); // Status dropdown visibility
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   ); // Screen orientation
@@ -65,27 +155,30 @@ const LeadScreen = () => {
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(20); // Items per page
   const numberOfItemsPerPageList = [10, 20, 30, 50]; // Page size options
 
-  /**
-   * Get available statuses based on current type filter
-   * If no filter is set, shows all statuses grouped by type
-   */
-  const availableStatuses = useMemo(() => {
-    if (orderTypeFilter) {
-      return getStatusesByType(orderTypeFilter);
-    }
-    // If no type filter, return grouped statuses for the dropdown
-    return getAllStatusesGrouped();
+  const groupedStatusSections = useMemo(() => {
+    const sections = getAllStatusesGrouped();
+    if (!orderTypeFilter) return sections;
+
+    const typeKey = orderTypeFilter === 'REPAIR' ? 'repair' : 'inspection';
+    return sections.filter(
+      (section) => section.type === 'common' || section.type === typeKey,
+    );
   }, [orderTypeFilter]);
 
-  /**
-   * Check if a status is available for selection based on current filters
-   */
-  const isStatusAvailable = useCallback((status: LeadStatus) => {
-    if (!orderTypeFilter) return true; // All statuses available when no type filter
-    
-    const statuses = getStatusesByType(orderTypeFilter);
-    return statuses.some(s => s.status === status);
-  }, [orderTypeFilter]);
+  const statusOptions = useMemo<StatusDropdownOption[]>(() => {
+    return groupedStatusSections.flatMap((group) => [
+      {
+        label: group.title.toUpperCase(),
+        value: `__header__${group.type}`,
+        isHeader: true,
+      },
+      ...group.data.map(({ status, label, icon }) => ({
+        label,
+        value: status,
+        icon,
+      })),
+    ]);
+  }, [groupedStatusSections]);
 
   // Effect for handling screen orientation changes
   useEffect(() => {
@@ -178,6 +271,7 @@ const LeadScreen = () => {
     setPage(1);
   }, []);
 
+
   /**
    * Render individual lead card
    */
@@ -188,7 +282,15 @@ const LeadScreen = () => {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => navigation.navigate('LeadDetail', { lead: item })}
-      style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
+      style={[
+        styles.card,
+        styles.shadow,
+        { 
+          borderColor: colors.outline,
+          flexBasis: orientation === 'LANDSCAPE' ? '32%' : '48%',
+          flexGrow: 0,
+        }
+      ]}
     > 
       <Card style={{backgroundColor: colors.surface}}>
         <Card.Content>
@@ -302,80 +404,6 @@ const LeadScreen = () => {
     </TouchableOpacity> 
   )}, [colors, navigation]);
 
-  /**
-   * Render status dropdown with grouped sections
-   */
-  const renderStatusMenu = () => {
-    // If type filter is applied, show simple list
-    if (orderTypeFilter) {
-      const statuses = getStatusesByType(orderTypeFilter);
-      return (
-        <>
-          {statuses.map(({ status, icon, label }) => {
-            const selected = statusFilters.includes(status);
-            return (
-              <Menu.Item
-                key={status}
-                onPress={() => {
-                  setStatusFilters((prev) =>
-                    selected ? prev.filter((s) => s !== status) : [...prev, status]
-                  );
-                  setPage(1);
-                }}
-                title={label}
-                leadingIcon={icon}
-                trailingIcon={selected ? 'check' : undefined}
-              />
-            );
-          })}
-        </>
-      );
-    }
-
-    // If no type filter, show grouped statuses
-    return (
-      <>
-        {getAllStatusesGrouped().map((group, index) => (
-          <View key={group.title}>
-            {/* Section Header */}
-            <View style={[styles.menuSectionHeader, { backgroundColor: colors.surfaceVariant }]}>
-              <Text style={[styles.menuSectionTitle, { color: colors.onSurfaceVariant }]}>
-                {group.title}
-              </Text>
-            </View>
-            
-            {/* Section Items */}
-            {group.data.map(({ status, icon, label }) => {
-              const selected = statusFilters.includes(status);
-              const available = isStatusAvailable(status);
-              
-              return (
-                <Menu.Item
-                  key={status}
-                  onPress={() => {
-                    if (!available) return;
-                    setStatusFilters((prev) =>
-                      selected ? prev.filter((s) => s !== status) : [...prev, status]
-                    );
-                    setPage(1);
-                  }}
-                  title={label}
-                  leadingIcon={icon}
-                  trailingIcon={selected ? 'check' : undefined}
-                  style={!available ? { opacity: 0.5 } : {}}
-                  disabled={!available}
-                />
-              );
-            })}
-            
-            {/* Divider between sections (except last) */}
-            {index < getAllStatusesGrouped().length - 1 && <Divider />}
-          </View>
-        ))}
-      </>
-    );
-  };
-
   // Pagination calculations
   const from = (page - 1) * numberOfItemsPerPage;
   const to = Math.min(page * numberOfItemsPerPage, pagination?.total || 0);
@@ -436,37 +464,22 @@ const LeadScreen = () => {
             Inspection
           </Button>
 
-          {/* Status Filter Dropdown */}
-          <View>
-            <Menu
-              visible={statusMenuVisible}
-              onDismiss={() => setStatusMenuVisible(false)}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => setStatusMenuVisible(true)}
-                  style={styles.filterButton}
-                  labelStyle={styles.filterLabel}
-                  textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
-                  icon={statusFilters.length > 0 ? 'filter-check-outline' : 'filter-variant'}
-                >
-                  {statusFilters.length > 0 ? `${statusFilters.length} Selected` : 'Status'}
-                </Button>
-              }
-            >
-              {renderStatusMenu()}
-
-              <Divider />
-              {/* Clear all status filters */}
-              <Menu.Item
-                onPress={() => {
-                  setStatusFilters([]);
-                  setPage(1);
-                }}
-                title="Clear All"
-                leadingIcon="close"
-              />
-            </Menu>
+          {/* Status Filter Button */}
+          <View style={styles.multiSelectWrapper}>
+            <MultiSelectDropdown
+              label="Status"
+              placeholder="Select status"
+              options={statusOptions}
+              value={statusFilters}
+              onSelect={(selected) => {
+                setStatusFilters(selected as LeadStatus[]);
+                setPage(1);
+              }}
+              mode="outlined"
+              menuContentStyle={styles.statusDropdownMenu}
+              CustomMultiSelectDropdownItem={StatusDropdownItem}
+              CustomMultiSelectDropdownInput={StatusDropdownInput}
+            />
           </View>
 
           {/* Clear Filters Button with Badge */}
@@ -546,6 +559,7 @@ const LeadScreen = () => {
               keyExtractor={(item) => item.lead_id}
               numColumns={numColumns}
               contentContainerStyle={styles.grid}
+              columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
@@ -613,6 +627,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: p(4),
     marginVertical: p(4),
   },
+  multiSelectWrapper: {
+    flexGrow: 1,
+    minWidth: p(160),
+    maxWidth: p(340),
+    marginRight: p(8),
+    marginVertical: p(4),
+  },
   filterLabel: {
     fontSize: p(14),
   },
@@ -625,6 +646,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: p(5),
     gap: p(10),
   },
+  columnWrapper: {
+    justifyContent: 'space-between',
+  },
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -633,7 +657,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   card: {
-    flex: 1,
     margin: p(5),
     borderRadius: p(10),
   },
@@ -675,15 +698,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
   },
-  menuSectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  statusDropdownMenu: {
+    width: p(340),
+    maxWidth: '90%',
   },
-  menuSectionTitle: {
-    fontSize: 12,
+  statusGroupHeader: {
+    paddingHorizontal: p(12),
+    paddingVertical: p(6),
+    backgroundColor: '#f5f2fb',
+  },
+  statusGroupHeaderText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#7a6a92',
+  },
+  statusOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: p(6),
+  },
+  statusMenuItemWrapper: {
+    flex: 1,
+  },
+  statusMenuItem: {
+    minHeight: 44,
+  },
+  statusOptionLabel: {
+    fontSize: 14,
+  },
+  statusOptionLabelActive: {
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
 

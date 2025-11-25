@@ -12,6 +12,7 @@ import {
   PanResponder,
   GestureResponderEvent,
   Animated,
+  Keyboard,
 } from 'react-native';
 import {
   Text,
@@ -28,6 +29,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/common/Header';
+import Input from '../../components/Input';
 import { useLeadStore } from '../../store/leadStore';
 import { printTable } from '../../utils/printTable';
 import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
@@ -478,7 +480,8 @@ export default function UpdateInspectionScreen() {
   const [selectedLoad, setSelectedLoad] = useState('1');
 
   const [selectedColor, setSelectedColor] = useState('RED');
-const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   
   // Modal states
   const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
@@ -503,6 +506,20 @@ const [colorPickerVisible, setColorPickerVisible] = useState(false);
       setImages([gear.gear_image_url]);
     }
   }, [gear]);
+
+  // Track keyboard visibility to adjust bottom padding
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   // Handle scroll for sticky header
   const handleScroll = Animated.event(
@@ -734,7 +751,10 @@ const getColorLabel = (colorValue: string) => {
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: isKeyboardVisible ? p(260) : p(40) }
+        ]}
       >
         {/* Error banner */}
         {error && (
@@ -946,14 +966,17 @@ const getColorLabel = (colorValue: string) => {
             {/* Remarks */}
             <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
               <Text style={styles.cardTitle}>Remarks</Text>
-              <TextInput
-                mode="outlined"
+              <Input
                 placeholder="Add notes or remarks..."
                 value={remarks}
                 onChangeText={setRemarks}
                 multiline
                 numberOfLines={4}
+                enableVoice
+                appendVoiceResults
                 style={{ minHeight: 90, fontSize: p(14) }}
+                containerStyle={{ alignItems: 'flex-start' }}
+                onVoiceError={(message) => Alert.alert('Voice Input', message)}
               />
             </View>
           </View>
@@ -1061,7 +1084,7 @@ const getColorLabel = (colorValue: string) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: p(40) },
+  scrollContent: {},
   
   // Loading and error styles
   loadingContainer: {
