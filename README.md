@@ -95,3 +95,25 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+## Voice-enabled inputs
+
+The reusable `VoiceInputButton` and `Input` components let you drop a microphone next to any text field:
+
+```tsx
+import Input from '../components/Input';
+
+<Input
+  label="Notes"
+  value={notes}
+  onChangeText={setNotes}
+  multiline
+  enableVoice
+  appendVoiceResults
+/>
+```
+
+Under the hood we rely on `@react-native-voice/voice`. After installing node modules remember to:
+
+- **iOS**: update `ios/redline/Info.plist` with `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription`, then run `cd ios && pod install`.
+- **Android**: ensure `RECORD_AUDIO` permission stays declared (already included through `PermissionAndroid.request` at runtime).

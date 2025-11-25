@@ -304,11 +304,10 @@ const FirefighterFlowScreen = () => {
   };
 
   const handleManualAddGear = () => {
-    if (!selectedFirefighter) {
-      Alert.alert('Select Firefighter', 'Please select a firefighter first');
-      return;
-    }
-    navigation.navigate('AddGear');
+    navigation.navigate(
+      'AddGear',
+      selectedFirefighter ? { presetRoster: selectedFirefighter } : undefined,
+    );
   };
 
   const handleCompleteInspection = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,11 @@ import {
   Dimensions,
   Image,
   FlatList,
-  TouchableOpacity,
+  Pressable,
+  type PressableProps,
+  type PressableStateCallbackType,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import {
   Text,
@@ -19,12 +23,17 @@ import {
   Divider,
   Snackbar,
 } from 'react-native-paper';
+import {
+  Dropdown,
+  type Option as DropdownOption,
+} from 'react-native-paper-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import CommonDatePicker from '../../components/common/DatePicker';
+import MonthYearPicker from '../../components/common/MonthYearPicker';
 import RosterModal from '../../components/common/Modal/RosterModal';
 import ManufacturerModal from '../../components/common/Modal/ManufacturerModal';
 import { useLeadStore } from '../../store/leadStore';
@@ -38,7 +47,11 @@ import dayjs from 'dayjs';
 import Toast from 'react-native-toast-message';
 import BarcodeScannerModal from '../../components/common/Modal/BarcodeScannerModal';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddGear', 'GearSearch'>;
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'AddGear',
+  'GearSearch'
+>;
 
 interface RosterItem {
   roster_id: number;
@@ -77,30 +90,54 @@ interface ManufacturerItem {
   is_deleted?: boolean;
 }
 
+const DropdownTouchable = React.forwardRef<View, PressableProps>(
+  ({ style, ...rest }, ref) => (
+    <Pressable
+      ref={ref}
+      style={(state: PressableStateCallbackType) => {
+        const resolvedStyle: StyleProp<ViewStyle> =
+          typeof style === 'function' ? style(state) : style;
+        return [resolvedStyle, state.pressed ? { opacity: 0.8 } : null];
+      }}
+      {...rest}
+    />
+  ),
+);
+
 const AddGearScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute();
+  const route = useRoute<RouteProp<RootStackParamList, 'AddGear'>>();
   const { currentLead } = useLeadStore();
   const { colors } = useTheme();
 
   // Stores
-  const { gearTypes, loading: gearLoading, createGear, fetchGearTypes } = useGearStore();
+  const {
+    gearTypes,
+    loading: gearLoading,
+    createGear,
+    fetchGearTypes,
+  } = useGearStore();
   const { fetchRosters } = useRosterStore();
   const { fetchManufacturers } = useManufacturerStore();
 
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
-    Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
+    Dimensions.get('window').width > Dimensions.get('window').height
+      ? 'LANDSCAPE'
+      : 'PORTRAIT',
   );
-  printTable("AddGears_screen - currentLead", currentLead);
+  printTable('AddGears_screen - currentLead', currentLead);
 
   // Form state
   const [gearName, setGearName] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [assignedRoster, setAssignedRoster] = useState<RosterItem | null>(null);
-  const [manufacturer, setManufacturer] = useState<ManufacturerItem | null>(null);
+  const [manufacturer, setManufacturer] = useState<ManufacturerItem | null>(
+    null,
+  );
   const [selectedGearType, setSelectedGearType] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<GearStatus>('new');
   const [manufacturingDate, setManufacturingDate] = useState('');
+  const [isGearNameEditable, setIsGearNameEditable] = useState(true);
 
   // UI states
   const [submitting, setSubmitting] = useState(false);
@@ -120,11 +157,11 @@ const AddGearScreen = () => {
 
   // menus + modals
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
-  const [manufacturerModalVisible, setManufacturerModalVisible] = useState(false);
+  const [manufacturerModalVisible, setManufacturerModalVisible] =
+    useState(false);
   const [manufacturerMenuVisible, setManufacturerMenuVisible] = useState(false);
   const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   const [rosterMenuVisible, setRosterMenuVisible] = useState(false);
-  const [gearTypeMenuVisible, setGearTypeMenuVisible] = useState(false);
 
   useEffect(() => {
     const onChange = () => {
@@ -135,6 +172,14 @@ const AddGearScreen = () => {
     return () => sub.remove();
   }, []);
 
+  const presetRoster = route.params?.presetRoster as RosterItem | undefined;
+
+  useEffect(() => {
+    if (presetRoster) {
+      setAssignedRoster(presetRoster);
+    }
+  }, [presetRoster]);
+
   // Fetch gear types on mount
   useEffect(() => {
     fetchGearTypes();
@@ -142,14 +187,14 @@ const AddGearScreen = () => {
 
   const isLandscape = orientation === 'LANDSCAPE';
 
-    // NEW: Handle barcode scan result
-    const handleBarcodeScanned = (barcode: string) => {
-      setSerialNumber(barcode);
-      Toast.show({
-        type: 'success',
-        text1: 'Barcode scanned successfully!',
-      });
-    };
+  // NEW: Handle barcode scan result
+  const handleBarcodeScanned = (barcode: string) => {
+    setSerialNumber(barcode);
+    Toast.show({
+      type: 'success',
+      text1: 'Barcode scanned successfully!',
+    });
+  };
 
   const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
@@ -209,32 +254,39 @@ const AddGearScreen = () => {
       serial_number: serialNumber.trim(),
       status: selectedStatus,
       active_status: true,
-      firestation_id: currentLead?.firestation?.id || assignedRoster?.firestation.id,
+      firestation_id:
+        currentLead?.firestation?.id || assignedRoster?.firestation.id,
       franchise_id: currentLead?.franchise?.id || assignedRoster?.franchise.id,
       // firestation_id :11,
       // franchise_id : 22,
       gear_type_id: selectedGearType?.gear_type_id,
-      // manufacturing_date: formatDateForAPI(manufacturingDate), // Add manufacturing date
-      manufacturing_date : dayjs(manufacturingDate).format('YYYY-MM-DD')
+      manufacturing_date: manufacturingDate
+        ? dayjs(`${manufacturingDate}-01`).format('YYYY-MM-DD')
+        : '',
     };
 
-    console.log('Save payload', payload , "manufacturingDate",manufacturingDate);
+    console.log(
+      'Save payload',
+      payload,
+      'manufacturingDate',
+      manufacturingDate,
+    );
 
     try {
       // const success:any = await createGear(payload);
       // console.log("success-Gear_added successfully",success)'
-    const createdGear = await createGear(payload);
-    console.log("success-Gear_added successfully", createdGear);
+      const createdGear = await createGear(payload);
+      console.log('success-Gear_added successfully', createdGear);
       if (createdGear) {
-            Toast.show({
-              type: 'success',
-              text1: 'Gear added successfully!',
-            });
+        Toast.show({
+          type: 'success',
+          text1: 'Gear added successfully!',
+        });
         // Reset form and navigate back after success
         setTimeout(() => {
-        resetForm();
+          resetForm();
           // navigation.goBack();
-        navigation.navigate('GearDetail', {  gear_id: createdGear.gear_id });
+          navigation.navigate('GearDetail', { gear_id: createdGear.gear_id });
         }, 1500);
       } else {
         // showSnackbar('Failed to add gear. Please try again.');
@@ -262,18 +314,50 @@ const AddGearScreen = () => {
   };
 
   const onRosterSelect = (roster: RosterItem) => {
-    printTable("onRosterSelect", roster);
+    printTable('onRosterSelect', roster);
     setAssignedRoster(roster);
   };
 
   const onManufacturerSelect = (mfr: ManufacturerItem) => {
-    printTable("mfr", mfr);
+    printTable('mfr', mfr);
     setManufacturer(mfr);
   };
 
-  const onGearTypeSelect = (gearType: any) => {
-    setSelectedGearType(gearType);
-    setGearTypeMenuVisible(false);
+  const gearTypeOptions = useMemo<DropdownOption[]>(() => {
+    return (gearTypes || []).map(gearType => ({
+      label: gearType.gear_type,
+      value: String(gearType.gear_type_id),
+    }));
+  }, [gearTypes]);
+
+  const onGearTypeSelect = (gearTypeId?: string) => {
+    if (!gearTypeId) {
+      setSelectedGearType(null);
+      setGearName('');
+      setIsGearNameEditable(true);
+      return;
+    }
+
+    const gearType = gearTypes?.find(
+      type => String(type.gear_type_id) === gearTypeId,
+    );
+    setSelectedGearType(gearType || null);
+
+    if (gearType) {
+      const isOtherType =
+        gearType.gear_type?.toLowerCase?.().includes('other') ?? false;
+
+      if (isOtherType) {
+        setGearName('');
+        setIsGearNameEditable(true);
+      } else {
+        setGearName(gearType.gear_type || '');
+        setIsGearNameEditable(false);
+      }
+    } else {
+      setGearName('');
+      setIsGearNameEditable(true);
+    }
   };
 
   const getStatusLabel = (status: GearStatus) => {
@@ -308,13 +392,25 @@ const AddGearScreen = () => {
           <View style={styles.selectedItemInfo}>
             <Icon source="account" size={p(36)} color={colors.primary} />
             <View style={styles.selectedItemText}>
-              <Text style={[styles.selectedItemName, { color: colors.onSurface }]}>
+              <Text
+                style={[styles.selectedItemName, { color: colors.onSurface }]}
+              >
                 {assignedRoster.roster_name}
               </Text>
-              <Text style={[styles.selectedItemSubtitle, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[
+                  styles.selectedItemSubtitle,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
                 {assignedRoster.firestation?.name || 'Unknown Station'}
               </Text>
-              <Text style={[styles.selectedItemSubtitle, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[
+                  styles.selectedItemSubtitle,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
                 {assignedRoster.email} • {assignedRoster.phone}
               </Text>
             </View>
@@ -330,7 +426,11 @@ const AddGearScreen = () => {
                 onPress={() => setRosterMenuVisible(true)}
                 compact
               >
-                <Icon source="dots-vertical" size={p(20)} color={colors.onSurface} />
+                <Icon
+                  source="dots-vertical"
+                  size={p(20)}
+                  color={colors.onSurface}
+                />
               </Button>
             }
           >
@@ -380,10 +480,17 @@ const AddGearScreen = () => {
           <View style={styles.selectedItemInfo}>
             <Icon source="factory" size={p(36)} color={colors.primary} />
             <View style={styles.selectedItemText}>
-              <Text style={[styles.selectedItemName, { color: colors.onSurface }]}>
+              <Text
+                style={[styles.selectedItemName, { color: colors.onSurface }]}
+              >
                 {manufacturer.manufacturer_name}
               </Text>
-              <Text style={[styles.selectedItemSubtitle, { color: colors.onSurfaceVariant }]}>
+              <Text
+                style={[
+                  styles.selectedItemSubtitle,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
                 {manufacturer.city}, {manufacturer.country}
               </Text>
             </View>
@@ -399,7 +506,11 @@ const AddGearScreen = () => {
                 onPress={() => setManufacturerMenuVisible(true)}
                 compact
               >
-                <Icon source="dots-vertical" size={p(20)} color={colors.onSurface} />
+                <Icon
+                  source="dots-vertical"
+                  size={p(20)}
+                  color={colors.onSurface}
+                />
               </Button>
             }
           >
@@ -427,25 +538,42 @@ const AddGearScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* header */}
       <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <Button mode="text" compact onPress={() => navigation.goBack()} contentStyle={{ flexDirection: 'row' }} style={{ marginLeft: p(-8) }}>
+        <Button
+          mode="text"
+          compact
+          onPress={() => navigation.goBack()}
+          contentStyle={{ flexDirection: 'row' }}
+          style={{ marginLeft: p(-8) }}
+        >
           <Icon source="arrow-left" size={p(20)} color={colors.onSurface} />
         </Button>
 
-        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Add Gear</Text>
+        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>
+          Add Gear
+        </Text>
 
         <View style={styles.headerActions}>
-          <Button mode="text" compact onPress={() => navigation.goBack()} textColor={colors.onSurface}>Cancel</Button>
-          <Button 
-            mode="contained" 
-            compact 
-            onPress={handleSave} 
+          <Button
+            mode="text"
+            compact
+            onPress={() => navigation.goBack()}
+            textColor={colors.onSurface}
+          >
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            compact
+            onPress={handleSave}
             loading={submitting}
             disabled={submitting}
-            buttonColor={colors.primary} 
-            style={styles.saveBtn} 
+            buttonColor={colors.primary}
+            style={styles.saveBtn}
             textColor={colors.surface}
           >
             {submitting ? 'Saving...' : 'Save'}
@@ -453,17 +581,60 @@ const AddGearScreen = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: p(28) }}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: p(28) }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {currentLead && (
+          <Card
+            style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
+          >
+            <Card.Content>
+              <Text
+                style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}
+              >
+                Current Job Information
+              </Text>
+              <Divider style={{ marginVertical: p(8) }} />
+              <Text
+                style={[styles.infoText, { color: colors.onSurfaceVariant }]}
+              >
+                Fire Station: {currentLead.firestation?.name}
+              </Text>
+              <Text
+                style={[styles.infoText, { color: colors.onSurfaceVariant }]}
+              >
+                Franchise: {currentLead.franchise?.name}
+              </Text>
+            </Card.Content>
+          </Card>
+        )}
+
         {/* Basic info */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
-            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Information</Text>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>
+              Gear Information
+            </Text>
             <Divider style={{ marginVertical: p(8) }} />
 
-                        {/* Fire Fighter & Manufacturer side-by-side */}
-                        <View style={[styles.inputRow, { marginTop: p(8), alignItems: 'flex-start', gap: p(6) }]}>
-              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Fire Fighter *</Text>
+            {/* Fire Fighter & Manufacturer side-by-side */}
+            <View
+              style={[
+                styles.inputRow,
+                { marginTop: p(8), alignItems: 'flex-start', gap: p(6) },
+              ]}
+            >
+              <View
+                style={[
+                  styles.inputCol,
+                  isLandscape ? { flex: 1 } : { flex: 1 },
+                ]}
+              >
+                <Text style={[styles.label, { color: colors.onSurface }]}>
+                  Fire Fighter *
+                </Text>
                 {renderSelectedRosterCard()}
                 {!assignedRoster && (
                   <TextInput
@@ -478,10 +649,22 @@ const AddGearScreen = () => {
                 )}
               </View>
 
-              <View style={{ width: isLandscape ? p(12) : 0, height: isLandscape ? undefined : p(12) }} />
+              <View
+                style={{
+                  width: isLandscape ? p(12) : 0,
+                  height: isLandscape ? undefined : p(12),
+                }}
+              />
 
-              <View style={[styles.inputCol, isLandscape ? { flex: 1 } : { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturer *</Text>
+              <View
+                style={[
+                  styles.inputCol,
+                  isLandscape ? { flex: 1 } : { flex: 1 },
+                ]}
+              >
+                <Text style={[styles.label, { color: colors.onSurface }]}>
+                  Manufacturer *
+                </Text>
                 {renderSelectedManufacturerCard()}
                 {!manufacturer && (
                   <TextInput
@@ -494,66 +677,6 @@ const AddGearScreen = () => {
                     dense
                   />
                 )}
-              </View>
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Gear Type *</Text>
-                <Menu
-                  visible={gearTypeMenuVisible}
-                  onDismiss={() => setGearTypeMenuVisible(false)}
-                  anchor={
-                    <TouchableOpacity
-                      style={[
-                        styles.selectButton,
-                        { 
-                          backgroundColor: colors.surface,
-                          borderColor: colors.outline 
-                        }
-                      ]}
-                      onPress={() => setGearTypeMenuVisible(true)}
-                    >
-                      <Text style={[
-                        styles.selectButtonText,
-                        { 
-                          color: selectedGearType ? colors.onSurface : colors.onSurfaceVariant 
-                        }
-                      ]}>
-                        {selectedGearType ? selectedGearType.gear_type : 'Select Gear Type'}
-                      </Text>
-                      <Text style={[styles.selectButtonIcon, { color: colors.onSurfaceVariant }]}>
-                        ▼
-                      </Text>
-                    </TouchableOpacity>
-                  }
-                  contentStyle={{ backgroundColor: colors.surface }}
-                >
-                  {gearTypes.map((gearType) => (
-                    <Menu.Item
-                      key={gearType.gear_type_id}
-                      onPress={() => onGearTypeSelect(gearType)}
-                      title={gearType.gear_type}
-                      titleStyle={{ color: colors.onSurface }}
-                    />
-                  ))}
-                </Menu>
-              </View>
-
-              <View style={{ width: p(12) }} />
-
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Gear Name *</Text>
-                <TextInput
-                  mode="outlined"
-                  value={gearName}
-                  onChangeText={setGearName}
-                  placeholder="Enter gear name"
-                  style={styles.input}
-                  outlineColor={colors.outline}
-                  activeOutlineColor={colors.primary}
-                  dense
-                />
               </View>
             </View>
 
@@ -573,7 +696,9 @@ const AddGearScreen = () => {
               </View> */}
 
               <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Serial Number *</Text>
+                <Text style={[styles.label, { color: colors.onSurface }]}>
+                  Serial Number *
+                </Text>
                 <TextInput
                   mode="outlined"
                   value={serialNumber}
@@ -584,8 +709,8 @@ const AddGearScreen = () => {
                   activeOutlineColor={colors.primary}
                   dense
                   right={
-                    <TextInput.Icon 
-                      icon="barcode-scan" 
+                    <TextInput.Icon
+                      icon="barcode-scan"
                       onPress={() => setBarcodeScannerVisible(true)}
                       color={colors.primary}
                     />
@@ -596,68 +721,62 @@ const AddGearScreen = () => {
               <View style={{ width: p(12) }} />
 
               <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Status</Text>
-                <Menu
-                  visible={statusMenuVisible}
-                  onDismiss={() => setStatusMenuVisible(false)}
-                  anchor={
-                    <TouchableOpacity
-                      style={[
-                        styles.selectButton,
-                        { 
-                          backgroundColor: colors.surface,
-                          borderColor: colors.outline 
-                        }
-                      ]}
-                      // onPress={() => setStatusMenuVisible(true)}
-                    >
-                      <Text style={[
-                        styles.selectButtonText,
-                        { 
-                          color: colors.onSurface
-                        }
-                      ]}>
-                        {getStatusLabel(selectedStatus)}
-                      </Text>
-                      <Text style={[styles.selectButtonIcon, { color: colors.onSurfaceVariant }]}>
-                        ▼
-                      </Text>
-                    </TouchableOpacity>
-                  }
-                  contentStyle={{ backgroundColor: colors.surface }}
-                >
-                  {GEAR_STATUSES.map((status) => (
-                    <Menu.Item
-                      key={status.value}
-                      onPress={() => {
-                        setSelectedStatus(status.value);
-                        setStatusMenuVisible(false);
-                      }}
-                      title={status.label}
-                      titleStyle={{ color: colors.onSurface }}
-                    />
-                  ))}
-                </Menu>
+                <MonthYearPicker
+                  label="Manufacturing Month & Year"
+                  value={manufacturingDate}
+                  onChange={setManufacturingDate}
+                  placeholder="Select month & year"
+                />
               </View>
             </View>
 
+            <View style={styles.inputRow}>
+              <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>
+                  Gear Type *
+                </Text>
+                <Dropdown
+                  label="Gear Type"
+                  placeholder="Select gear type"
+                  mode="outlined"
+                  value={
+                    selectedGearType
+                      ? String(selectedGearType.gear_type_id)
+                      : undefined
+                  }
+                  options={gearTypeOptions}
+                  onSelect={onGearTypeSelect}
+                  menuContentStyle={{ backgroundColor: colors.surface }}
+                  hideMenuHeader
+                  // No Touchable prop needed
+                />
+              </View>
 
+              <View style={{ width: p(12) }} />
 
-            {/* Manufacturing Date */}
-            <View style={{ marginTop: p(10) }}>
-              <Text style={[styles.label, { color: colors.onSurface }]}>Manufacturing Date (dd-mm-yyyy)</Text>
-              <CommonDatePicker
-                value={manufacturingDate}
-                onChange={setManufacturingDate}
-                mode="date"
-                placeholder="Select manufacturing date"
-              />
+              <View style={[styles.inputCol, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.onSurface }]}>
+                  Gear Name *
+                </Text>
+                <TextInput
+                  mode="outlined"
+                  value={gearName}
+                  onChangeText={setGearName}
+                  placeholder="Enter gear name"
+                  style={styles.input}
+                  outlineColor={colors.outline}
+                  activeOutlineColor={colors.primary}
+                  dense
+                  editable={isGearNameEditable}
+                  disabled={!isGearNameEditable}
+                />
+              </View>
             </View>
           </Card.Content>
         </Card>
 
         {/* Gear Images Card - Keeping your existing gear images */}
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+        {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
             <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
             <Divider style={{ marginVertical: p(8) }} />
@@ -679,41 +798,31 @@ const AddGearScreen = () => {
                 compact
                 icon="camera"
                 style={[styles.smallBtn, { marginLeft: p(8) }]}
-                onPress={() => { /* upload */ }}
+                onPress={() => { }}
               >
                 Upload
               </Button>
             </View>
             
           </Card.Content>
-        </Card>
+        </Card> */}
 
-        {/* Current Lead Info */}
-        {currentLead && (
-          <Card style={[styles.card, { backgroundColor: colors.surfaceVariant }]}>
-            <Card.Content>
-              <Text style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}>
-                Current Job Information
-              </Text>
-              <Divider style={{ marginVertical: p(8) }} />
-              <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
-                Fire Station: {currentLead.firestation?.name}
-              </Text>
-              <Text style={[styles.infoText, { color: colors.onSurfaceVariant }]}>
-                Franchise: {currentLead.franchise?.name}
-              </Text>
-            </Card.Content>
-          </Card>
-        )}
+        {/* Current Lead Info moved above */}
 
         {/* Submit Button */}
-        <View style={{ marginTop: p(12), marginBottom: p(22), marginHorizontal: p(100) }}>
-          <Button 
-            mode="contained" 
-            onPress={handleSave} 
+        <View
+          style={{
+            marginTop: p(12),
+            marginBottom: p(22),
+            marginHorizontal: p(100),
+          }}
+        >
+          <Button
+            mode="contained"
+            onPress={handleSave}
             loading={submitting}
             disabled={submitting}
-            buttonColor={colors.primary} 
+            buttonColor={colors.primary}
             contentStyle={{ paddingVertical: p(8) }}
             labelStyle={{
               fontSize: p(16),
@@ -730,18 +839,24 @@ const AddGearScreen = () => {
       <RosterModal
         visible={rosterModalVisible}
         onClose={() => setRosterModalVisible(false)}
-        onRosterSelect={(r: any) => { onRosterSelect(r as RosterItem); setRosterModalVisible(false); }}
+        onRosterSelect={(r: any) => {
+          onRosterSelect(r as RosterItem);
+          setRosterModalVisible(false);
+        }}
         onAddRosterManual={handleAddRosterManual}
       />
 
       <ManufacturerModal
         visible={manufacturerModalVisible}
         onClose={() => setManufacturerModalVisible(false)}
-        onSelect={(mfr: any) => { onManufacturerSelect(mfr as ManufacturerItem); setManufacturerModalVisible(false); }}
+        onSelect={(mfr: any) => {
+          onManufacturerSelect(mfr as ManufacturerItem);
+          setManufacturerModalVisible(false);
+        }}
       />
 
-            {/* NEW: Barcode Scanner Modal */}
-        <BarcodeScannerModal
+      {/* NEW: Barcode Scanner Modal */}
+      <BarcodeScannerModal
         visible={barcodeScannerVisible}
         onClose={() => setBarcodeScannerVisible(false)}
         onBarcodeScanned={handleBarcodeScanned}
@@ -769,7 +884,12 @@ const styles = StyleSheet.create({
     paddingVertical: p(10),
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: p(18), fontWeight: '700', textAlign: 'center', flex: 1 },
+  headerTitle: {
+    fontSize: p(18),
+    fontWeight: '700',
+    textAlign: 'center',
+    flex: 1,
+  },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   saveBtn: { borderRadius: p(8) },
 
@@ -778,32 +898,23 @@ const styles = StyleSheet.create({
 
   cardTitle: { fontSize: p(16), fontWeight: '700' },
 
-  inputRow: { flexDirection: 'row', alignItems: 'center',  marginBottom: p(4)  },
+  inputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: p(4) },
   inputCol: { flex: 1 },
   label: { fontSize: p(13), fontWeight: '600', marginBottom: p(4) },
   input: { height: p(44) },
   smallBtn: { borderRadius: p(8) },
 
-  selectButton: {
+  selectedItemCard: {
+    borderWidth: 1,
+    borderRadius: p(8),
+    backgroundColor: 'white',
+  },
+  selectedItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: p(16),
-    paddingVertical: p(12),
-    borderRadius: p(4),
-    borderWidth: 1,
+    paddingVertical: p(8),
   },
-  selectButtonText: {
-    fontSize: p(16),
-    flex: 1,
-  },
-  selectButtonIcon: {
-    fontSize: p(12),
-    marginLeft: p(8),
-  },
-
-  selectedItemCard: { borderWidth: 1, borderRadius: p(8), backgroundColor: 'white' },
-  selectedItemContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: p(8) },
   selectedItemInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   selectedItemText: { flex: 1, marginLeft: p(10) },
   selectedItemName: { fontSize: p(15), fontWeight: '600' },

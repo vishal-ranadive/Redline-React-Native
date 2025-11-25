@@ -7,8 +7,10 @@ import {
   ScrollView,
   Alert,
   Animated,
-  TouchableOpacity
+  TouchableOpacity,
 
+  Keyboard,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -23,8 +25,15 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../components/common/Header';
-import { useGearStore } from '../../store/gearStore';
+import Input from '../../components/Input';
+import { useLeadStore } from '../../store/leadStore';
 import { printTable } from '../../utils/printTable';
+import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
+import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal';
+import { launchImageLibrary } from 'react-native-image-picker';
+import Svg, { Path } from 'react-native-svg';
+import ViewShot from 'react-native-view-shot';
+import { useGearStore } from '../../store/gearStore';
 import { 
   InspectionHeader,
   StatusSelection,
@@ -34,7 +43,7 @@ import {
 } from './components';
 import { CustomDropdown, MultiSelectModal, ColorPickerModal } from '../../components/common';
 import { INSPECTION_CONSTANTS } from '../../constants/inspection';
-
+import {p} from "../../utils/responsive"
 // Gear Findings options
 const GEAR_FINDINGS = [
   { value: 'MFR_LABEL_DAMAGED_LOOSE', label: 'Mfr. Info Label Damaged/Loose' },
@@ -67,6 +76,10 @@ export default function UpdateInspectionScreen() {
   const [gear, setGear] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [size, setSize] = useState(gear?.gear_size ?? 'L');
+  const [serialNumber, setSerial] = useState(gear?.serial_number ?? '');
+  const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
+
 
   // Form state
   const [formData, setFormData] = useState({
@@ -88,10 +101,10 @@ export default function UpdateInspectionScreen() {
   });
 
   // UI state
-  const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
-  const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
-  const [colorPickerVisible, setColorPickerVisible] = useState(false);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  // const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
+  // const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
+  // const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  // const scrollY = useRef(new Animated.Value(0)).current;
 
   // Get gear ID from route params
   const gearId = route.params?.gearId;
@@ -163,6 +176,26 @@ export default function UpdateInspectionScreen() {
   const requiresHydroTest = INSPECTION_CONSTANTS.HYDRO_TEST_GEAR_TYPES.includes(
     gear?.gear_type?.gear_type?.toUpperCase()
   );
+  const [selectedColor, setSelectedColor] = useState('RED');
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  
+  // Modal states
+  const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
+  const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Multiple images state
+  const [images, setImages] = useState<string[]>([]);
+
+  // Update form fields when gear data loads
+  useEffect(() => {
+    if (gear) {
+      setSize(gear.gear_size || 'L');
+      setSerial(gear.serial_number || '');
+      setRemarks(gear.remarks || '');
+    }
+  }, [gear]);
 
   // Handle form field changes
   const handleFieldChange = useCallback((field: string, value: any) => {
@@ -172,6 +205,28 @@ export default function UpdateInspectionScreen() {
     }));
   }, []);
 
+  // Update images when gear image URL is available
+  useEffect(() => {
+    if (gear?.gear_image_url) {
+      setImages([gear.gear_image_url]);
+    }
+  }, [gear]);
+
+  // Track keyboard visibility to adjust bottom padding
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showListener = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideListener = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
+
+  // Handle scroll for sticky header
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: false }
@@ -278,7 +333,10 @@ export default function UpdateInspectionScreen() {
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: isKeyboardVisible ? p(260) : p(40) }
+        ]}
       >
         {/* Error banner */}
         {error && (
@@ -469,15 +527,18 @@ export default function UpdateInspectionScreen() {
 
             {/* Remarks */}
             <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
-              <TextInput
-                mode="outlined"
+              <Text style={styles.cardTitle}>Remarks</Text>
+              <Input
                 placeholder="Add notes or remarks..."
                 value={formData.remarks}
                 onChangeText={(text) => handleFieldChange('remarks', text)}
                 multiline
                 numberOfLines={4}
-                style={{ minHeight: 90 }}
+                enableVoice
+                appendVoiceResults
+                style={{ minHeight: 90, fontSize: p(14) }}
+                containerStyle={{ alignItems: 'flex-start' }}
+                onVoiceError={(message) => Alert.alert('Voice Input', message)}
               />
             </View>
           </View>
@@ -537,8 +598,10 @@ export default function UpdateInspectionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollView: { flex: 1, marginTop:0, },
-  scrollContent: { paddingBottom: 40 },
+  scrollView: { flex: 1 },
+  scrollContent: {},
+  // scrollView: { flex: 1, marginTop:0, },
+  // scrollContent: { paddingBottom: 40 },
   
   // Loading and error styles
   loadingContainer: {
