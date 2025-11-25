@@ -47,6 +47,10 @@ interface RosterState {
   
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+
+  // roster
+    fetchRostersByFirestation: (firestationId: number, params?: any) => Promise<void>;
+
 }
 
 export const useRosterStore = create<RosterState>()(
@@ -127,6 +131,32 @@ export const useRosterStore = create<RosterState>()(
             loading: false,
           });
           return false;
+        }
+      },
+      // Add to your store implementation
+      fetchRostersByFirestation: async (firestationId: number, params: any = {}) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await rosterApi.getRostersByFirestation(firestationId, params);
+
+          if (response.status) {
+            set({
+              rosters: response.rosters || [],
+              pagination: response.pagination || null,
+              loading: false,
+              error: null,
+            });
+          } else {
+            set({
+              error: response.message || 'Failed to fetch rosters',
+              loading: false,
+            });
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Network error',
+            loading: false,
+          });
         }
       },
 

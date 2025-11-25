@@ -9,6 +9,14 @@ export const rosterApi = {
     return response.data;
   },
 
+  getRostersByFirestation: async (firestationId: number, params?: any): Promise<any> => {
+    console.log('➡️ API CALL /roster/firestation/', firestationId, 'with', params);
+    console.log('Endpoint', `/roster/firestation/${firestationId}/${params.firestation_id}`)
+    const response = await axiosInstance.get(`/roster/firestation/${firestationId}/`);
+    console.log('✅ API Response /roster/firestation/', response.data);
+    return response.data;
+  },
+
   // Get roster by ID
   getRosterById: async (id: number): Promise<any> => {
     const response = await axiosInstance.get(`/roster/${id}/`);

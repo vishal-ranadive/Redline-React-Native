@@ -1,5 +1,5 @@
 // src/screens/firefighterscreens/FirefighterFlowScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,54 +14,16 @@ import {
   useTheme,
   IconButton,
   ActivityIndicator,
+  Divider,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import Header from '../../components/common/Header';
 import { useNavigation } from '@react-navigation/native';
-import CustomDropdown from '../../components/common/CustomDropdown';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-
-// Dummy firefighter data
-const FIREFIGHTERS = [
-  {
-    roster_id: 1,
-    first_name: 'MICHEAL',
-    middle_name: '',
-    last_name: 'KERN',
-    email: 'michealkeran@sarasota.com',
-    phone: '555-0101',
-    station: 'Sarasota County Fire Department'
-  },
-  {
-    roster_id: 8,
-    first_name: 'JANE',
-    middle_name: 'M',
-    last_name: 'DOE',
-    email: 'jane.doe@fire.com',
-    phone: '5551234567',
-    station: 'Abington Fire Department'
-  },
-  {
-    roster_id: 19,
-    first_name: 'DEMO',
-    middle_name: 'FIREFIGHTER',
-    last_name: 'RR',
-    email: 'demoff@gmail.com',
-    phone: '+1-555-123-4888',
-    station: 'Abington Fire Department'
-  },
-  {
-    roster_id: 25,
-    first_name: 'DEMOROSTER',
-    middle_name: 'AA',
-    last_name: 'AA',
-    email: 'roster.AA@smsaexpress.com',
-    phone: '5551234567',
-    station: 'Central Fire Station'
-  },
-];
+import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
+import RosterModal from '../../components/common/Modal/RosterModal';
 
 // Real gear data from your API response
 const REAL_GEARS_DATA = [
@@ -246,22 +208,18 @@ const FirefighterFlowScreen = () => {
   const [gears, setGears] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [rosterModalVisible, setRosterModalVisible] = useState(false);
+  const [addFirefighterModalVisible, setAddFirefighterModalVisible] = useState(false);
 
-  const getFirefighterLabel = (rosterId: number) => {
-    const firefighter = FIREFIGHTERS.find(f => f.roster_id === rosterId);
-    return firefighter ? `${firefighter.first_name} ${firefighter.last_name}` : 'Select Firefighter';
-  };
-
-  const handleFirefighterSelect = async (rosterId: number) => {
-    const firefighter = FIREFIGHTERS.find(f => f.roster_id === rosterId);
-    setSelectedFirefighter(firefighter);
+  const handleFirefighterSelect = async (roster: any) => {
+    setSelectedFirefighter(roster);
     setSelectedCategory(null);
     setLoading(true);
     
     try {
       // Simulate API call with real data
       setTimeout(() => {
-        const filteredGears = REAL_GEARS_DATA.filter(gear => gear.roster_id === rosterId);
+        const filteredGears = REAL_GEARS_DATA.filter(gear => gear.roster_id === roster.roster_id);
         setGears(filteredGears);
         setLoading(false);
       }, 1000);
@@ -294,10 +252,8 @@ const FirefighterFlowScreen = () => {
       };
     }
 
-    // For demo purposes, using the first gear's inspection details as previous inspection
-    // and empty current inspection
     const previousInspection = categoryGears[0]?.inspection_details || {};
-    const currentInspection = {}; // Empty for current inspection
+    const currentInspection = {};
     
     return {
       previous: previousInspection,
@@ -340,10 +296,10 @@ const FirefighterFlowScreen = () => {
   };
 
   const handleScanGear = () => {
-    if (!selectedFirefighter) {
-      Alert.alert('Select Firefighter', 'Please select a firefighter first');
-      return;
-    }
+    // if (!selectedFirefighter) {
+    //   Alert.alert('Select Firefighter', 'Please select a firefighter first');
+    //   return;
+    // }
     navigation.navigate('GearScan' as never);
   };
 
@@ -365,6 +321,30 @@ const FirefighterFlowScreen = () => {
 
   const handleCancel = () => {
     navigation.goBack();
+  };
+
+  const handleOpenRosterModal = () => {
+    setRosterModalVisible(true);
+  };
+
+  const handleCloseRosterModal = () => {
+    setRosterModalVisible(false);
+  };
+
+  const handleRosterSelect = (roster: any) => {
+    handleFirefighterSelect(roster);
+  };
+
+  const handleAddRosterManual = () => {
+    setAddFirefighterModalVisible(true);
+  };
+
+  const handleCloseAddFirefighterModal = () => {
+    setAddFirefighterModalVisible(false);
+  };
+
+  const handleFirefighterAdded = () => {
+    console.log('Firefighter added successfully');
   };
 
   // Render category drill-down view
@@ -455,9 +435,13 @@ const FirefighterFlowScreen = () => {
 
     return (
       <View style={styles.categoriesSection}>
-        <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-          Gear Categories
-        </Text>
+        <View style={styles.gearsHeader}>
+          <Divider style={styles.divider} />
+          <Text style={[styles.gearsTitle, { color: colors.onSurfaceVariant, backgroundColor: colors.background }]}>
+            Gears
+          </Text>
+          <Divider style={styles.divider} />
+        </View>
         
         <View style={styles.categoriesGrid}>
           {GEAR_CATEGORIES.map((category) => {
@@ -524,12 +508,6 @@ const FirefighterFlowScreen = () => {
                         <Text style={[styles.fieldName, { color: colors.onSurface }]}>
                           {field}:
                         </Text>
-                        {/* <Text style={[styles.fieldStatus, { color: colors.onSurfaceVariant }]}>
-                          {inspectionSummary.current[field] 
-                            ? getStatusText(inspectionSummary.current[field])
-                            : 'Pending'
-                          }
-                        </Text> */}
                       </View>
                     ))}
                   </View>
@@ -550,86 +528,94 @@ const FirefighterFlowScreen = () => {
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Top Row - Firefighter Selection */}
-        <View style={styles.topRow}>
-          <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>
-            Fire Fighters
-          </Text>
-          
-          <View style={styles.dropdownContainer}>
-            <CustomDropdown
-              options={FIREFIGHTERS}
-              selectedValue={selectedFirefighter?.roster_id}
-              onSelect={handleFirefighterSelect}
-              placeholder="Select Firefighter"
-              getLabel={(id: number) => getFirefighterLabel(id)}
-              getOptionLabel={(option: any) => `${option.first_name} ${option.last_name}`}
-              getOptionValue={(option: any) => option.roster_id}
-            />
-          </View>
-
-          <Button
-            mode="contained"
-            onPress={() => Alert.alert('Add Fire Fighter', 'Navigate to add firefighter form')}
-            style={styles.addButton}
-            labelStyle={styles.addButtonLabel}
-          >
-            Add Fire Fighter
-          </Button>
-        </View>
-
-        {/* Middle Action Row */}
-        {!selectedCategory && (
-          <View style={styles.actionRow}>
-            <Button
-              mode="contained"
-              onPress={handleScanGear}
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              icon="barcode-scan"
-              labelStyle={styles.actionButtonLabel}
-              contentStyle={styles.actionButtonContent}
-            >
-              Scan Gear
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={handleManualAddGear}
-              style={styles.actionButton}
-              icon="plus-circle"
-              labelStyle={styles.actionButtonLabel}
-              contentStyle={styles.actionButtonContent}
-            >
-              Manual Add Gear
-            </Button>
-          </View>
-        )}
-
-        {/* Firefighter Info Card */}
-        {selectedFirefighter && (
-          <Card style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+        {/* Firefighter Selection Card */}
+        {selectedFirefighter ? (
+          <Card style={[styles.firefighterCard, { backgroundColor: colors.surface }]}>
             <Card.Content>
-              <View style={styles.firefighterInfo}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {selectedFirefighter.first_name[0]}{selectedFirefighter.last_name[0]}
-                  </Text>
+              <View style={styles.firefighterHeader}>
+                <View style={styles.firefighterInfo}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {selectedFirefighter.first_name[0]}{selectedFirefighter.last_name[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.firefighterDetails}>
+                    <Text style={[styles.firefighterName, { color: colors.onSurface }]}>
+                      {selectedFirefighter.first_name} {selectedFirefighter.middle_name} {selectedFirefighter.last_name}
+                    </Text>
+                    <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
+                      {selectedFirefighter.email}
+                    </Text>
+                    <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
+                      {selectedFirefighter.phone} • {selectedFirefighter.firestation?.name || selectedFirefighter.station || 'Unknown Station'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.firefighterDetails}>
-                  <Text style={[styles.firefighterName, { color: colors.onSurface }]}>
-                    {selectedFirefighter.first_name} {selectedFirefighter.middle_name} {selectedFirefighter.last_name}
-                  </Text>
-                  <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
-                    {selectedFirefighter.email}
-                  </Text>
-                  <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
-                    {selectedFirefighter.phone} • {selectedFirefighter.station}
-                  </Text>
-                </View>
+                <Button
+                  mode="outlined"
+                  onPress={handleOpenRosterModal}
+                  style={styles.changeButton}
+                  labelStyle={styles.changeButtonLabel}
+                  icon="account-switch"
+                >
+                  Change
+                </Button>
               </View>
             </Card.Content>
           </Card>
+        ) : (
+          // Primary button when no firefighter is selected
+          <View style={styles.selectFirefighterSection}>
+            <Button
+              mode="contained"
+              onPress={handleOpenRosterModal}
+              style={[styles.selectButton, { backgroundColor: colors.primary }]}
+              labelStyle={styles.selectButtonLabel}
+              icon="account-search"
+              contentStyle={styles.selectButtonContent}
+            >
+              Select Firefighter
+            </Button>
+          </View>
         )}
+
+        {/* Three Action Buttons - Always visible */}
+        <View style={styles.actionRow}>
+          <Button
+            mode="contained"
+            onPress={handleScanGear}
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            icon="barcode-scan"
+            labelStyle={styles.actionButtonLabel}
+            contentStyle={styles.actionButtonContent}
+            disabled={!selectedFirefighter}
+          >
+            Scan Gear
+          </Button>
+
+          <Button
+            mode="outlined"
+            onPress={handleManualAddGear}
+            style={styles.actionButton}
+            icon="plus-circle"
+            labelStyle={styles.actionButtonLabel}
+            contentStyle={styles.actionButtonContent}
+            disabled={!selectedFirefighter}
+          >
+            Add New Gear
+          </Button>
+
+          <Button
+            mode="outlined"
+            onPress={handleAddRosterManual}
+            style={styles.actionButton}
+            icon="account-plus"
+            labelStyle={styles.actionButtonLabel}
+            contentStyle={styles.actionButtonContent}
+          >
+            Add New Fire Fighter
+          </Button>
+        </View>
 
         {/* Loading State */}
         {loading && (
@@ -646,7 +632,7 @@ const FirefighterFlowScreen = () => {
         {renderCategoryGears()}
 
         {/* Bottom Action Buttons */}
-        {!selectedCategory && (
+        {!selectedCategory && selectedFirefighter && (
           <View style={styles.bottomActions}>
             <Button
               mode="outlined"
@@ -661,12 +647,24 @@ const FirefighterFlowScreen = () => {
               onPress={handleCompleteInspection}
               style={styles.completeButton}
               labelStyle={styles.bottomButtonLabel}
-              disabled={!selectedFirefighter}
             >
               Complete Inspection
             </Button>
           </View>
         )}
+
+        <RosterModal
+          visible={rosterModalVisible}
+          onClose={handleCloseRosterModal}
+          onRosterSelect={handleRosterSelect}
+          onAddRosterManual={handleAddRosterManual}
+        />
+
+        <AddFirefighterModal
+          visible={addFirefighterModalVisible}
+          onClose={handleCloseAddFirefighterModal}
+          onSuccess={handleFirefighterAdded}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -682,54 +680,22 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: p(16),
     paddingBottom: p(32),
+    gap: p(16),
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: p(20),
-  },
-  sectionLabel: {
-    fontSize: p(16),
-    fontWeight: '600',
-    flex: 1,
-  },
-  dropdownContainer: {
-    flex: 2,
-    marginHorizontal: p(12),
-  },
-  addButton: {
-    borderRadius: p(8),
-  },
-  addButtonLabel: {
-    fontSize: p(12),
-    fontWeight: '600',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: p(20),
-    gap: p(12),
-  },
-  actionButton: {
-    flex: 1,
+  // Firefighter Card Styles
+  firefighterCard: {
     borderRadius: p(12),
-  },
-  actionButtonContent: {
-    height: p(50),
-  },
-  actionButtonLabel: {
-    fontSize: p(14),
-    fontWeight: '600',
-  },
-  infoCard: {
-    borderRadius: p(12),
-    marginBottom: p(20),
     elevation: 2,
+  },
+  firefighterHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   firefighterInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   avatar: {
     width: p(50),
@@ -757,6 +723,47 @@ const styles = StyleSheet.create({
     fontSize: p(12),
     marginBottom: p(2),
   },
+  changeButton: {
+    borderRadius: p(8),
+    marginLeft: p(8),
+  },
+  changeButtonLabel: {
+    fontSize: p(12),
+    fontWeight: '600',
+  },
+  // Select Firefighter Section
+  selectFirefighterSection: {
+    alignItems: 'center',
+  },
+  selectButton: {
+    borderRadius: p(12),
+    width: '100%',
+  },
+  selectButtonContent: {
+    height: p(50),
+  },
+  selectButtonLabel: {
+    fontSize: p(16),
+    fontWeight: '600',
+  },
+  // Action Buttons
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: p(8),
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: p(8),
+  },
+  actionButtonContent: {
+    height: p(45),
+  },
+  actionButtonLabel: {
+    fontSize: p(12),
+    fontWeight: '600',
+  },
+  // Loading State
   loadingContainer: {
     alignItems: 'center',
     padding: p(40),
@@ -765,8 +772,23 @@ const styles = StyleSheet.create({
     marginTop: p(12),
     fontSize: p(14),
   },
+  // Categories Section
   categoriesSection: {
-    marginBottom: p(20),
+    marginTop: p(8),
+  },
+  gearsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: p(16),
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  gearsTitle: {
+    paddingHorizontal: p(16),
+    fontSize: p(16),
+    fontWeight: '600',
   },
   categoryDetailSection: {
     marginBottom: p(20),

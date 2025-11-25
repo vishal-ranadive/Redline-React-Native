@@ -15,11 +15,12 @@ import {
   useTheme,
   Divider,
   ActivityIndicator,
+  DataTable,
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 import { useRosterStore } from '../../../store/rosterStore';
 import { useLeadStore } from '../../../store/leadStore';
-import  useDebounce  from '../../../hooks/useDebounce';
+import useDebounce from '../../../hooks/useDebounce';
 
 interface RosterModalProps {
   visible: boolean;
@@ -36,13 +37,21 @@ const RosterModal: React.FC<RosterModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
   const debouncedSearch = useDebounce(searchQuery, 500);
   
   // Stores
-  const { rosters, loading, fetchRosters } = useRosterStore();
+  const { rosters, loading, fetchRosters, pagination, fetchRostersByFirestation } = useRosterStore();
   const { currentLead } = useLeadStore();
 
-  // Filter rosters based on search query
+  const numberOfItemsPerPageList = [10, 20, 50];
+
+  // Calculate pagination range
+  const from = (page - 1) * numberOfItemsPerPage;
+  const to = Math.min(page * numberOfItemsPerPage, pagination?.total || 0);
+
+  // Filter rosters based on search query (client-side filtering as fallback)
   const filteredRosters = rosters.filter(roster =>
     searchQuery.trim() === '' ? true :
     roster.roster_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -51,29 +60,33 @@ const RosterModal: React.FC<RosterModalProps> = ({
     (roster.last_name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Fetch rosters with search
+  // Fetch rosters with search and pagination
   useEffect(() => {
     if (visible) {
-      const searchParams: any = {};
+      const searchParams: any = {
+        page,
+        page_size: numberOfItemsPerPage,
+      };
       
       if (debouncedSearch.trim()) {
         searchParams.first_name = debouncedSearch;
         searchParams.email = debouncedSearch;
       }
 
-      // Optionally filter by current lead's firestation
-      // if (currentLead?.firestation?.id) {
-      //   searchParams.firestation_id = currentLead.firestation.id;
-      // }
+      // Filter by current lead's firestation
+      if (currentLead?.firestation?.id) {
+        searchParams.firestation_id = currentLead.firestation.id;
+      }
 
-      fetchRosters(searchParams);
+      fetchRostersByFirestation(currentLead?.firestation?.id);
     }
-  }, [visible, debouncedSearch]);
+  }, [visible, debouncedSearch, page, numberOfItemsPerPage]);
 
   // Reset when modal opens
   useEffect(() => {
     if (visible) {
       setSearchQuery('');
+      setPage(1);
     }
   }, [visible]);
 
@@ -147,13 +160,39 @@ const RosterModal: React.FC<RosterModalProps> = ({
               </Text>
             </View>
           ) : filteredRosters.length > 0 ? (
-            <FlatList
-              data={filteredRosters}
-              keyExtractor={(item) => item.roster_id.toString()}
-              renderItem={renderRosterItem}
-              ItemSeparatorComponent={() => <Divider />}
-              showsVerticalScrollIndicator={false}
-            />
+            <>
+              <FlatList
+                data={filteredRosters}
+                keyExtractor={(item) => item.roster_id.toString()}
+                renderItem={renderRosterItem}
+                ItemSeparatorComponent={() => <Divider />}
+                showsVerticalScrollIndicator={false}
+              />
+              
+              {/* Pagination Controls */}
+              {pagination && pagination.total > 0 && (
+                <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
+                  <DataTable.Pagination
+                    page={page - 1}
+                    numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
+                    onPageChange={(newPage) => setPage(newPage + 1)}
+                    label={`${from + 1}-${to} of ${pagination.total}`}
+                    showFastPaginationControls
+                    numberOfItemsPerPageList={numberOfItemsPerPageList}
+                    numberOfItemsPerPage={numberOfItemsPerPage}
+                    onItemsPerPageChange={setNumberOfItemsPerPage}
+                    selectPageDropdownLabel={'Rows per page'}
+                    theme={{
+                      colors: {
+                        primary: colors.primary,
+                        onSurface: colors.onSurface,
+                        surface: colors.surface,
+                      },
+                    }}
+                  />
+                </View>
+              )}
+            </>
           ) : (
             <View style={styles.emptyContainer}>
               <Icon source="account-search" size={p(64)} color={colors.onSurfaceVariant} />
@@ -258,6 +297,10 @@ const styles = StyleSheet.create({
   },
   addButton: {
     borderRadius: p(12),
+  },
+  paginationContainer: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: p(8),
   },
 });
 
