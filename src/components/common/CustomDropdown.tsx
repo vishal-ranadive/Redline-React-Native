@@ -5,38 +5,66 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
-import {
-  Text,
-  IconButton,
-  useTheme,
-} from 'react-native-paper';
-import { p } from '../../utils/responsive';
+import { Text, IconButton, useTheme } from 'react-native-paper';
 
-const CustomDropdown = ({
+interface DropdownOption {
+  value: string;
+  label: string;
+  color?: string;
+}
+
+interface CustomDropdownProps {
+  options: DropdownOption[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+  placeholder: string;
+  getLabel: (value: string) => string;
+  style?: any;
+  disabled?: boolean;
+}
+
+export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   options,
   selectedValue,
   onSelect,
   placeholder,
   getLabel,
-  getOptionLabel = (option: any) => option.label || option.name,
-  getOptionValue = (option: any) => option.value || option.id,
   style,
-}: any) => {
+  disabled = false,
+}) => {
   const [visible, setVisible] = useState(false);
   const { colors } = useTheme();
 
   return (
     <View style={style}>
       <TouchableOpacity
-        style={[styles.dropdownButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
-        onPress={() => setVisible(true)}
+        style={[
+          styles.dropdownButton,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.outline,
+            opacity: disabled ? 0.6 : 1,
+          },
+        ]}
+        onPress={() => !disabled && setVisible(true)}
+        disabled={disabled}
       >
-        <Text style={[styles.dropdownButtonText, { color: colors.onSurface }]}>
+        <Text
+          style={[
+            styles.dropdownButtonText,
+            {
+              color: selectedValue
+                ? colors.onSurface
+                : colors.onSurfaceVariant,
+            },
+          ]}
+        >
           {selectedValue ? getLabel(selectedValue) : placeholder}
         </Text>
         <IconButton
-          icon={visible ? "menu-up" : "menu-down"}
+          icon={visible ? 'menu-up' : 'menu-down'}
           size={20}
           iconColor={colors.onSurfaceVariant}
         />
@@ -48,37 +76,45 @@ const CustomDropdown = ({
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.dropdownOverlay}
           activeOpacity={1}
           onPress={() => setVisible(false)}
         >
           <View style={[styles.dropdownModal, { backgroundColor: colors.surface }]}>
             <ScrollView style={styles.dropdownScroll}>
-              {options.map((option: any) => (
+              {options.map((option) => (
                 <TouchableOpacity
-                  key={getOptionValue(option)}
+                  key={option.value}
                   style={[
                     styles.dropdownOption,
-                    { 
-                      backgroundColor: selectedValue === getOptionValue(option) ? colors.primaryContainer : 'transparent',
-                      borderBottomColor: colors.outline 
-                    }
+                    {
+                      backgroundColor:
+                        selectedValue === option.value
+                          ? colors.primaryContainer
+                          : 'transparent',
+                      borderBottomColor: colors.outline,
+                    },
                   ]}
                   onPress={() => {
-                    onSelect(getOptionValue(option));
+                    onSelect(option.value);
                     setVisible(false);
                   }}
                 >
-                  <Text style={[
-                    styles.dropdownOptionText, 
-                    { 
-                      color: selectedValue === getOptionValue(option) ? colors.onPrimaryContainer : colors.onSurface 
-                    }
-                  ]}>
-                    {getOptionLabel(option)}
+                  <Text
+                    style={[
+                      styles.dropdownOptionText,
+                      {
+                        color:
+                          selectedValue === option.value
+                            ? colors.onPrimaryContainer
+                            : colors.onSurface,
+                      },
+                    ]}
+                  >
+                    {getLabel(option.value)}
                   </Text>
-                  {selectedValue === getOptionValue(option) && (
+                  {selectedValue === option.value && (
                     <IconButton
                       icon="check"
                       size={20}
@@ -95,7 +131,7 @@ const CustomDropdown = ({
   );
 };
 
-const styles = {
+const styles = StyleSheet.create({
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -107,7 +143,7 @@ const styles = {
     minHeight: 48,
   },
   dropdownButtonText: {
-    fontSize: p(14),
+    fontSize: 14,
     flex: 1,
   },
   dropdownOverlay: {
@@ -134,9 +170,7 @@ const styles = {
     borderBottomWidth: 1,
   },
   dropdownOptionText: {
-    fontSize: p(14),
+    fontSize: 14,
     flex: 1,
   },
-};
-
-export default CustomDropdown;
+});

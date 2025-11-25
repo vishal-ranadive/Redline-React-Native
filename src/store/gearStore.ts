@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { gearApi } from '../services/gearApi';
+import { gearFindingsApi } from '../services/gearFindingsApi';
 
 interface GearType {
   gear_type_id: number;
@@ -53,6 +54,11 @@ interface Gear {
   updated_by: string;
 }
 
+interface GearFinding {
+  id: number;
+  findings: string;
+}
+
 interface GearState {
   // State
   gearTypes: GearType[];
@@ -65,6 +71,11 @@ interface GearState {
     page_size: number;
     total: number;
   } | null;
+
+  gearFindings: GearFinding[];
+  gearFindingsLoading: boolean;
+  
+
 
   // Actions
   fetchGearTypes: () => Promise<void>;
@@ -90,6 +101,9 @@ export const useGearStore = create<GearState>()(
       loading: false,
       error: null,
       pagination: null,
+      gearFindings:[],
+      gearFindingsLoading: false, 
+
 
       // Fetch gear types
       fetchGearTypes: async () => {
@@ -241,6 +255,31 @@ export const useGearStore = create<GearState>()(
           });
         }
       },
+
+
+      fetchGearFindings: async (gearTypeId: number) => {
+  set({ gearFindingsLoading: true, error: null });
+  try {
+    const response = await gearFindingsApi.getGearFindings(gearTypeId);
+    if (response.status) {
+      set({
+        gearFindings: response.gear_findings || [],
+        gearFindingsLoading: false,
+        error: null,
+      });
+    } else {
+      set({
+        error: response.message || 'Failed to fetch gear findings',
+        gearFindingsLoading: false,
+      });
+    }
+  } catch (error: any) {
+    set({
+      error: error.message || 'Network error',
+      gearFindingsLoading: false,
+    });
+  }
+},
 
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
