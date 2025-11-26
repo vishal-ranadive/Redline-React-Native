@@ -292,7 +292,7 @@ const AddGearScreen = () => {
         // showSnackbar('Failed to add gear. Please try again.');
         Toast.show({
           type: 'error',
-          text1: 'Failed to add Gear',
+          text1: 'Failed to Add New Gear',
         });
       }
     } catch (error) {
@@ -554,10 +554,10 @@ const AddGearScreen = () => {
         </Button>
 
         <Text style={[styles.headerTitle, { color: colors.onSurface }]}>
-          Add Gear
+          Add New Gear
         </Text>
 
-        <View style={styles.headerActions}>
+        {/* <View style={styles.headerActions}>
           <Button
             mode="text"
             compact
@@ -578,7 +578,7 @@ const AddGearScreen = () => {
           >
             {submitting ? 'Saving...' : 'Save'}
           </Button>
-        </View>
+        </View> */}
       </View>
 
       <ScrollView
@@ -600,7 +600,7 @@ const AddGearScreen = () => {
               <Text
                 style={[styles.infoText, { color: colors.onSurfaceVariant }]}
               >
-                Fire Station: {currentLead.firestation?.name}
+                Department: {currentLead.firestation?.name}
               </Text>
               <Text
                 style={[styles.infoText, { color: colors.onSurfaceVariant }]}
@@ -830,7 +830,7 @@ const AddGearScreen = () => {
               color: '#fff',
             }}
           >
-            {submitting ? 'Adding Gear...' : 'Add Gear'}
+            {submitting ? 'Adding Gear...' : 'Add New Gear'}
           </Button>
         </View>
       </ScrollView>

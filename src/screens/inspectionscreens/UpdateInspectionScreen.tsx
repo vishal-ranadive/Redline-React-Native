@@ -250,10 +250,10 @@ export default function UpdateInspectionScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header 
+        {/* <Header 
           title="Update Gear Status"
           showBackButton={true}
-        />
+        /> */}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading gear data...</Text>

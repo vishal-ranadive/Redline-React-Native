@@ -10,11 +10,11 @@ export const INSPECTION_CONSTANTS = {
 
   // Service types
   SERVICE_TYPES: [
-    { value: 'INSPECTED_AND_CLEANED', label: 'Inspected and Cleaned' },
-    { value: 'CLEANED_ONLY', label: 'Cleaned Only' },
-    { value: 'INSPECTED_ONLY', label: 'Inspected Only' },
-    { value: 'SPECIALIZED_CLEANING', label: 'Specialized Cleaning' },
-    { value: 'OTHER', label: 'Other' },
+    { value: 'INSPECTED_AND_CLEANED', label: 'Inspected and Cleaned' }, //3
+    { value: 'CLEANED_ONLY', label: 'Cleaned Only' },//1
+    { value: 'INSPECTED_ONLY', label: 'Inspected Only' },//2
+    { value: 'SPECIALIZED_CLEANING', label: 'Specialized Cleaning' },//4
+    { value: 'OTHER', label: 'Other' },//5
   ],
 
   // Harness types

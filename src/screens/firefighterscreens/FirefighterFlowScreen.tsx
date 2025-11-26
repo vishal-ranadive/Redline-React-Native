@@ -1,5 +1,5 @@
 // src/screens/firefighterscreens/FirefighterFlowScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -24,128 +24,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
 import RosterModal from '../../components/common/Modal/RosterModal';
-
-// Real gear data from your API response
-const REAL_GEARS_DATA = [
-  {
-    gear_id: 15,
-    roster_id: 1,
-    gear_name: "Jacket Liner",
-    gear_type: { gear_type_id: 4, gear_type: "JACKET LINER" },
-    status: "PASS",
-    last_inspection: "2024-01-15",
-    inspection_details: {
-      "Primary Liner": "PASS",
-      "Primary Shell": "ACTION_REQUIRED"
-    }
-  },
-  {
-    gear_id: 18,
-    roster_id: 25,
-    gear_name: "Helmet",
-    gear_type: { gear_type_id: 2, gear_type: "HELMET" },
-    status: "ACTION_REQUIRED",
-    last_inspection: "2024-01-10",
-    inspection_details: {
-      "Helmet": "ACTION_REQUIRED",
-      "Face Shield": "PASS"
-    }
-  },
-  {
-    gear_id: 17,
-    roster_id: 25,
-    gear_name: "Gloves",
-    gear_type: { gear_type_id: 2, gear_type: "HELMET" },
-    status: "PASS",
-    last_inspection: "2024-01-12",
-    inspection_details: {
-      "Gloves": "PASS",
-      "Wristlets": "PASS"
-    }
-  },
-  {
-    gear_id: 21,
-    roster_id: 19,
-    gear_name: "Jacket Liner",
-    gear_type: { gear_type_id: 1, gear_type: "GLOVES" },
-    status: "FAIL",
-    last_inspection: "2024-01-08",
-    inspection_details: {
-      "Primary Liner": "FAIL",
-      "Primary Shell": "ACTION_REQUIRED"
-    }
-  },
-  {
-    gear_id: 22,
-    roster_id: 8,
-    gear_name: "Helmet",
-    gear_type: { gear_type_id: 1, gear_type: "GLOVES" },
-    status: "PASS",
-    last_inspection: "2024-01-14",
-    inspection_details: {
-      "Helmet": "PASS",
-      "Suspension System": "PASS"
-    }
-  },
-  {
-    gear_id: 23,
-    roster_id: 8,
-    gear_name: "Gloves",
-    gear_type: { gear_type_id: 3, gear_type: "HOOD" },
-    status: "ACTION_REQUIRED",
-    last_inspection: "2024-01-11",
-    inspection_details: {
-      "Gloves": "ACTION_REQUIRED"
-    }
-  },
-  {
-    gear_id: 20,
-    roster_id: 8,
-    gear_name: "Boots",
-    gear_type: { gear_type_id: 4, gear_type: "JACKET LINER" },
-    status: "PASS",
-    last_inspection: "2024-01-13",
-    inspection_details: {
-      "Boots": "PASS",
-      "Steel Toe": "PASS"
-    }
-  },
-  {
-    gear_id: 19,
-    roster_id: 19,
-    gear_name: "Gloves",
-    gear_type: { gear_type_id: 1, gear_type: "GLOVES" },
-    status: "PASS",
-    last_inspection: "2024-01-09",
-    inspection_details: {
-      "Gloves": "PASS"
-    }
-  },
-  {
-    gear_id: 24,
-    roster_id: 8,
-    gear_name: "Pant Shell",
-    gear_type: { gear_type_id: 9, gear_type: "PANT SHELL" },
-    status: "ACTION_REQUIRED",
-    last_inspection: "2024-01-07",
-    inspection_details: {
-      "Primary Shell": "ACTION_REQUIRED",
-      "Primary Liner": "PASS"
-    }
-  },
-  {
-    gear_id: 27,
-    roster_id: 8,
-    gear_name: "Boots",
-    gear_type: { gear_type_id: 4, gear_type: "JACKET LINER" },
-    status: "PASS",
-    last_inspection: "2024-01-16",
-    inspection_details: {
-      "Boots": "PASS",
-      "Outsole": "PASS"
-    }
-  }
-];
+import { useInspectionStore } from '../../store/inspectionStore';
+import { useLeadStore } from '../../store/leadStore';
+import { useGearStore } from '../../store/gearStore';
 
 // Gear categories with icons and matching gear types
 const GEAR_CATEGORIES = [
@@ -204,40 +85,60 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInsp
 const FirefighterFlowScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
+  const { currentLead } = useLeadStore();
+  const { gearTypes } = useGearStore();
+  const { 
+    firefighterGears, 
+    loading, 
+    fetchFirefighterGears, 
+    clearFirefighterGears 
+  } = useInspectionStore();
+
   const [selectedFirefighter, setSelectedFirefighter] = useState<any>(null);
-  const [gears, setGears] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [addFirefighterModalVisible, setAddFirefighterModalVisible] = useState(false);
 
+  // Fetch gear types on mount
+  useEffect(() => {
+    // This will ensure gear types are available for categorization
+  }, []);
+
   const handleFirefighterSelect = async (roster: any) => {
+    if (!currentLead) {
+      Alert.alert('Error', 'No lead selected');
+      return;
+    }
+
     setSelectedFirefighter(roster);
     setSelectedCategory(null);
-    setLoading(true);
     
     try {
-      // Simulate API call with real data
-      setTimeout(() => {
-        const filteredGears = REAL_GEARS_DATA.filter(gear => gear.roster_id === roster.roster_id);
-        setGears(filteredGears);
-        setLoading(false);
-      }, 1000);
+      await fetchFirefighterGears(currentLead.lead_id, roster.roster_id);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch gears');
-      setGears([]);
-      setLoading(false);
     }
   };
+
+  // Clear gears when firefighter is deselected
+  useEffect(() => {
+    if (!selectedFirefighter) {
+      clearFirefighterGears();
+    }
+  }, [selectedFirefighter]);
 
   // Filter gears by category
   const getGearsByCategory = (categoryId: string) => {
     const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
     if (!category) return [];
     
-    return gears.filter(gear => 
-      category.gearTypes.includes(gear.gear_type?.gear_type)
-    );
+    return firefighterGears.filter(gear => {
+      // Find the gear type name from gearTypes store using gear_type_id
+      const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id);
+      const gearTypeName = gearType?.gear_type || gear.gear_name;
+      
+      return category.gearTypes.includes(gearTypeName.toUpperCase());
+    });
   };
 
   // Get category inspection summary
@@ -252,8 +153,25 @@ const FirefighterFlowScreen = () => {
       };
     }
 
-    const previousInspection = categoryGears[0]?.inspection_details || {};
+    // For current inspection data
     const currentInspection = {};
+    
+    // For previous inspection data
+    const previousInspection = {};
+    
+    // Process each gear in the category
+    categoryGears.forEach(gear => {
+      if (gear.current_inspection) {
+        // Add current inspection data if available
+        // You can map the inspection fields based on your API response
+        console.log("gear.current_inspection",gear.current_inspection)
+      }
+      
+      if (gear.previous_inspection) {
+        // Add previous inspection data if available
+        console.log("gear.previous_inspection",gear.previous_inspection)
+      }
+    });
     
     return {
       previous: previousInspection,
@@ -279,6 +197,21 @@ const FirefighterFlowScreen = () => {
     }
   };
 
+  // Get gear status from current inspection
+  const getGearStatus = (gear: any) => {
+    if (!gear.current_inspection) return 'Not Inspected';
+    
+    const gearStatus = gear.current_inspection.gear_status?.status;
+    if (!gearStatus) return 'Not Inspected';
+    
+    // Map API status to our status system
+    if (gearStatus.includes('Pass') || gearStatus.includes('PASS')) return 'PASS';
+    if (gearStatus.includes('Corrective Action') || gearStatus.includes('Action Required')) return 'ACTION_REQUIRED';
+    if (gearStatus.includes('Fail') || gearStatus.includes('FAIL')) return 'FAIL';
+    
+    return 'Not Inspected';
+  };
+
   const handleCategoryPress = (categoryId: string) => {
     if (!selectedFirefighter) {
       Alert.alert('Select Firefighter', 'Please select a firefighter first');
@@ -288,7 +221,10 @@ const FirefighterFlowScreen = () => {
   };
 
   const handleGearPress = (gear: any) => {
-    navigation.navigate('UpadateInspection', { gearId: gear.gear_id });
+    navigation.navigate('UpadateInspection', { 
+      gearId: gear.gear_id,
+      // gearData: gear 
+    });
   };
 
   const handleBackToCategories = () => {
@@ -296,10 +232,6 @@ const FirefighterFlowScreen = () => {
   };
 
   const handleScanGear = () => {
-    // if (!selectedFirefighter) {
-    //   Alert.alert('Select Firefighter', 'Please select a firefighter first');
-    //   return;
-    // }
     navigation.navigate('GearScan' as never);
   };
 
@@ -385,50 +317,57 @@ const FirefighterFlowScreen = () => {
             </Card.Content>
           </Card>
         ) : (
-          categoryGears.map((gear) => (
-            <Card 
-              key={gear.gear_id}
-              style={[styles.gearCard, { backgroundColor: colors.surface }]}
-              onPress={() => handleGearPress(gear)}
-            >
-              <Card.Content style={styles.gearContent}>
-                <View style={styles.gearInfo}>
-                  <Text style={[styles.gearName, { color: colors.onSurface }]}>
-                    {gear.gear_name}
-                  </Text>
-                  <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
-                    Serial: {gear.serial_number || 'N/A'}
-                  </Text>
-                  <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
-                    Last Inspection: {gear.last_inspection}
-                  </Text>
-                </View>
-                <View style={styles.gearStatus}>
-                  <View 
-                    style={[
-                      styles.gearStatusBadge, 
-                      { backgroundColor: getStatusColor(gear.status) }
-                    ]}
-                  >
-                    <Text style={styles.gearStatusText}>
-                      {getStatusText(gear.status)}
+          categoryGears.map((gear) => {
+            const gearStatus = getGearStatus(gear);
+            const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id);
+            
+            return (
+              <Card 
+                key={gear.gear_id}
+                style={[styles.gearCard, { backgroundColor: colors.surface }]}
+                onPress={() => handleGearPress(gear)}
+              >
+                <Card.Content style={styles.gearContent}>
+                  <View style={styles.gearInfo}>
+                    <Text style={[styles.gearName, { color: colors.onSurface }]}>
+                      {gear.gear_name}
                     </Text>
+                    <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
+                      Type: {gearType?.gear_type || 'Unknown'}
+                    </Text>
+                    {gear.current_inspection?.inspection_date && (
+                      <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
+                        Last Inspection: {gear.current_inspection.inspection_date}
+                      </Text>
+                    )}
                   </View>
-                  <IconButton
-                    icon="chevron-right"
-                    size={20}
-                    iconColor={colors.onSurfaceVariant}
-                  />
-                </View>
-              </Card.Content>
-            </Card>
-          ))
+                  <View style={styles.gearStatus}>
+                    <View 
+                      style={[
+                        styles.gearStatusBadge, 
+                        { backgroundColor: getStatusColor(gearStatus) }
+                      ]}
+                    >
+                      <Text style={styles.gearStatusText}>
+                        {getStatusText(gearStatus)}
+                      </Text>
+                    </View>
+                    <IconButton
+                      icon="chevron-right"
+                      size={20}
+                      iconColor={colors.onSurfaceVariant}
+                    />
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          })
         )}
       </View>
     );
   };
 
-  // Render main categories view
+  // Render main categories view - ALWAYS render categories even if empty
   const renderCategories = () => {
     if (selectedCategory) return null;
 
@@ -444,8 +383,8 @@ const FirefighterFlowScreen = () => {
         
         <View style={styles.categoriesGrid}>
           {GEAR_CATEGORIES.map((category) => {
-            const categoryGears = getGearsByCategory(category.id);
-            const inspectionSummary = getCategoryInspectionSummary(category.id);
+            const categoryGears:any = getGearsByCategory(category.id);
+            const inspectionSummary : any = getCategoryInspectionSummary(category.id);
             
             return (
               <Card 
@@ -468,7 +407,7 @@ const FirefighterFlowScreen = () => {
                     {categoryGears.length} items
                   </Text>
                   
-                  {/* Previous Inspection */}
+                  {/* Always show inspection sections even if empty */}
                   <View style={styles.inspectionSection}>
                     <Text style={[styles.inspectionLabel, { color: colors.onSurfaceVariant }]}>
                       Previous Inspection:
@@ -497,7 +436,6 @@ const FirefighterFlowScreen = () => {
                     ))}
                   </View>
 
-                  {/* Current Inspection */}
                   <View style={styles.inspectionSection}>
                     <Text style={[styles.inspectionLabel, { color: colors.onSurfaceVariant }]}>
                       Current Inspection:
@@ -506,6 +444,9 @@ const FirefighterFlowScreen = () => {
                       <View key={index} style={styles.inspectionRow}>
                         <Text style={[styles.fieldName, { color: colors.onSurface }]}>
                           {field}:
+                        </Text>
+                        <Text style={[styles.fieldStatus, { color: colors.onSurfaceVariant }]}>
+                          Not Started
                         </Text>
                       </View>
                     ))}
@@ -669,6 +610,7 @@ const FirefighterFlowScreen = () => {
   );
 };
 
+// ... keep all the existing styles the same ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
