@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import Header from '../../components/common/Header';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
@@ -27,6 +27,7 @@ import RosterModal from '../../components/common/Modal/RosterModal';
 import { useInspectionStore } from '../../store/inspectionStore';
 import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
+import { ColorPickerModal } from '../../components/common';
 
 // Gear categories with icons and matching gear types
 const GEAR_CATEGORIES = [
@@ -83,10 +84,15 @@ const GEAR_CATEGORIES = [
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
 const FirefighterFlowScreen = () => {
+  
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const { currentLead } = useLeadStore();
   const { gearTypes } = useGearStore();
+    const route = useRoute<any>();
+
+  const { firefighter} = route.params ?? {};
+  console.log("Selected_firefighter", firefighter)
   const { 
     firefighterGears, 
     loading, 
@@ -98,11 +104,20 @@ const FirefighterFlowScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [addFirefighterModalVisible, setAddFirefighterModalVisible] = useState(false);
+  const [rosterColor, setRosterColor] = useState<string >("");
+  const [colorLocked, setColorLocked] = useState<boolean>(false);
+  const [colorPickerVisible, setColorPickerVisible] = useState<boolean>(false);
+
 
   // Fetch gear types on mount
   useEffect(() => {
     // This will ensure gear types are available for categorization
+    if(firefighter){
+      handleFirefighterSelect(firefighter)
+    }
   }, []);
+
+
 
   const handleFirefighterSelect = async (roster: any) => {
     if (!currentLead) {
@@ -126,6 +141,35 @@ const FirefighterFlowScreen = () => {
       clearFirefighterGears();
     }
   }, [selectedFirefighter]);
+
+  // Clear gears when firefighter is deselected
+  useEffect(() => {
+    if (!selectedFirefighter) {
+      clearFirefighterGears();
+    }
+  }, [selectedFirefighter]);
+
+useEffect(() => {
+  if (!firefighterGears) return;
+
+  // Find first gear with current inspection & tag_color
+  const found = firefighterGears.find(
+    g => g?.current_inspection?.tag_color
+  );
+
+  if (found) {
+    // Case 1: color exists → lock it
+    setRosterColor(found.current_inspection.tag_color.toLowerCase());
+    setColorLocked(true);
+  } else {
+    // Case 2: no inspection → allow selecting color
+    setRosterColor(""); 
+    setColorLocked(false);
+  }
+}, [firefighterGears]);
+
+
+  console.log("foundsetRosterColor",rosterColor)
 
   // Filter gears by category
   const getGearsByCategory = (categoryId: string) => {
@@ -232,12 +276,30 @@ const getStatusColor = (status: string) => {
     setSelectedCategory(categoryId);
   };
 
-  const handleGearPress = (gear: any) => {
-    navigation.navigate('UpadateInspection', { 
+
+
+
+const handleGearPress = (gear:any) => {
+
+  console.log("handleGearPress", gear)
+  if (!gear.current_inspection) {
+    // → CREATE NEW INSPECTION
+    navigation.navigate("UpadateInspection", {
       gearId: gear.gear_id,
-      // gearData: gear 
+      mode: "create",
+      firefighter: selectedFirefighter   
     });
-  };
+  } else {
+    // → UPDATE EXISTING INSPECTION
+    navigation.navigate("UpadateInspection", {
+      gearId: gear.gear_id,
+      inspectionId: gear.current_inspection.inspection_id,
+      mode: "update",
+      firefighter: selectedFirefighter   
+    });
+  }
+};
+
 
   const handleBackToCategories = () => {
     setSelectedCategory(null);
@@ -344,9 +406,9 @@ const getStatusColor = (status: string) => {
                     <Text style={[styles.gearName, { color: colors.onSurface }]}>
                       {gear.gear_name}
                     </Text>
-                    <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
+                    {/* <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
                       Type: {gearType?.gear_type || 'Unknown'}
-                    </Text>
+                    </Text> */}
                     {gear.current_inspection?.inspection_date && (
                       <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
                         Last Inspection: {gear.current_inspection.inspection_date}
@@ -523,15 +585,63 @@ const getStatusColor = (status: string) => {
                     </Text>
                   </View>
                 </View>
-                <Button
-                  mode="outlined"
-                  onPress={handleOpenRosterModal}
-                  style={styles.changeButton}
-                  labelStyle={styles.changeButtonLabel}
-                  icon="account-switch"
-                >
-                  Change
-                </Button>
+<View style={{ gap: 10 }}>
+
+  {/* 1️⃣ CHANGE FIREFIGHTER BUTTON (always visible) */}
+  <Button
+    mode="outlined"
+    onPress={handleOpenRosterModal}
+    style={styles.changeButton}       // same style as before
+    labelStyle={styles.changeButtonLabel}
+    icon="account-switch"
+  >
+    Change Firefighter
+  </Button>
+
+  {/* 2️⃣ TAG COLOR BUTTON */}
+{/* TAG COLOR BUTTON */}
+{rosterColor ? (
+  <Button
+    mode="outlined"
+    icon="pencil"
+    onPress={() => {
+      if (!colorLocked) setColorPickerVisible(true);
+    }}
+    disabled={colorLocked} // disable if locked
+    style={[styles.changeButton, { backgroundColor: rosterColor }]}
+    labelStyle={styles.changeButtonLabel}
+    contentStyle={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}
+  >
+    <Text
+      style={{
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+        fontWeight: '600',
+        fontSize: 16,
+      }}
+    >
+      {colorLocked ? "Color Locked" : "Change Color"}
+    </Text>
+  </Button>
+) : (
+  <Button
+    mode="outlined"
+    onPress={() => setColorPickerVisible(true)}
+    icon="palette"
+    style={styles.changeButton}
+    labelStyle={styles.changeButtonLabel}
+  >
+    Select Color
+  </Button>
+)}
+
+
+</View>
+
+
+
+
               </View>
             </Card.Content>
           </Card>
@@ -633,6 +743,15 @@ const getStatusColor = (status: string) => {
           onRosterSelect={handleRosterSelect}
           onAddRosterManual={handleAddRosterManual}
         />
+        <ColorPickerModal
+            visible={colorPickerVisible}
+            selectedColor={rosterColor}
+            onClose={() => setColorPickerVisible(false)}
+            onColorSelect={(color) => {
+              setRosterColor(color?.toLocaleLowerCase());
+              setColorPickerVisible(false);
+            }}
+          />
 
         <AddFirefighterModal
           visible={addFirefighterModalVisible}

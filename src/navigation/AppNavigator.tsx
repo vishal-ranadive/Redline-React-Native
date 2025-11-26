@@ -38,10 +38,15 @@ export type RootStackParamList = {
   AddGear: { presetRoster?: any } | undefined;
 
   GearDetail: {gear_id:any};
-    FirefighterFlow: undefined;
+    FirefighterFlow: {firefighter?:any};
 
 
-  UpadateInspection:  { gearId: number };
+  UpadateInspection:  { 
+      gearId: number; 
+  inspectionId?: number;
+  mode: "create" | "update";
+  firefighter:any;
+   };
 
   //Profile
    UpdateProfile: undefined;

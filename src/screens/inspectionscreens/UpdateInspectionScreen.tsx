@@ -71,6 +71,10 @@ export default function UpdateInspectionScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { fetchGearById } = useGearStore();
+
+  const { gearId, inspectionId, mode, firefighter } = route.params;
+
+  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter })
   
   // State for gear data
   const [gear, setGear] = useState<any>(null);
@@ -107,7 +111,8 @@ export default function UpdateInspectionScreen() {
   // const scrollY = useRef(new Animated.Value(0)).current;
 
   // Get gear ID from route params
-  const gearId = route.params?.gearId;
+  // const gearId = route.params?.gearId;
+
   
   // Fetch gear data
   useEffect(() => {
@@ -243,7 +248,10 @@ export default function UpdateInspectionScreen() {
       ...formData
     });
     
-    navigation.navigate('FirefighterFlow');
+    // navigation.navigate('FirefighterFlow');
+    navigation.navigate("FirefighterFlow", {
+  firefighter: firefighter   // 👈 SEND THIS BACK
+});
   };
 
   // Show loading state
@@ -362,10 +370,6 @@ export default function UpdateInspectionScreen() {
                 Inspection Details
               </Text>
 
-              <StatusSelection
-                selectedStatus={formData.status}
-                onStatusChange={(status) => handleFieldChange('status', status)}
-              />
 
               <ServiceTypeSelection
                 selectedServiceType={formData.serviceType}
@@ -523,6 +527,13 @@ export default function UpdateInspectionScreen() {
                   iconColor={colors.onSurfaceVariant}
                 />
               </TouchableOpacity>
+
+
+              
+              <StatusSelection
+                selectedStatus={formData.status}
+                onStatusChange={(status) => handleFieldChange('status', status)}
+              />
             </View>
 
             {/* Remarks */}
