@@ -780,7 +780,10 @@ const LeadDetailScreen = () => {
                 fontWeight: '600',
                 color: '#fff',
               }}
-              style={{ borderColor: colors.outline, borderRadius: p(10), elevation: 12 }}
+              style={{
+                      flex: 1,             // ← Makes buttons wider automatically
+                marginHorizontal: p(6), // ← Keeps them close, not too wide
+                 borderColor: colors.outline, borderRadius: p(10), elevation: 12 }}
               icon={action.icon}
               elevation={4}
             >
@@ -995,10 +998,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     paddingVertical: p(12),
-    marginHorizontal: p(10),
+    marginHorizontal: p(40),
     borderRadius: p(12),
     marginBottom: p(46),
+    gap: p(8),
   },
+  footerButton: {
+    flexGrow: 1,                 // ← Allows auto width based on screen
+    minWidth: '48%',             // ← Mobile: full width; Tablet: side by side
+    borderRadius: p(10),
+    elevation: 4,
+  },
+
   hardnessGuide: {
     marginTop: p(16),
     padding: p(12),

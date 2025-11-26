@@ -142,60 +142,71 @@ const FirefighterFlowScreen = () => {
   };
 
   // Get category inspection summary
-  const getCategoryInspectionSummary = (categoryId: string) => {
-    const categoryGears = getGearsByCategory(categoryId);
-    const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
-    
-    if (!category || categoryGears.length === 0) {
-      return {
-        previous: {},
-        current: {}
-      };
-    }
+const getCategoryInspectionSummary = (categoryId:string) => {
+  const categoryGears = getGearsByCategory(categoryId);
+  const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
 
-    // For current inspection data
-    const currentInspection = {};
-    
-    // For previous inspection data
-    const previousInspection = {};
-    
-    // Process each gear in the category
-    categoryGears.forEach(gear => {
-      if (gear.current_inspection) {
-        // Add current inspection data if available
-        // You can map the inspection fields based on your API response
-        console.log("gear.current_inspection",gear.current_inspection)
-      }
-      
-      if (gear.previous_inspection) {
-        // Add previous inspection data if available
-        console.log("gear.previous_inspection",gear.previous_inspection)
-      }
-    });
-    
+  if (!category || categoryGears.length === 0) {
+    return [];
+  }
+
+  // Build summary for each gear
+  const summary = categoryGears.map(gear => {
+    const usage = gear.gear_usage || "PRIMARY";
+    const name = gear.gear_name;
+
+    const currentStatus = gear.current_inspection?.gear_status?.status || "No Current Inspection";
+    const previousStatus = gear.previous_inspection?.gear_status?.status || "No Previous Inspection";
+
     return {
-      previous: previousInspection,
-      current: currentInspection
+      gear_id: gear.gear_id,
+      gear_name: name,
+      gear_usage: usage,
+      current_status: currentStatus,
+      previous_status: previousStatus,
     };
-  };
+  });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PASS': return '#34A853';
-      case 'ACTION_REQUIRED': return '#F9A825';
-      case 'FAIL': return '#EA4335';
-      default: return '#666';
-    }
-  };
+  return summary;
+};
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'PASS': return 'Pass';
-      case 'ACTION_REQUIRED': return 'Action Required';
-      case 'FAIL': return 'Fail';
-      default: return 'Not Inspected';
-    }
-  };
+
+
+const normalizeStatus = (status: string) => {
+  if (!status) return 'NOT_INSPECTED';
+
+  return status
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_');
+};
+
+const getStatusColor = (status: string) => {
+  console.log("ssssssssssssssss", status)
+
+    const normalized = normalizeStatus(status);
+
+  switch (normalized) {
+    case 'PASS':
+      return '#34A853'; // green
+  
+    case 'CORRECTIVE_ACTION_REQUIRED':
+      return '#F9A825'; // yellow
+
+    case 'RECOMMENDED_OOS':
+      return '#f15719ff'; // orange
+
+    case 'EXPIRED':
+      return '#ff0303ff'; // red
+
+    default:
+      return '#666'; // fallback
+  }
+};
+
+
+
 
   // Get gear status from current inspection
   const getGearStatus = (gear: any) => {
@@ -204,12 +215,13 @@ const FirefighterFlowScreen = () => {
     const gearStatus = gear.current_inspection.gear_status?.status;
     if (!gearStatus) return 'Not Inspected';
     
-    // Map API status to our status system
-    if (gearStatus.includes('Pass') || gearStatus.includes('PASS')) return 'PASS';
-    if (gearStatus.includes('Corrective Action') || gearStatus.includes('Action Required')) return 'ACTION_REQUIRED';
-    if (gearStatus.includes('Fail') || gearStatus.includes('FAIL')) return 'FAIL';
+    // // Map API status to our status system
+    // if (gearStatus.includes('Pass') || gearStatus.includes('PASS')) return 'PASS';
+    // if (gearStatus.includes('Corrective Action') || gearStatus.includes('Action Required')) return 'ACTION_REQUIRED';
+    // if (gearStatus.includes('Fail') || gearStatus.includes('FAIL')) return 'FAIL';
     
-    return 'Not Inspected';
+    // return 'Not Inspected';
+    return gearStatus
   };
 
   const handleCategoryPress = (categoryId: string) => {
@@ -349,7 +361,7 @@ const FirefighterFlowScreen = () => {
                       ]}
                     >
                       <Text style={styles.gearStatusText}>
-                        {getStatusText(gearStatus)}
+                        {gearStatus}
                       </Text>
                     </View>
                     <IconButton
@@ -383,78 +395,98 @@ const FirefighterFlowScreen = () => {
         
         <View style={styles.categoriesGrid}>
           {GEAR_CATEGORIES.map((category) => {
-            const categoryGears:any = getGearsByCategory(category.id);
-            const inspectionSummary : any = getCategoryInspectionSummary(category.id);
-            
-            return (
-              <Card 
-                key={category.id} 
-                style={[styles.categoryCard, { backgroundColor: colors.surface }]}
-                onPress={() => handleCategoryPress(category.id)}
-              >
-                <Card.Content style={styles.categoryContent}>
-                  <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-                    <IconButton
-                      icon={category.icon}
-                      size={24}
-                      iconColor="#fff"
-                    />
-                  </View>
-                  <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
-                    {category.title}
-                  </Text>
-                  <Text style={[styles.gearCount, { color: colors.onSurfaceVariant }]}>
-                    {categoryGears.length} items
-                  </Text>
-                  
-                  {/* Always show inspection sections even if empty */}
-                  <View style={styles.inspectionSection}>
-                    <Text style={[styles.inspectionLabel, { color: colors.onSurfaceVariant }]}>
-                      Previous Inspection:
-                    </Text>
-                    {category.fields.map((field, index) => (
-                      <View key={index} style={styles.inspectionRow}>
-                        <Text style={[styles.fieldName, { color: colors.onSurface }]}>
-                          {field}:
-                        </Text>
-                        <Text 
-                          style={[
-                            styles.fieldStatus,
-                            { 
-                              color: inspectionSummary.previous[field] 
-                                ? getStatusColor(inspectionSummary.previous[field])
-                                : colors.onSurfaceVariant 
-                            }
-                          ]}
-                        >
-                          {inspectionSummary.previous[field] 
-                            ? getStatusText(inspectionSummary.previous[field])
-                            : 'Not Inspected'
-                          }
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+  const categoryGears = getGearsByCategory(category.id);
+  const inspectionSummary = getCategoryInspectionSummary(category.id); 
 
-                  <View style={styles.inspectionSection}>
-                    <Text style={[styles.inspectionLabel, { color: colors.onSurfaceVariant }]}>
-                      Current Inspection:
-                    </Text>
-                    {category.fields.map((field, index) => (
-                      <View key={index} style={styles.inspectionRow}>
-                        <Text style={[styles.fieldName, { color: colors.onSurface }]}>
-                          {field}:
-                        </Text>
-                        <Text style={[styles.fieldStatus, { color: colors.onSurfaceVariant }]}>
-                          Not Started
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </Card.Content>
-              </Card>
-            );
-          })}
+  return (
+    <Card
+      key={category.id}
+      style={[styles.categoryCard, { backgroundColor: colors.surface }]}
+      onPress={() => handleCategoryPress(category.id)}
+    >
+      <Card.Content style={styles.categoryContent}>
+
+        {/* Category Header */}
+        <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
+          <IconButton icon={category.icon} size={24} iconColor="#fff" />
+        </View>
+
+        <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
+          {category.title}
+        </Text>
+
+        <Text style={[styles.gearCount, { color: colors.onSurfaceVariant }]}>
+          {categoryGears.length} items
+        </Text>
+
+        {/* ------------------ INSPECTION SUMMARY LIST ------------------ */}
+<View style={{ marginTop: 12 , width:"100%"}}>
+
+  {/* ---------- CURRENT INSPECTION ---------- */}
+  <Text style={[styles.sectionTitleInspection, {color: colors.onSurface,     fontSize: p(14), }]}>
+    Current Inspection
+  </Text>
+
+  {inspectionSummary.some(i => i.current_status !== "No Current Inspection") ? (
+    inspectionSummary.map(gear => (
+      <View key={gear.gear_id} style={styles.rowItem}>
+        <Text style={styles.rowLeft}>
+          {gear.gear_usage} — {gear.gear_name}
+        </Text>
+
+        <Text 
+          style={[
+            styles.rowRight,
+            { color: getStatusColor(gear.current_status) }
+          ]}
+        >
+          {gear.current_status}
+        </Text>
+      </View>
+    ))
+  ) : (
+    <Text style={{ color: colors.onSurfaceVariant }}>No current inspections</Text>
+  )}
+
+  {/* ---------- PREVIOUS INSPECTION ---------- */}
+  <Text
+    style={[
+      styles.sectionTitleInspection,
+      { color: colors.onSurface, marginTop: 16 }
+    ]}
+  >
+    Previous Inspection
+  </Text>
+
+  {inspectionSummary.some(i => i.previous_status !== "No Previous Inspection") ? (
+    inspectionSummary.map(gear => (
+      <View key={gear.gear_id} style={styles.rowItem}>
+        <Text style={styles.rowLeft}>
+          {gear.gear_usage} — {gear.gear_name}
+        </Text>
+
+        <Text
+          style={[
+            styles.rowRight,
+            { color: colors.onSurfaceVariant }
+          ]}
+        >
+          {gear.previous_status}
+        </Text>
+      </View>
+    ))
+  ) : (
+    <Text style={{ color: colors.onSurfaceVariant }}>No previous inspections</Text>
+  )}
+
+</View>
+
+        {/* ---------------- END SUMMARY LIST ---------------- */}
+      </Card.Content>
+    </Card>
+  );
+})}
+
         </View>
       </View>
     );
@@ -524,7 +556,9 @@ const FirefighterFlowScreen = () => {
           <Button
             mode="contained"
             onPress={handleScanGear}
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            style={[styles.actionButton, 
+              // { backgroundColor: colors.primary }
+            ]}
             icon="barcode-scan"
             labelStyle={styles.actionButtonLabel}
             contentStyle={styles.actionButtonContent}
@@ -872,6 +906,29 @@ const styles = StyleSheet.create({
     fontSize: p(14),
     fontWeight: '600',
   },
+
+
+  sectionTitleInspection: {
+    fontSize: p(14),
+    fontWeight: '700',
+    // marginBottom: p(16),
+  },
+rowItem: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: 6,
+},
+
+rowLeft: {
+  fontSize: 14,
+  fontWeight: "500",
+},
+
+rowRight: {
+  fontSize: 14,
+  fontWeight: "600",
+},
+
 });
 
 export default FirefighterFlowScreen;
