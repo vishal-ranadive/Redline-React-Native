@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadScreen.tsx
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList } from 'react-native';
 import {
   Text,
   TextInput,
@@ -10,16 +10,8 @@ import {
   Icon,
   Badge,
   DataTable,
-  Menu,
-  Divider,
-  Checkbox,
 } from 'react-native-paper';
-import {
-  MultiSelectDropdown,
-  type Option as DropdownOption,
-  type MultiSelectDropdownItemProps,
-  type DropdownInputProps,
-} from 'react-native-paper-dropdown';
+import { MultiSelect } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,89 +38,12 @@ const p = (size: number): number => size;
 
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
-type StatusDropdownOption = DropdownOption & {
+type StatusDropdownOption = {
+  label: string;
+  value: string;
   icon?: string;
-  isHeader?: boolean;
-};
-
-type StatusDropdownItemProps = MultiSelectDropdownItemProps & {
-  option: StatusDropdownOption;
-};
-
-const StatusDropdownInput = ({
-  placeholder,
-  label,
-  rightIcon,
-  mode,
-  disabled,
-  error,
-}: DropdownInputProps) => (
-  <TextInput
-    placeholder={placeholder}
-    label={label}
-    value=""
-    right={rightIcon}
-    mode={mode}
-    editable={false}
-    disabled={disabled}
-    error={error}
-  />
-);
-
-const StatusDropdownItem = ({
-  option,
-  value = [],
-  onSelect,
-  width,
-  isLast,
-  menuItemTestID,
-}: StatusDropdownItemProps) => {
-  const isHeader = option.isHeader;
-
-  if (isHeader) {
-    return (
-      <>
-        <View style={[styles.statusGroupHeader, { minWidth: width }]}>
-          <Text style={styles.statusGroupHeaderText}>{option.label}</Text>
-        </View>
-        {!isLast && <Divider />}
-      </>
-    );
-  }
-
-  const isSelected = value.includes(option.value);
-  const handleToggle = () => {
-    if (isSelected) {
-      onSelect?.(value.filter((currentValue) => currentValue !== option.value));
-    } else {
-      onSelect?.([...value, option.value]);
-    }
-  };
-
-  return (
-    <>
-      <View style={[styles.statusOptionRow, { minWidth: width }]}>
-        <View style={styles.statusMenuItemWrapper}>
-          <Menu.Item
-            testID={menuItemTestID}
-            style={styles.statusMenuItem}
-            title={option.label}
-            titleStyle={[
-              styles.statusOptionLabel,
-              isSelected && styles.statusOptionLabelActive,
-            ]}
-            onPress={handleToggle}
-            leadingIcon={option.icon}
-          />
-        </View>
-        <Checkbox.Android
-          status={isSelected ? 'checked' : 'unchecked'}
-          onPress={handleToggle}
-        />
-      </View>
-      {!isLast && <Divider />}
-    </>
-  );
+  isSection?: boolean;
+  disable?: boolean;
 };
 
 /**
@@ -149,6 +64,7 @@ const LeadScreen = () => {
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   ); // Screen orientation
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]); // Selected status filters
+  const [statusDropdownFocus, setStatusDropdownFocus] = useState(false);
   
   // Pagination state
   const [page, setPage] = useState<number>(1); // Current page
@@ -170,7 +86,8 @@ const LeadScreen = () => {
       {
         label: group.title.toUpperCase(),
         value: `__header__${group.type}`,
-        isHeader: true,
+        isSection: true,
+        disable: true,
       },
       ...group.data.map(({ status, label, icon }) => ({
         label,
@@ -179,6 +96,46 @@ const LeadScreen = () => {
       })),
     ]);
   }, [groupedStatusSections]);
+
+  const renderStatusItem = useCallback(
+    (item: StatusDropdownOption) => {
+      if (item.isSection) {
+        return (
+          <View style={styles.dropdownSectionHeader}>
+            <Text style={styles.dropdownSectionHeaderText}>{item.label}</Text>
+          </View>
+        );
+      }
+
+      const isSelected = statusFilters.includes(item.value as LeadStatus);
+
+      return (
+        <View style={styles.dropdownItem}>
+          {item.icon && (
+            <Icon
+              source={item.icon}
+              size={22}
+              color={isSelected ? colors.primary : colors.onSurfaceVariant}
+              testID={`status-icon-${item.value}`}
+            />
+          )}
+          {item.icon && <View style={{ width: p(10) }} />}
+          <Text
+            style={[
+              styles.dropdownItemLabel,
+              {
+                color: colors.onSurface,
+                fontWeight: isSelected ? '700' : '500',
+              },
+            ]}
+          >
+            {item.label}
+          </Text>
+        </View>
+      );
+    },
+    [colors.onSurface, colors.onSurfaceVariant, colors.primary, statusFilters],
+  );
 
   // Effect for handling screen orientation changes
   useEffect(() => {
@@ -466,19 +423,30 @@ const LeadScreen = () => {
 
           {/* Status Filter Button */}
           <View style={styles.multiSelectWrapper}>
-            <MultiSelectDropdown
-              label="Status"
-              placeholder="Select status"
-              options={statusOptions}
+            <MultiSelect
+              style={[
+                styles.dropdown,
+                { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
+              ]}
+              placeholderStyle={styles.dropdownPlaceholder}
+              selectedTextStyle={{ display: 'none' }}
+              data={statusOptions}
               value={statusFilters}
-              onSelect={(selected) => {
-                setStatusFilters(selected as LeadStatus[]);
+              labelField="label"
+              valueField="value"
+              placeholder="Select status"
+              onFocus={() => setStatusDropdownFocus(true)}
+              onBlur={() => setStatusDropdownFocus(false)}
+              renderSelectedItem={() => <View />}
+              onChange={(selected) => {
+                const sanitized = (selected as string[]).filter(
+                  (value) => !value.startsWith('__header__'),
+                ) as LeadStatus[];
+                setStatusFilters(sanitized);
                 setPage(1);
               }}
-              mode="outlined"
-              menuContentStyle={styles.statusDropdownMenu}
-              CustomMultiSelectDropdownItem={StatusDropdownItem}
-              CustomMultiSelectDropdownInput={StatusDropdownInput}
+              renderItem={renderStatusItem}
+              maxHeight={p(620)}
             />
           </View>
 
@@ -629,10 +597,44 @@ const styles = StyleSheet.create({
   },
   multiSelectWrapper: {
     flexGrow: 1,
-    minWidth: p(160),
-    maxWidth: p(340),
+    minWidth: p(140),
+    maxWidth: p(260),
     marginRight: p(8),
     marginVertical: p(4),
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderRadius: p(10),
+    paddingHorizontal: p(12),
+    minHeight: p(44),
+    justifyContent: 'center',
+  },
+  dropdownPlaceholder: {
+    color: '#999',
+    fontSize: p(14),
+  },
+  dropdownSelectedText: {
+    fontSize: p(14),
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: p(8),
+  },
+  dropdownItemLabel: {
+    fontSize: p(18),
+    fontWeight: '600',
+  },
+  dropdownSectionHeader: {
+    paddingVertical: p(6),
+    paddingHorizontal: p(12),
+    backgroundColor: '#f5f2fb',
+  },
+  dropdownSectionHeaderText: {
+    fontSize: p(11),
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#7a6a92',
   },
   filterLabel: {
     fontSize: p(14),
@@ -697,38 +699,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 50,
-  },
-  statusDropdownMenu: {
-    width: p(340),
-    maxWidth: '90%',
-  },
-  statusGroupHeader: {
-    paddingHorizontal: p(12),
-    paddingVertical: p(6),
-    backgroundColor: '#f5f2fb',
-  },
-  statusGroupHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#7a6a92',
-  },
-  statusOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: p(6),
-  },
-  statusMenuItemWrapper: {
-    flex: 1,
-  },
-  statusMenuItem: {
-    minHeight: 44,
-  },
-  statusOptionLabel: {
-    fontSize: 14,
-  },
-  statusOptionLabelActive: {
-    fontWeight: '600',
   },
 });
 
