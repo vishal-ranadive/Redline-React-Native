@@ -7,6 +7,7 @@ import {
   Image,
   FlatList,
   Pressable,
+  Keyboard,
   type PressableProps,
   type PressableStateCallbackType,
   type StyleProp,
@@ -23,10 +24,7 @@ import {
   Divider,
   Snackbar,
 } from 'react-native-paper';
-import {
-  Dropdown,
-  type Option as DropdownOption,
-} from 'react-native-paper-dropdown';
+import { Dropdown } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -104,6 +102,11 @@ const DropdownTouchable = React.forwardRef<View, PressableProps>(
   ),
 );
 
+type DropdownOption = {
+  label: string;
+  value: string;
+};
+
 const AddGearScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'AddGear'>>();
@@ -138,6 +141,8 @@ const AddGearScreen = () => {
   const [selectedStatus, setSelectedStatus] = useState<GearStatus>('new');
   const [manufacturingDate, setManufacturingDate] = useState('');
   const [isGearNameEditable, setIsGearNameEditable] = useState(true);
+  const [isCustomGearNameRequired, setIsCustomGearNameRequired] = useState(false);
+  const [gearNameError, setGearNameError] = useState('');
 
   // UI states
   const [submitting, setSubmitting] = useState(false);
@@ -146,6 +151,8 @@ const AddGearScreen = () => {
 
   // NEW: Barcode scanner state
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [gearTypeDropdownFocus, setGearTypeDropdownFocus] = useState(false);
 
   // mock images
   const gearImages = [
@@ -180,6 +187,18 @@ const AddGearScreen = () => {
     }
   }, [presetRoster]);
 
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   // Fetch gear types on mount
   useEffect(() => {
     fetchGearTypes();
@@ -202,12 +221,9 @@ const AddGearScreen = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!gearName.trim()) {
+    if (isCustomGearNameRequired && !gearName.trim()) {
+      setGearNameError('Gear name is required for Other type');
       showSnackbar('Please enter gear name');
-      return false;
-    }
-    if (!serialNumber.trim()) {
-      showSnackbar('Please enter serial number');
       return false;
     }
     if (!selectedGearType) {
@@ -285,8 +301,9 @@ const AddGearScreen = () => {
         // Reset form and navigate back after success
         setTimeout(() => {
           resetForm();
-          // navigation.goBack();
-          navigation.navigate('GearDetail', { gear_id: createdGear.gear_id });
+          navigation.navigate('UpadateInspection', {
+            gearId: Number(createdGear.gear_id),
+          });
         }, 1500);
       } else {
         // showSnackbar('Failed to add gear. Please try again.');
@@ -331,13 +348,6 @@ const AddGearScreen = () => {
   }, [gearTypes]);
 
   const onGearTypeSelect = (gearTypeId?: string) => {
-    if (!gearTypeId) {
-      setSelectedGearType(null);
-      setGearName('');
-      setIsGearNameEditable(true);
-      return;
-    }
-
     const gearType = gearTypes?.find(
       type => String(type.gear_type_id) === gearTypeId,
     );
@@ -347,16 +357,22 @@ const AddGearScreen = () => {
       const isOtherType =
         gearType.gear_type?.toLowerCase?.().includes('other') ?? false;
 
+      setIsCustomGearNameRequired(isOtherType);
+
       if (isOtherType) {
         setGearName('');
+        setGearNameError('');
         setIsGearNameEditable(true);
       } else {
         setGearName(gearType.gear_type || '');
+        setGearNameError('');
         setIsGearNameEditable(false);
       }
     } else {
       setGearName('');
+      setGearNameError('');
       setIsGearNameEditable(true);
+      setIsCustomGearNameRequired(false);
     }
   };
 
@@ -539,93 +555,80 @@ const AddGearScreen = () => {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          paddingBottom: keyboardVisible ? p(250) : 0,
+        },
+      ]}
     >
-      {/* header */}
-      <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <Button
-          mode="text"
-          compact
-          onPress={() => navigation.goBack()}
-          contentStyle={{ flexDirection: 'row' }}
-          style={{ marginLeft: p(-8) }}
-        >
-          <Icon source="arrow-left" size={p(20)} color={colors.onSurface} />
-        </Button>
-
-        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>
-          Add New Gear
-        </Text>
-
-        {/* <View style={styles.headerActions}>
+        {/* header */}
+        <View style={[styles.header, { borderBottomColor: colors.outline }]}>
           <Button
             mode="text"
             compact
             onPress={() => navigation.goBack()}
-            textColor={colors.onSurface}
+            contentStyle={{ flexDirection: 'row' }}
+            style={{ marginLeft: p(-8) }}
           >
-            Cancel
+            <Icon source="arrow-left" size={p(20)} color={colors.onSurface} />
           </Button>
-          <Button
-            mode="contained"
-            compact
-            onPress={handleSave}
-            loading={submitting}
-            disabled={submitting}
-            buttonColor={colors.primary}
-            style={styles.saveBtn}
-            textColor={colors.surface}
-          >
-            {submitting ? 'Saving...' : 'Save'}
-          </Button>
-        </View> */}
-      </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: p(28) }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {currentLead && (
-          <Card
-            style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
-          >
+          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>
+            Add New Gear
+          </Text>
+
+          {/* <View style={styles.headerActions}>
+            ...
+          </View> */}
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: p(28) }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {currentLead && (
+            <Card
+              style={[styles.card, { backgroundColor: colors.surfaceVariant }]}
+            >
+              <Card.Content>
+                <Text
+                  style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}
+                >
+                  Current Job Information
+                </Text>
+                <Divider style={{ marginVertical: p(8) }} />
+                <Text
+                  style={[styles.infoText, { color: colors.onSurfaceVariant }]}
+                >
+                  Department: {currentLead.firestation?.name}
+                </Text>
+                <Text
+                  style={[styles.infoText, { color: colors.onSurfaceVariant }]}
+                >
+                  Franchise: {currentLead.franchise?.name}
+                </Text>
+              </Card.Content>
+            </Card>
+          )}
+
+          {/* Basic info */}
+          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
             <Card.Content>
-              <Text
-                style={[styles.cardTitle, { color: colors.onSurfaceVariant }]}
-              >
-                Current Job Information
+              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>
+                Gear Information
               </Text>
               <Divider style={{ marginVertical: p(8) }} />
-              <Text
-                style={[styles.infoText, { color: colors.onSurfaceVariant }]}
-              >
-                Department: {currentLead.firestation?.name}
-              </Text>
-              <Text
-                style={[styles.infoText, { color: colors.onSurfaceVariant }]}
-              >
-                Franchise: {currentLead.franchise?.name}
-              </Text>
-            </Card.Content>
-          </Card>
-        )}
 
-        {/* Basic info */}
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>
-              Gear Information
-            </Text>
-            <Divider style={{ marginVertical: p(8) }} />
-
-            {/* Fire Fighter & Manufacturer side-by-side */}
-            <View
-              style={[
-                styles.inputRow,
-                { marginTop: p(8), alignItems: 'flex-start', gap: p(6) },
-              ]}
-            >
+              {/* Fire Fighter & Manufacturer side-by-side */}
+              <View
+                style={[
+                  styles.inputRow,
+                  { marginTop: p(8), alignItems: 'flex-start', gap: p(6) },
+                ]}
+              >
               <View
                 style={[
                   styles.inputCol,
@@ -636,25 +639,14 @@ const AddGearScreen = () => {
                   Fire Fighter *
                 </Text>
                 {renderSelectedRosterCard()}
-                {!assignedRoster && (
-                  <TextInput
-                    mode="outlined"
-                    value=""
-                    placeholder="Search fire fighter..."
-                    onFocus={() => setRosterModalVisible(true)}
-                    style={[styles.input, { marginTop: p(6) }]}
-                    right={<TextInput.Icon icon="magnify" />}
-                    dense
-                  />
-                )}
               </View>
 
-              <View
-                style={{
-                  width: isLandscape ? p(12) : 0,
-                  height: isLandscape ? undefined : p(12),
-                }}
-              />
+                <View
+                  style={{
+                    width: isLandscape ? p(12) : 0,
+                    height: isLandscape ? undefined : p(12),
+                  }}
+                />
 
               <View
                 style={[
@@ -666,173 +658,142 @@ const AddGearScreen = () => {
                   Manufacturer *
                 </Text>
                 {renderSelectedManufacturerCard()}
-                {!manufacturer && (
+              </View>
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputCol, { flex: 1 }]}>
+                  <Text style={[styles.label, { color: colors.onSurface }]}>
+                    Serial Number
+                  </Text>
                   <TextInput
                     mode="outlined"
-                    value=""
-                    placeholder="Select manufacturer..."
-                    onFocus={() => setManufacturerModalVisible(true)}
-                    style={[styles.input, { marginTop: p(6) }]}
-                    right={<TextInput.Icon icon="magnify" />}
+                    value={serialNumber}
+                    onChangeText={setSerialNumber}
+                    placeholder="Enter serial number"
+                    style={styles.input}
+                    outlineColor={colors.outline}
+                    activeOutlineColor={colors.primary}
                     dense
+                    right={
+                      <TextInput.Icon
+                        icon="barcode-scan"
+                        onPress={() => setBarcodeScannerVisible(true)}
+                        color={colors.primary}
+                      />
+                    }
                   />
-                )}
-              </View>
-            </View>
+                </View>
 
-            <View style={styles.inputRow}>
-              {/* <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>Serial Number *</Text>
-                <TextInput
-                  mode="outlined"
-                  value={serialNumber}
-                  onChangeText={setSerialNumber}
-                  placeholder="Enter serial number"
-                  style={styles.input}
-                  outlineColor={colors.outline}
-                  activeOutlineColor={colors.primary}
-                  dense
-                />
-              </View> */}
+                <View style={{ width: p(12) }} />
 
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>
-                  Serial Number *
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  value={serialNumber}
-                  onChangeText={setSerialNumber}
-                  placeholder="Enter serial number"
-                  style={styles.input}
-                  outlineColor={colors.outline}
-                  activeOutlineColor={colors.primary}
-                  dense
-                  right={
-                    <TextInput.Icon
-                      icon="barcode-scan"
-                      onPress={() => setBarcodeScannerVisible(true)}
-                      color={colors.primary}
-                    />
-                  }
-                />
+                <View style={[styles.inputCol, { flex: 1 }]}>
+                  <MonthYearPicker
+                    label="Manufacturing Month & Year"
+                    value={manufacturingDate}
+                    onChange={setManufacturingDate}
+                    placeholder="Select month & year"
+                  />
+                </View>
               </View>
 
-              <View style={{ width: p(12) }} />
-
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <MonthYearPicker
-                  label="Manufacturing Month & Year"
-                  value={manufacturingDate}
-                  onChange={setManufacturingDate}
-                  placeholder="Select month & year"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>
-                  Gear Type *
-                </Text>
+              <View style={styles.inputRow}>
+                <View style={[styles.inputCol, { flex: 1 }]}>
+                  <Text style={[styles.label, { color: colors.onSurface }]}>
+                    Gear Type *
+                  </Text>
                 <Dropdown
-                  label="Gear Type"
+                  style={[
+                    styles.dropdown,
+                    { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
+                  ]}
+                  selectedTextStyle={styles.dropdownSelectedText}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
+                  itemTextStyle={{ color: colors.onSurface }}
+                  activeColor={colors.surfaceVariant}
+                  data={gearTypeOptions}
+                  labelField="label"
+                  valueField="value"
                   placeholder="Select gear type"
-                  mode="outlined"
                   value={
                     selectedGearType
                       ? String(selectedGearType.gear_type_id)
-                      : undefined
+                      : null
                   }
-                  options={gearTypeOptions}
-                  onSelect={onGearTypeSelect}
-                  menuContentStyle={{ backgroundColor: colors.surface }}
-                  hideMenuHeader
-                  // No Touchable prop needed
+                  onFocus={() => setGearTypeDropdownFocus(true)}
+                  onBlur={() => setGearTypeDropdownFocus(false)}
+                  onChange={(item) => {
+                    onGearTypeSelect(item.value);
+                    setGearTypeDropdownFocus(false);
+                  }}
                 />
+                </View>
+
+                <View style={{ width: p(12) }} />
+
+                <View style={[styles.inputCol, { flex: 1 }]}>
+                  <Text style={[styles.label, { color: colors.onSurface }]}>
+                    Gear Name{isCustomGearNameRequired ? ' *' : ''}
+                  </Text>
+                  <TextInput
+                    mode="outlined"
+                    value={gearName}
+                    onChangeText={(text) => {
+                      setGearName(text);
+                      if (text.trim()) {
+                        setGearNameError('');
+                      }
+                    }}
+                    placeholder="Enter gear name"
+                    style={styles.input}
+                    outlineColor={colors.outline}
+                    activeOutlineColor={colors.primary}
+                    dense
+                    editable={isGearNameEditable}
+                    disabled={!isGearNameEditable}
+                    error={!!gearNameError}
+                  />
+                  {!!gearNameError && (
+                    <Text
+                      style={{
+                        color: colors.error,
+                        marginTop: p(2),
+                        fontSize: p(11),
+                      }}
+                    >
+                      {gearNameError}
+                    </Text>
+                  )}
+                </View>
               </View>
+            </Card.Content>
+          </Card>
 
-              <View style={{ width: p(12) }} />
-
-              <View style={[styles.inputCol, { flex: 1 }]}>
-                <Text style={[styles.label, { color: colors.onSurface }]}>
-                  Gear Name *
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  value={gearName}
-                  onChangeText={setGearName}
-                  placeholder="Enter gear name"
-                  style={styles.input}
-                  outlineColor={colors.outline}
-                  activeOutlineColor={colors.primary}
-                  dense
-                  editable={isGearNameEditable}
-                  disabled={!isGearNameEditable}
-                />
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-
-        {/* Gear Images Card - Keeping your existing gear images */}
-        {/* <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
-            <Divider style={{ marginVertical: p(8) }} />
-
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <FlatList
-                horizontal
-                data={gearImages}
-                keyExtractor={(_, i) => i.toString()}
-                renderItem={({ item }) => (
-                  <Image source={item} style={styles.thumb} />
-                )}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingRight: p(12) }}
-              />
-              
-              <Button
-                mode="outlined"
-                compact
-                icon="camera"
-                style={[styles.smallBtn, { marginLeft: p(8) }]}
-                onPress={() => { }}
-              >
-                Upload
-              </Button>
-            </View>
-            
-          </Card.Content>
-        </Card> */}
-
-        {/* Current Lead Info moved above */}
-
-        {/* Submit Button */}
-        <View
-          style={{
-            marginTop: p(12),
-            marginBottom: p(22),
-            marginHorizontal: p(100),
-          }}
-        >
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            loading={submitting}
-            disabled={submitting}
-            buttonColor={colors.primary}
-            contentStyle={{ paddingVertical: p(8) }}
-            labelStyle={{
-              fontSize: p(16),
-              fontWeight: '600',
-              color: '#fff',
+          {/* Submit Button */}
+          <View
+            style={{
+              marginTop: p(12),
+              marginBottom: p(22),
+              marginHorizontal: p(100),
             }}
           >
-            {submitting ? 'Adding Gear...' : 'Add New Gear'}
-          </Button>
-        </View>
+            <Button
+              mode="contained"
+              onPress={handleSave}
+              loading={submitting}
+              disabled={submitting}
+              buttonColor={colors.primary}
+              contentStyle={{ paddingVertical: p(8) }}
+              labelStyle={{
+                fontSize: p(16),
+                fontWeight: '600',
+                color: '#fff',
+              }}
+            >
+              {submitting ? 'Adding Gear...' : 'Add New Gear'}
+            </Button>
+          </View>
       </ScrollView>
 
       {/* Modals */}
@@ -903,6 +864,20 @@ const styles = StyleSheet.create({
   label: { fontSize: p(13), fontWeight: '600', marginBottom: p(4) },
   input: { height: p(44) },
   smallBtn: { borderRadius: p(8) },
+  dropdown: {
+    height: p(44),
+    borderWidth: 1,
+    borderRadius: p(8),
+    paddingHorizontal: p(12),
+    justifyContent: 'center',
+  },
+  dropdownSelectedText: {
+    fontSize: p(14),
+  },
+  dropdownPlaceholder: {
+    fontSize: p(14),
+    color: '#999',
+  },
 
   selectedItemCard: {
     borderWidth: 1,

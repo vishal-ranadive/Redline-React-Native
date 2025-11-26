@@ -35,7 +35,6 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
 
   const [formData, setFormData] = useState({
     first_name: '',
-    middle_name: '',
     last_name: '',
     email: '',
     phone: '',
@@ -46,10 +45,6 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.first_name.trim()) {
-      newErrors.first_name = 'First name is required';
-    }
-
     if (!formData.last_name.trim()) {
       newErrors.last_name = 'Last name is required';
     }
@@ -58,10 +53,6 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
     }
 
     setErrors(newErrors);
@@ -97,7 +88,6 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       firestation_id: currentLead.firestation.id,
       franchise_id: currentLead.franchise.id,
       first_name: formData.first_name.trim(),
-      middle_name: formData.middle_name.trim(),
       last_name: formData.last_name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
@@ -119,7 +109,6 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
   const resetForm = () => {
     setFormData({
       first_name: '',
-      middle_name: '',
       last_name: '',
       email: '',
       phone: '',
@@ -154,24 +143,9 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
           {/* Form */}
           <View style={styles.formContainer}>
             <TextInput
-              label="First Name *"
+              label="First Name"
               value={formData.first_name}
               onChangeText={(value) => handleInputChange('first_name', value)}
-              style={styles.input}
-              mode="outlined"
-              error={!!errors.first_name}
-              left={<TextInput.Icon icon="account" />}
-            />
-            {errors.first_name && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.first_name}
-              </Text>
-            )}
-
-            <TextInput
-              label="Middle Name"
-              value={formData.middle_name}
-              onChangeText={(value) => handleInputChange('middle_name', value)}
               style={styles.input}
               mode="outlined"
               left={<TextInput.Icon icon="account" />}
@@ -210,20 +184,14 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
             )}
 
             <TextInput
-              label="Phone *"
+              label="Phone"
               value={formData.phone}
               onChangeText={(value) => handleInputChange('phone', value)}
               style={styles.input}
               mode="outlined"
               keyboardType="phone-pad"
-              error={!!errors.phone}
               left={<TextInput.Icon icon="phone" />}
             />
-            {errors.phone && (
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {errors.phone}
-              </Text>
-            )}
 
             <Text style={[styles.noteText, { color: colors.onSurfaceVariant }]}>
               * Required fields

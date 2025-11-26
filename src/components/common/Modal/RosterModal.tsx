@@ -100,11 +100,26 @@ const RosterModal: React.FC<RosterModalProps> = ({
     onAddRosterManual();
   };
 
+  const getInitials = (name: string = '') => {
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+    const parts = trimmed.split(' ');
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+  };
+
   const renderRosterItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.rosterItem, { backgroundColor: colors.surface }]}
       onPress={() => handleRosterSelect(item)}
     >
+      <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.avatarText, { color: colors.onPrimary }]}>
+          {getInitials(item.roster_name)}
+        </Text>
+      </View>
       <View style={styles.rosterInfo}>
         <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>
           {item.roster_name}
@@ -264,6 +279,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: p(16),
+  },
+  avatar: {
+    width: p(44),
+    height: p(44),
+    borderRadius: p(22),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: p(12),
+  },
+  avatarText: {
+    fontSize: p(18),
+    fontWeight: '600',
   },
   rosterInfo: {
     flex: 1,
