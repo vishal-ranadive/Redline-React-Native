@@ -15,3 +15,4 @@ export const inspectionApi = {
     return response.data;
   },
 };
+

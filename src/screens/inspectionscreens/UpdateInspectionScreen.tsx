@@ -167,8 +167,8 @@ export default function UpdateInspectionScreen() {
     }));
   }, [gearFindings]);
 
-  console.log("formattedFindings", formattedFindings);
-  console.log("🔥 Gear Findings Fetched:", gearFindings);
+  // console.log("formattedFindings", formattedFindings);
+  // console.log("🔥 Gear Findings Fetched:", gearFindings);
 
   // Check if gear requires hydro test
   const requiresHydroTest = useMemo(() => {
@@ -472,6 +472,7 @@ export default function UpdateInspectionScreen() {
             navigation.navigate('GearDetail', { gearId: gear.gear_id });
           }
         }}
+        onColorPickerOpen={() => setColorPickerVisible(true)}
         mode={mode}
       />
 
@@ -583,6 +584,19 @@ export default function UpdateInspectionScreen() {
                 selectedStatus={formData.status}
                 onStatusChange={(status) => handleFieldChange('status', status)}
               />
+
+
+               {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
+            {formData.status === 'CORRECTIVE_ACTION_REQUIRED' && (
+              <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
+                <RepairCostFields
+                  cost={formData.cost}
+                  repairNeeded={formData.repairNeeded}
+                  onCostChange={(cost) => handleFieldChange('cost', cost)}
+                  onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
+                />
+              </View>
+            )}
             </View>
 
             {/* Remarks */}
@@ -604,81 +618,8 @@ export default function UpdateInspectionScreen() {
 
           {/* Right Column - Images, Hydro Test, and Repair */}
           <View style={styles.col}>
-            {/* Gear Images */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
 
-
-                            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
-              <Input
-                placeholder="Enter gear size (e.g., L, XL, 42)"
-                value={formData.size}
-                onChangeText={(text) => handleFieldChange('size', text)}
-                style={styles.textInput}
-              />
-              
-
-                            {/* Gear Findings */}
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
-              <TouchableOpacity
-                style={[styles.gearFindingsButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
-                onPress={() => setGearFindingsModalVisible(true)}
-              >
-                <Text style={[styles.gearFindingsButtonText, { color: colors.onSurface }]}>
-                  {formData.selectedGearFindings.length > 0 
-                    ? `${formData.selectedGearFindings.length} findings selected` 
-                    : 'Select Gear Findings'
-                  }
-                </Text>
-                <IconButton
-                  icon="chevron-right"
-                  size={20}
-                  iconColor={colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-
-              {/* Show selected gear findings with better layout */}
-              {formData.selectedGearFindings.length > 0 && (
-                <View style={styles.selectedFindingsContainer}>
-                  {getSelectedGearFindingsLabels().map((label, index) => (
-                    <View key={index} style={styles.findingItem}>
-                      <Chip
-                        style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
-                        textStyle={{ color: colors.onPrimaryContainer, fontSize: 12 }}
-                        onClose={() => {
-                          const newFindings = [...formData.selectedGearFindings];
-                          newFindings.splice(index, 1);
-                          handleFieldChange('selectedGearFindings', newFindings);
-                        }}
-                      >
-                        {label}
-                      </Chip>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
-              <View style={styles.imagesContainer}>
-                {images.map((imageUri, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.imageBox}
-                    onPress={() => handleImagePress(imageUri)}
-                  >
-                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity 
-                  style={[styles.imageBox, styles.addImageBox]}
-                  onPress={addNewImage}
-                >
-                  <Text style={styles.addImageText}>+</Text>
-                  <Text style={styles.addImageLabel}>Add Image</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Hydro Test Section - Only for liners */}
+                        {/* Hydro Test Section - Only for liners */}
             {requiresHydroTest && (
               <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
                 <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Hydro Test</Text>
@@ -754,18 +695,83 @@ export default function UpdateInspectionScreen() {
                 )}
               </View>
             )}
+            {/* Gear Images */}
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
 
-            {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
-            {formData.status === 'CORRECTIVE_ACTION_REQUIRED' && (
-              <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
-                <RepairCostFields
-                  cost={formData.cost}
-                  repairNeeded={formData.repairNeeded}
-                  onCostChange={(cost) => handleFieldChange('cost', cost)}
-                  onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
+
+                            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
+              <Input
+                placeholder="Enter gear size (e.g., L, XL, 42)"
+                value={formData.size}
+                onChangeText={(text) => handleFieldChange('size', text)}
+                style={styles.textInput}
+              />
+              
+
+                            {/* Gear Findings */}
+              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
+              <TouchableOpacity
+                style={[styles.gearFindingsButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+                onPress={() => setGearFindingsModalVisible(true)}
+              >
+                <Text style={[styles.gearFindingsButtonText, { color: colors.onSurface }]}>
+                  {formData.selectedGearFindings.length > 0 
+                    ? `${formData.selectedGearFindings.length} findings selected` 
+                    : 'Select Gear Findings'
+                  }
+                </Text>
+                <IconButton
+                  icon="chevron-right"
+                  size={20}
+                  iconColor={colors.onSurfaceVariant}
                 />
+              </TouchableOpacity>
+
+              {/* Show selected gear findings with better layout */}
+              {formData.selectedGearFindings.length > 0 && (
+                <View style={styles.selectedFindingsContainer}>
+                  {getSelectedGearFindingsLabels().map((label, index) => (
+                    <View key={index} style={styles.findingItem}>
+                      <Chip
+                        style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
+                        textStyle={{ color: colors.onPrimaryContainer, fontSize: 12 }}
+                        onClose={() => {
+                          const newFindings = [...formData.selectedGearFindings];
+                          newFindings.splice(index, 1);
+                          handleFieldChange('selectedGearFindings', newFindings);
+                        }}
+                      >
+                        {label}
+                      </Chip>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+              <View style={styles.imagesContainer}>
+                {images.map((imageUri, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.imageBox}
+                    onPress={() => handleImagePress(imageUri)}
+                  >
+                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={[styles.imageBox, styles.addImageBox]}
+                  onPress={addNewImage}
+                >
+                  <Text style={styles.addImageText}>+</Text>
+                  <Text style={styles.addImageLabel}>Add Image</Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+
+
+
+           
           </View>
         </View>
 

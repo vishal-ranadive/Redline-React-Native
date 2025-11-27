@@ -27,6 +27,7 @@ interface InspectionHeaderProps {
   tagColor?: string;
   isColorLocked?: boolean;
   onHistoryPress?: () => void;
+  onColorPickerOpen?: () => void;
   mode: 'create' | 'update';
 }
 
@@ -39,6 +40,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
   tagColor,
   isColorLocked = false,
   onHistoryPress,
+  onColorPickerOpen,
   mode 
 }) => {
   const { colors } = useTheme();
@@ -55,6 +57,12 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
       onHistoryPress();
     } else if (gear?.gear_id) {
       navigation.navigate('GearDetail', { gearId: gear.gear_id });
+    }
+  };
+
+  const handleColorButtonPress = () => {
+    if (!isColorLocked && onColorPickerOpen) {
+      onColorPickerOpen();
     }
   };
 
@@ -112,8 +120,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
       {/* COLLAPSIBLE HEADER */}
       <View style={styles.headerRow}>
 
-
-        {/* RIGHT SIDE - FIREFIGHTER INFO WITH COLLAPSE */}
+                {/* RIGHT SIDE - FIREFIGHTER INFO WITH COLLAPSE */}
         <TouchableOpacity 
           style={styles.rightSection} 
           onPress={toggleCollapse} 
@@ -142,17 +149,14 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
           </View>
         </TouchableOpacity>
 
-                {/* LEFT SIDE - COLOR BUTTON */}
+
+        {/* LEFT SIDE - COLOR BUTTON */}
         <View style={styles.leftSection}>
           {tagColor ? (
             <Button
               mode="outlined"
               icon="pencil"
-              onPress={() => {
-                if (!isColorLocked) {
-                  // Handle color change if needed
-                }
-              }}
+              onPress={handleColorButtonPress}
               disabled={isColorLocked}
               style={[styles.colorButton, { backgroundColor: tagColor }]}
               labelStyle={styles.colorButtonLabel}
@@ -174,9 +178,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
           ) : (
             <Button
               mode="outlined"
-              onPress={() => {
-                // Handle color selection if needed
-              }}
+              onPress={handleColorButtonPress}
               icon="palette"
               style={styles.colorButton}
               labelStyle={styles.colorButtonLabel}
@@ -185,6 +187,8 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
             </Button>
           )}
         </View>
+
+
       </View>
 
       {/* EXPANDED CONTENT */}
@@ -305,14 +309,14 @@ const styles = StyleSheet.create({
     width: "100%",
     zIndex: 99,
     elevation: 10,
-    // paddingBottom: 6,
+    paddingBottom: 6,
   },
   headerWithHistory: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    // paddingTop: 10,
+    paddingTop: 10,
   },
   historyButton: {
     position: "absolute",
@@ -340,16 +344,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap:32,
+    paddingVertical: 14,
     alignItems: "center",
   },
   leftSection: {
-   width:"20%"
-
+    // flex: 1,
+    // marginRight: 12,width:"30%"
+    width:"30%"
   },
   rightSection: {
-   width:"20%"
+    // flex: 2,
+    width:"30%"
   },
   firefighterInfo: {
     flexDirection: "row",
