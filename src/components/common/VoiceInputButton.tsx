@@ -7,7 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { IconButton, useTheme } from 'react-native-paper';
-import { startSpeechToText } from 'react-native-voice-to-text';
+import * as VoiceToText from '@ascendtis/react-native-voice-to-text';
 
 
 type VoiceInputButtonProps = {
@@ -112,6 +112,52 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
     return () => animation.stop();
   }, [blinkOpacity, isListening]);
 
+  /**
+   * Register voice-to-text event listeners once.
+   * We:
+   * - Update `isListening` based on START/END events
+   * - Apply recognized text when RESULTS arrive, then stop listening
+   */
+  useEffect(() => {
+    const resultsListener = VoiceToText.addEventListener(
+      'onSpeechResults',
+      (event: { value?: string }) => {
+        const text = event?.value ?? '';
+        applyResultToInput(text);
+
+        // Single-shot recognizer: stop after first result.
+        VoiceToText.stopListening().catch(() => {
+          // swallow stop errors; not critical
+        });
+      },
+    );
+
+    const startListener = VoiceToText.addEventListener(
+      'onSpeechStart',
+      () => setIsListening(true),
+    );
+
+    const endListener = VoiceToText.addEventListener(
+      'onSpeechEnd',
+      () => setIsListening(false),
+    );
+
+    const errorListener = VoiceToText.addEventListener(
+      'onSpeechError',
+      (event: { message?: string }) => {
+        const message = event?.message ?? 'Voice recognition error';
+        onError?.(message);
+      },
+    );
+
+    return () => {
+      resultsListener.remove();
+      startListener.remove();
+      endListener.remove();
+      errorListener.remove();
+    };
+  }, [applyResultToInput, onError]);
+
   const requestMicrophonePermission = async () => {
     if (Platform.OS !== 'android') {
       return true;
@@ -131,51 +177,41 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   };
 
   const toggleListening = async () => {
-    if (isListening) {
-      return;
-    }
-
     try {
+      if (isListening) {
+        await VoiceToText.stopListening();
+        return;
+      }
+
       const hasPermission = await requestMicrophonePermission();
       if (!hasPermission) {
         onError?.('Microphone permission denied');
         return;
       }
 
-      setIsListening(true);
-      const result = await startSpeechToText();
-      const text =
-        typeof result === 'string'
-          ? result
-          : (result as { value?: string; text?: string })?.value ??
-            (result as { value?: string; text?: string })?.text ??
-            '';
-      applyResultToInput(text ?? '');
+      await VoiceToText.startListening();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to start microphone';
+      const message =
+        error instanceof Error ? error.message : 'Failed to start microphone';
       onError?.(message);
-    } finally {
-      setIsListening(false);
     }
   };
 
   return (
     <Animated.View style={[style, isListening && { opacity: blinkOpacity }]}>
-    <IconButton
-      icon={isListening ? 'microphone-off' : 'microphone'}
-      size={size}
-      mode="contained"
-      containerColor={isListening ? '#ef1313ff' : colors.secondaryContainer}
-      iconColor={isListening ? '#ffffff' : colors.onSurface}
-      onPress={() => {
-        if (!isListening) toggleListening(); // Prevent double start
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={computedAccessibilityLabel}
-      disabled={disabled} // remove isListening from here
-      testID="voice-input-button"
-    />
-  </Animated.View>
+      <IconButton
+        icon={isListening ? 'microphone-off' : 'microphone'}
+        size={size}
+        mode="contained"
+        containerColor={isListening ? '#ef1313ff' : colors.secondaryContainer}
+        iconColor={isListening ? '#ffffff' : colors.onSurface}
+        onPress={toggleListening}
+        accessibilityRole="button"
+        accessibilityLabel={computedAccessibilityLabel}
+        disabled={disabled}
+        testID="voice-input-button"
+      />
+    </Animated.View>
   );
 };
 

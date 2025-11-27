@@ -23,6 +23,7 @@ import FirefighterListScreen from '../screens/inspectionscreens/FirefighterListS
 import ViewInspectionScreen from '../screens/inspectionscreens/ViewInspectionScreen';
 import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGearsScreen';
 import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlowScreen';
+import { FirefighterRoster } from '../store/inspectionStore';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -60,7 +61,7 @@ export type RootStackParamList = {
   GearScreen:{load:any, bin:any}
 
   //Fire Fighter Flow
-  FirefighterGearsScreen:{firefighter:any};
+  FirefighterGearsScreen:{roster: FirefighterRoster};
   FirefighterListScreen:any;
   ViewInspectionScreen:undefined;
 
