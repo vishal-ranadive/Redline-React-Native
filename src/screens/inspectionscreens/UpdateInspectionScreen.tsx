@@ -145,22 +145,129 @@ export default function UpdateInspectionScreen() {
   }, [gearId]);
 
   // Load gear findings and images
+  // Load gear findings, status and images
   useEffect(() => {
     const loadFindingsAndImage = async () => {
       if (!gear) return;
 
       await fetchGearFindings(gear.gear_type.gear_type_id);
-      await fetchGearStatus()
-     const  resutl = await inspectionApi.getGearInspectionByInspectionId(2017)
-      console.log("getGearInspectionByInspectionId", resutl)
+      await fetchGearStatus();
+
       // Use gear image if available, otherwise use default images
-      if (gear.gear_image_url) {
+      if (gear.gear_image_url && !inspectionId) {
         setImages([gear.gear_image_url, ...DEFAULT_IMAGES]);
       }
     };
 
     loadFindingsAndImage();
   }, [gear]);
+
+
+  // Add this useEffect to fetch inspection data when inspectionId is available
+useEffect(() => {
+  const fetchInspectionData = async () => {
+    if (!inspectionId) return;
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await inspectionApi.getGearInspectionByInspectionId(inspectionId);
+      if (response.status && response.data) {
+        const inspectionData = response.data;
+        console.log("🔥 Fetched Inspection Data:", inspectionData);
+
+        // Populate form data with inspection data
+        setFormData(prev => ({
+          ...prev,
+          status: getStatusValue(inspectionData.gear_status?.status) || 'PASS',
+          serviceType: getServiceTypeValue(inspectionData.service_type?.status) || 'INSPECTED_AND_CLEANED',
+          harnessType: inspectionData.harness_type || false,
+          size: inspectionData.gear?.gear_size || '',
+          selectedGearFindings: inspectionData.finding ? [inspectionData.finding.id.toString()] : [],
+          serialNumber: inspectionData.gear?.serial_number || '',
+          hydroPerformed: inspectionData.hydro_test_performed || false,
+          hydroResult: inspectionData.hydro_test_result?.toLowerCase() || undefined,
+          hydroFailureReason: inspectionData.hydrotest_remarks || '',
+          repairNeeded: inspectionData.inspection_cost > 0,
+          cost: inspectionData.inspection_cost?.toString() || '0',
+          remarks: inspectionData.remarks || '',
+          selectedLoad: inspectionData.load_number?.toString() || '1',
+          selectedColor: inspectionData.tag_color || tagColor || 'red',
+          specializedCleaningDetails: inspectionData.specialisedcleaning_remarks || '',
+        }));
+
+        // Set images from inspection data
+        if (inspectionData.inspection_images && inspectionData.inspection_images.length > 0) {
+          setImages(inspectionData.inspection_images);
+        }
+
+        // Set gear data if not already set
+        if (!gear && inspectionData.gear) {
+          setGear(inspectionData.gear);
+        }
+
+        console.log("✅ Form data populated from inspection:", inspectionData.inspection_id);
+      } else {
+        setError('Failed to fetch inspection data');
+      }
+    } catch (err) {
+      setError('Error fetching inspection data');
+      console.error('Error fetching inspection:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchInspectionData();
+}, [inspectionId]);
+
+// Helper functions to map API values to form values
+const getStatusValue = (status: string) => {
+  const statusMap: { [key: string]: string } = {
+    'Pass': 'PASS',
+    'Repair': 'REPAIR', 
+    'Expired': 'EXPIRED',
+    'Recommended Out Of Service': 'RECOMMENDED_OOS',
+    'Corrective Action Required': 'CORRECTIVE_ACTION_REQUIRED'
+  };
+  return statusMap[status] || 'PASS';
+};
+
+const getServiceTypeValue = (serviceType: string) => {
+  const serviceMap: { [key: string]: string } = {
+    'Cleaned Only': 'CLEANED_ONLY',
+    'Inspected Only': 'INSPECTED_ONLY', 
+    'Inspected and Cleaned': 'INSPECTED_AND_CLEANED',
+    'Specialised Cleaning': 'SPECIALIZED_CLEANING',
+    'Other': 'OTHER'
+  };
+  return serviceMap[serviceType] || 'INSPECTED_AND_CLEANED';
+};
+
+// Update the gear status mapping to use the fetched gearStatus
+const mapStatusToId = (status: string) => {
+
+  console.log("gearStatusgearStatus", gearStatus)
+  if (gearStatus && gearStatus.length > 0) {
+    const foundStatus = gearStatus.find((gs: any) => 
+      gs.status.toUpperCase() === status.toUpperCase() || 
+      getStatusValue(gs.status) === status
+    );
+    //@ts-ignore
+    return foundStatus?.id || 1;
+  }
+  
+  // Fallback mapping
+  const statusMap: { [key: string]: number } = {
+    'PASS': 1,
+    'REPAIR': 2,
+    'CORRECTIVE_ACTION_REQUIRED': 5,
+    'RECOMMENDED_OOS': 4,
+    'EXPIRED': 3
+  };
+  return statusMap[status] || 1;
+};
 
   // Format gear findings for multi-select modal
   const formattedFindings = useMemo(() => {
@@ -255,102 +362,88 @@ export default function UpdateInspectionScreen() {
     }
   };
 
-  // Save inspection data
-  const saveChanges = async () => {
-    if (!gear) {
-      Alert.alert('Error', 'No gear data available');
-      return;
-    }
 
-    console.log('Save', { 
-      gearId: gear.gear_id,
-      mode,
-      ...formData
-    });
 
-    try {
-      // Prepare gear findings as array of objects
-      const gearFindingsData = formData.selectedGearFindings.map(findingId => {
-        const finding = gearFindings.find(f => f.id.toString() === findingId);
-        return {
-          id: parseInt(findingId),
-          findings: finding?.findings || ''
-        };
-      });
+// Save inspection data
+const saveChanges = async () => {
+  if (!gear) {
+    Alert.alert('Error', 'No gear data available');
+    return;
+  }
 
-      const inspectionData = {
-        lead_id: currentLead?.lead_id,
-        mu_id: 1,
-        firestation_id: gear.firestation?.id,
-        franchise_id: gear.franchise?.id,
-        gear_id: gear.gear_id,
-        roster_id: firefighter?.roster_id,
-        
-        inspection_date: new Date().toISOString().split('T')[0],
-        inspection_status: 'POST-INSPECTION',
-        
-        hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
-        hydro_test_performed: formData.hydroPerformed,
-        hydro_failure_reason: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
-        // @mitesh
-        gear_findings : JSON.stringify(gearFindingsData), //stringified
+  console.log('Save', { 
+    gearId: gear.gear_id,
+    mode,
+    ...formData
+  });
+
+  try {
+    // Prepare gear findings - use finding_ids array as per API requirement
+    const findingIds = formData.selectedGearFindings.map(findingId => parseInt(findingId));
+
+    const inspectionData = {
+      lead_id: currentLead?.lead_id,
+      mu_id: 1,
+      firestation_id: gear.firestation?.id,
+      franchise_id: gear.franchise?.id,
+      gear_id: gear.gear_id,
+      roster_id: firefighter?.roster_id,
+      
+      inspection_date: new Date().toISOString().split('T')[0],
+      inspection_status: 'POST-INSPECTION',
+      
+      hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
+      hydro_test_performed: formData.hydroPerformed,
+      hydro_failure_reason: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
+      
+      // Use finding_ids array as per API requirement
+      // finding_ids: findingIds,
+
+              // @mitesh
+        gear_findings : JSON.stringify(formData.selectedGearFindings), //stringified
         finding_id: 1,
         
         // gear_findings: gearFindingsData, // Array of 
 
         // should_Be like this 
         // finding_ids:gearFindingsData.map(item => item.id), //[30, 31, 32, 33, 34]
-
-        inspection_cost: formData.repairNeeded ? parseFloat(formData.cost) : 0,
-        
-        inspection_image_url: images,
-        remarks: formData.remarks,
-        
-        load_number: parseInt(formData.selectedLoad),
-        specialisedcleaning_remarks: formData.serviceType === 'SPECIALIZED_CLEANING' ? formData.specializedCleaningDetails : null,
-        
-        gear_status_id: mapStatusToId(formData.status),
-        service_type_id: mapServiceTypeToId(formData.serviceType),
-        tag_color: formData.selectedColor.toLowerCase(), // Ensure lowercase
-        harness_type: formData.harnessType,
-        gear_size: formData.size,
-        
-      };
-
-      console.log('Inspection Data:', inspectionData);
-
-      // TODO: Uncomment when API is ready
-      let response;
-      if (mode === 'create') {
-        response = await inspectionApi.createGearInspection(inspectionData);
-      } else {
-        response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
-      }
-
-      if (response.status) {
-        Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-        navigation.navigate("FirefighterFlow", { firefighter });
-      } else {
-        Alert.alert('Error', response.message || 'Failed to save inspection');
-      }
-
-      console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response)
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Network error');
-    }
-  };
-
-  // Helper functions to map status to IDs
-  const mapStatusToId = (status: string) => {
-    const statusMap: { [key: string]: number } = {
-      'PASS': 1,
-      'REPAIR':2,
-      'CORRECTIVE_ACTION_REQUIRED': 5,
-      'RECOMMENDED_OOS': 4,
-      'EXPIRED': 3
+      
+      inspection_cost: formData.repairNeeded ? parseFloat(formData.cost) : 0,
+      
+      inspection_image_url: images,
+      remarks: formData.remarks,
+      
+      load_number: parseInt(formData.selectedLoad),
+      specialisedcleaning_remarks: formData.serviceType === 'SPECIALIZED_CLEANING' ? formData.specializedCleaningDetails : null,
+      
+      gear_status_id: mapStatusToId(formData.status),
+      service_type_id: mapServiceTypeToId(formData.serviceType),
+      tag_color: formData.selectedColor.toLowerCase(),
+      harness_type: formData.harnessType,
+      gear_size: formData.size,
     };
-    return statusMap[status] || 1;
-  };
+
+    console.log('Inspection Data:', inspectionData ,);
+
+    let response;
+    if (mode === 'create') {
+      response = await inspectionApi.createGearInspection(inspectionData);
+    } else {
+      response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
+    }
+
+    // if (response.status) {
+    //   Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+    //   navigation.navigate("FirefighterFlow", { firefighter });
+    // } else {
+    //   Alert.alert('Error', response.message || 'Failed to save inspection');
+    // }
+
+    console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response)
+  } catch (error: any) {
+    Alert.alert('Error', error.message || 'Network error');
+  }
+};
 
   /*
   {
@@ -529,13 +622,13 @@ export default function UpdateInspectionScreen() {
 
               {/* Harness Type as Toggle */}
               <View style={styles.rowSpace}>
-                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness Type</Text>
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness </Text>
                 <View style={styles.toggleContainer}>
                   {/* <Text style={[styles.toggleLabel, { color: colors.onSurfaceVariant }]}>
                     {formData.harnessType ? 'Class 3 - Full Body' : 'Class 2 - Chest'}
                   </Text> */}
                   <Switch 
-                    value={formData.harnessType} 
+                    value={formData.harnessType || true} 
                     onValueChange={(value) => handleFieldChange('harnessType', value)} 
                     />
                 </View>
@@ -560,36 +653,15 @@ export default function UpdateInspectionScreen() {
                 style={styles.dropdownContainer}
               />
 
-              {/* Color Picker - Only show if not locked */}
-              {/* {!isColorLocked && (
-                <>
-                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Color</Text>
-                  <TouchableOpacity
-                    style={[styles.colorPickerButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
-                    onPress={() => setColorPickerVisible(true)}
-                  >
-                    <View style={styles.colorPickerButtonContent}>
-                      <View style={[styles.selectedColorCircle, { 
-                        backgroundColor: INSPECTION_CONSTANTS.COLOR_OPTIONS.find(c => c.value === formData.selectedColor)?.color 
-                      }]} />
-                      <Text style={[styles.colorPickerButtonText, { color: colors.onSurface }]}>
-                        {formData.selectedColor.charAt(0).toUpperCase() + formData.selectedColor.slice(1)}
-                      </Text>
-                    </View>
-                    <IconButton
-                      icon="chevron-right"
-                      size={20}
-                      iconColor={colors.onSurfaceVariant}
-                    />
-                  </TouchableOpacity>
-                </>
-              )} */}
+
 
               {/* Status Selection */}
               <StatusSelection
                 selectedStatus={formData.status}
                 onStatusChange={(status) => handleFieldChange('status', status)}
               />
+
+              
 
 
                {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
@@ -707,7 +779,7 @@ export default function UpdateInspectionScreen() {
 
                             <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
               <Input
-                placeholder="Enter gear size (e.g., L, XL, 42)"
+                placeholder="Enter gear size"
                 value={formData.size}
                 onChangeText={(text) => handleFieldChange('size', text)}
                 style={styles.textInput}

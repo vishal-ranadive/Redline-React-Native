@@ -20,7 +20,7 @@ export const RepairCostFields: React.FC<RepairCostFieldsProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair & Cost</Text>
+      <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Estimated Cost</Text>
 
       <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Cost (USD)</Text>
       <TextInput
@@ -33,7 +33,7 @@ export const RepairCostFields: React.FC<RepairCostFieldsProps> = ({
         left={<TextInput.Affix text="$" />}
       />
 
-      <View style={styles.rowSpace}>
+      {/* <View style={styles.rowSpace}>
         <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Redline Repair</Text>
         <View style={styles.rowWrap}>
           <Chip 
@@ -69,7 +69,7 @@ export const RepairCostFields: React.FC<RepairCostFieldsProps> = ({
             No
           </Chip>
         </View>
-      </View>
+      </View> */}
     </View>
   );
 };
