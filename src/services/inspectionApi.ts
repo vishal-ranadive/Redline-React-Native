@@ -15,3 +15,23 @@ export const inspectionApi = {
     return response.data;
   },
 };
+
+export const inspectionApiViewFirefighter = {
+  // Get firefighter inspection information
+  getFirefighterInspectionView: async (
+    leadId: number,
+    inspectionId: number,
+  ): Promise<any> => {
+    const params = {
+      leadId: leadId,
+      inspectionId: inspectionId,
+    };
+
+    console.log(`➡️ API CALL /gear-inspections/firefighter-view/`, params);
+    const response = await axiosInstance.get(`/gear-inspections/firefighter-view/`, {
+      params,
+    });
+    console.log(`✅ API Response /gear-inspections/firefighter-view/`, response.data);
+    return response.data;
+  },
+};
