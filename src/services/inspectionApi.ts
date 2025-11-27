@@ -2,6 +2,45 @@
 import { axiosInstance } from './api';
 
 export const inspectionApi = {
+
+
+
+      // Create gear inspection
+    createGearInspection: async (payload: any): Promise<any> => {
+      console.log("➡️ API CALL POST /gear-inspections/", payload);
+
+      const response = await axiosInstance.post(`/gear-inspections/`, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      console.log("✅ API Response POST /gear-inspections/", response.data);
+      return response.data;
+    },
+
+
+    // Update gear inspection
+    updateGearInspection: async (inspectionId: number, payload: any): Promise<any> => {
+      console.log(`➡️ API CALL PUT /gear-inspections/${inspectionId}/`, payload);
+
+      const response = await axiosInstance.put(`/gear-inspections/${inspectionId}/`, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      console.log(`✅ API Response PUT /gear-inspections/${inspectionId}/`, response.data);
+      return response.data;
+    },
+    // Update gear inspection
+    getGearInspectionByInspectionId: async (inspectionId: number): Promise<any> => {
+      console.log(`➡️ API CALL GET /gear-inspections/${inspectionId}/`);
+
+      const response = await axiosInstance.get(`/gear-inspections/${inspectionId}/`, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      console.log(`✅ API Response GET /gear-inspections/${inspectionId}/`, response.data);
+      return response.data;
+    },
+
   // Get firefighter inspection information
   getFirefighterInspectionInfo: async (leadId: number, rosterId: number): Promise<any> => {
     console.log(`➡️ API CALL /firefighter-inspection-information/?lead_id=${leadId}&roster_id=${rosterId}`);

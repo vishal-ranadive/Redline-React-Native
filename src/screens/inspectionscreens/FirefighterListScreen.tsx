@@ -33,7 +33,7 @@ export default function FirefighterListScreen() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const MANUAL_LEAD_ID = 101;
-  const MANUAL_INSPECTION_ID = 2015;
+  const MANUAL_INSPECTION_ID = 2017;
   const currentLeadId = currentLead?.lead_id;
   const currentInspectionId = (currentLead as any)?.inspection_id;
   const effectiveLeadId = currentLeadId ?? MANUAL_LEAD_ID;

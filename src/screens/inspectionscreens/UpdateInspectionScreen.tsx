@@ -42,6 +42,7 @@ import {
 import { CustomDropdown, MultiSelectModal, ColorPickerModal } from '../../components/common';
 import { INSPECTION_CONSTANTS } from '../../constants/inspection';
 import { p } from "../../utils/responsive";
+import { inspectionApi } from '../../services/inspectionApi';
 
 // Default images for inspection
 const DEFAULT_IMAGES = [
@@ -61,7 +62,7 @@ export default function UpdateInspectionScreen() {
   const { colors } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings } = useGearStore();
+  const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings,  gearStatus, gearStatusLoading, fetchGearStatus } = useGearStore();
   const { currentLead } = useLeadStore();
 
   const { gearId, inspectionId, mode, firefighter, tagColor, colorLocked } = route.params;
@@ -149,7 +150,9 @@ export default function UpdateInspectionScreen() {
       if (!gear) return;
 
       await fetchGearFindings(gear.gear_type.gear_type_id);
-
+      await fetchGearStatus()
+     const  resutl = await inspectionApi.getGearInspectionByInspectionId(2017)
+      console.log("getGearInspectionByInspectionId", resutl)
       // Use gear image if available, otherwise use default images
       if (gear.gear_image_url) {
         setImages([gear.gear_image_url, ...DEFAULT_IMAGES]);
@@ -169,6 +172,7 @@ export default function UpdateInspectionScreen() {
 
   // console.log("formattedFindings", formattedFindings);
   // console.log("🔥 Gear Findings Fetched:", gearFindings);
+  console.log("🔥 Gear_gearStatus", gearStatus);
 
   // Check if gear requires hydro test
   const requiresHydroTest = useMemo(() => {
@@ -316,19 +320,21 @@ export default function UpdateInspectionScreen() {
       console.log('Inspection Data:', inspectionData);
 
       // TODO: Uncomment when API is ready
-      // let response;
-      // if (mode === 'create') {
-      //   response = await inspectionApi.createInspection(inspectionData);
-      // } else {
-      //   response = await inspectionApi.updateInspection(inspectionId, inspectionData);
-      // }
+      let response;
+      if (mode === 'create') {
+        response = await inspectionApi.createGearInspection(inspectionData);
+      } else {
+        response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
+      }
 
-      // if (response.status) {
+      if (response.status) {
         Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-        // navigation.navigate("FirefighterFlow", { firefighter });
-      // } else {
-      //   Alert.alert('Error', response.message || 'Failed to save inspection');
-      // }
+        navigation.navigate("FirefighterFlow", { firefighter });
+      } else {
+        Alert.alert('Error', response.message || 'Failed to save inspection');
+      }
+
+      console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response)
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Network error');
     }

@@ -74,11 +74,16 @@ interface GearState {
 
   gearFindings: GearFinding[];
   gearFindingsLoading: boolean;
+
+    gearStatus: [];             
+    gearStatusLoading: boolean;   
+
   
 
 
   // Actions
   fetchGearTypes: () => Promise<void>;
+  fetchGearStatus: ()=> Promise<void>;
   fetchGearFindings: (gearTypeId: number) => Promise<void>; 
   createGear: (gearData: any) => Promise<Gear | null>;
   fetchGearById: (id: number) => Promise<Gear | null>;
@@ -92,6 +97,8 @@ interface GearState {
   clearGears: () => void;
 }
 
+
+
 export const useGearStore = create<GearState>()(
   persist(
     (set, get) => ({
@@ -104,6 +111,9 @@ export const useGearStore = create<GearState>()(
       pagination: null,
       gearFindings:[],
       gearFindingsLoading: false, 
+
+      gearStatus: [],              
+      gearStatusLoading: false,    
 
 
       // Fetch gear types
@@ -278,6 +288,32 @@ export const useGearStore = create<GearState>()(
           set({
             error: error.message || 'Network error',
             gearFindingsLoading: false,
+          });
+        }
+      },
+
+            // --- FETCH GEAR STATUS (NEW) ---
+      fetchGearStatus: async () => {
+        set({ gearStatusLoading: true, error: null });
+
+        try {
+          const response = await gearApi.getGearStatus();
+          if (response.status) {
+            set({
+              gearStatus: response.data || [],
+              gearStatusLoading: false,
+              error: null,
+            });
+          } else {
+            set({
+              error: response.message || "Failed to fetch gear status",
+              gearStatusLoading: false,
+            });
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || "Network error",
+            gearStatusLoading: false,
           });
         }
       },

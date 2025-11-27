@@ -104,7 +104,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
           style={styles.historyButton}
           compact
         >
-          History
+          Gear History
         </Button>
       </View>
 

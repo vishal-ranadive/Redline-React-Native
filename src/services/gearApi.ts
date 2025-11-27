@@ -9,6 +9,13 @@ export const gearApi = {
     return response.data;
   },
 
+  getGearStatus: async (): Promise<any> => {
+  console.log("➡️ API CALL /gear-status/");
+  const response = await axiosInstance.get(`/gear-status/`);
+  console.log("✅ API Response /gear-status/", response.data);
+  return response.data;
+},
+
   // Create new gear
   createGear: async (gearData: any): Promise<any> => {
     console.log('➡️ API CALL /gear/ with', gearData);
