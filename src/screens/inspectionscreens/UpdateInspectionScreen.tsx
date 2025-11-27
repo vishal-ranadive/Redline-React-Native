@@ -72,7 +72,8 @@ export default function UpdateInspectionScreen() {
   const navigation = useNavigation<any>();
   const { fetchGearById } = useGearStore();
 
-  const { gearId, inspectionId, mode, firefighter } = route.params;
+  const { gearId, inspectionId, mode, firefighter,tagColor, colorLocked } = route.params;
+
 
   console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter })
   

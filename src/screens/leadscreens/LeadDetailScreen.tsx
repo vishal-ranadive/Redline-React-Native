@@ -141,7 +141,8 @@ const LeadDetailScreen = () => {
 
   // Get current water hardness category and color
   const currentHardnessCategory = useMemo(() => {
-    const ppm = parseInt(hardnessValue) || 0;
+    const ppm = parseFloat(hardnessValue) || 0;
+    console.log("ppmppmppmppm", ppm)
     return getWaterHardnessCategory(ppm);
   }, [hardnessValue]);
 
@@ -294,7 +295,7 @@ const LeadDetailScreen = () => {
    */
   const handleSaveHardness = async () => {
     try {
-      const ppm = parseInt(hardnessValue);
+      const ppm = parseFloat(hardnessValue);
       
       if (isNaN(ppm) || ppm < 0) {
         Alert.alert('Error', 'Please enter a valid positive number for water hardness');
@@ -762,7 +763,7 @@ const LeadDetailScreen = () => {
         >
           {[
             // { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
-            { label: 'Start Inspection', icon: 'barcode-scan',  action:() => navigation.navigate('FirefighterFlow') },
+            { label: 'Start Inspection', icon: 'barcode-scan',  action:() => navigation.navigate('FirefighterFlow', {}) },
             {
               label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',

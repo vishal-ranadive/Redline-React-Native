@@ -43,9 +43,11 @@ export type RootStackParamList = {
 
   UpadateInspection:  { 
       gearId: number; 
-  inspectionId?: number;
-  mode: "create" | "update";
-  firefighter:any;
+      inspectionId?: number;
+      mode: "create" | "update";
+      firefighter?:any;
+      tagColor?:string;
+      colorLocked?:boolean;
    };
 
   //Profile

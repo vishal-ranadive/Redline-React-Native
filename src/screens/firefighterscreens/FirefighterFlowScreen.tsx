@@ -279,25 +279,18 @@ const getStatusColor = (status: string) => {
 
 
 
-const handleGearPress = (gear:any) => {
-
-  console.log("handleGearPress", gear)
-  if (!gear.current_inspection) {
-    // → CREATE NEW INSPECTION
-    navigation.navigate("UpadateInspection", {
-      gearId: gear.gear_id,
-      mode: "create",
-      firefighter: selectedFirefighter   
-    });
-  } else {
-    // → UPDATE EXISTING INSPECTION
-    navigation.navigate("UpadateInspection", {
-      gearId: gear.gear_id,
-      inspectionId: gear.current_inspection.inspection_id,
-      mode: "update",
-      firefighter: selectedFirefighter   
-    });
-  }
+// In FirefighterFlowScreen.tsx - update handleGearPress
+const handleGearPress = (gear: any) => {
+  console.log("handleGearPress", gear);
+  
+  navigation.navigate("UpadateInspection", {
+    gearId: gear.gear_id,
+    inspectionId: gear.current_inspection?.inspection_id,
+    mode: gear.current_inspection ? "update" : "create",
+    firefighter: selectedFirefighter,
+    tagColor: rosterColor, // ← Pass the selected color
+    colorLocked: colorLocked // ← Pass whether color is locked
+  });
 };
 
 
@@ -619,6 +612,7 @@ const handleGearPress = (gear:any) => {
         textShadowRadius: 2,
         fontWeight: '600',
         fontSize: 16,
+        color:"white"
       }}
     >
       {colorLocked ? "Color Locked" : "Change Color"}
