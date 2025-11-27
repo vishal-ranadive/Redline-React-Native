@@ -126,9 +126,16 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         applyResultToInput(text);
 
         // Single-shot recognizer: stop after first result.
-        VoiceToText.stopListening().catch(() => {
+        try {
+          const stopResult = VoiceToText.stopListening();
+          if (stopResult && typeof stopResult.catch === 'function') {
+            stopResult.catch(() => {
+              // swallow stop errors; not critical
+            });
+          }
+        } catch (error) {
           // swallow stop errors; not critical
-        });
+        }
       },
     );
 
