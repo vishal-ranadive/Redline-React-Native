@@ -4,12 +4,12 @@ import { persist } from 'zustand/middleware';
 import { gearApi } from '../services/gearApi';
 import { gearFindingsApi } from '../services/gearFindingsApi';
 
-interface GearType {
+export interface GearType {
   gear_type_id: number;
   gear_type: string;
 }
 
-interface Gear {
+export interface Gear {
   gear_id: number;
   roster: {
     roster_id: number;
@@ -54,7 +54,7 @@ interface Gear {
   updated_by: string;
 }
 
-interface GearFinding {
+export interface GearFinding {
   id: number;
   findings: string;
 }
