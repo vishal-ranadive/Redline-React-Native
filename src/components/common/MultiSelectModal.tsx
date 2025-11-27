@@ -11,7 +11,7 @@ import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface MultiSelectOption {
-  value: string;
+  value: any;
   label: string;
 }
 

@@ -1,6 +1,5 @@
 // src/screens/inspectionscreens/components/InspectionHeader.tsx
-
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
   View,
@@ -11,7 +10,7 @@ import {
   UIManager,
   Alert,
 } from "react-native";
-import { Text, Icon, IconButton, Menu, useTheme, Divider } from "react-native-paper";
+import { Text, Icon, IconButton, Menu, useTheme, Button } from "react-native-paper";
 import Header from "../../../components/common/Header";
 
 // Enable smooth animation for Android
@@ -19,17 +18,44 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export const InspectionHeader = ({ gear, roster }: any) => {
-  const { colors } = useTheme();
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const navigation = useNavigation<any>();
-  const route = useRoute();
+interface InspectionHeaderProps {
+  gear: any;
+  roster: any;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  scrollY: any;
+  tagColor?: string;
+  isColorLocked?: boolean;
+  onHistoryPress?: () => void;
+  mode: 'create' | 'update';
+}
 
+export const InspectionHeader: React.FC<InspectionHeaderProps> = ({ 
+  gear, 
+  roster, 
+  isCollapsed, 
+  onToggleCollapse, 
+  scrollY,
+  tagColor,
+  isColorLocked = false,
+  onHistoryPress,
+  mode 
+}) => {
+  const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const toggleCollapse = () => {
     LayoutAnimation.easeInEaseOut();
-    setIsCollapsed(!isCollapsed);
+    onToggleCollapse();
+  };
+
+  const handleHistoryPress = () => {
+    if (onHistoryPress) {
+      onHistoryPress();
+    } else if (gear?.gear_id) {
+      navigation.navigate('GearDetail', { gearId: gear.gear_id });
+    }
   };
 
   const handleUpdate = () => {
@@ -40,40 +66,126 @@ export const InspectionHeader = ({ gear, roster }: any) => {
     Alert.alert("Remove Firefighter", "You tapped remove firefighter.");
   };
 
+  // Format manufacturing date
+  const formatManufacturingDate = (dateString: string) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const screenTitle = mode === 'create' ? 'Create Inspection' : 'Update Inspection';
+
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
 
-      {/* SCREEN TITLE */}
+      {/* SCREEN TITLE WITH HISTORY BUTTON */}
+      <View style={styles.headerWithHistory}>
+        <Header title={screenTitle} />
+        <Button 
+          mode="outlined" 
+          onPress={handleHistoryPress}
+          icon="history"
+          style={styles.historyButton}
+          compact
+        >
+          History
+        </Button>
+      </View>
 
-
-      <Header title="Update Gear Inspection" />
-
+      {/* TAG COLOR DISPLAY */}
+      {/* {tagColor && (
+        <View style={[styles.tagColorBar, { backgroundColor: tagColor }]}>
+          <Text style={styles.tagColorText}>
+            {isColorLocked ? "🔒 Color Locked" : "Selected Color"}
+          </Text>
+        </View>
+      )} */}
 
       {/* COLLAPSIBLE HEADER */}
-      <TouchableOpacity style={styles.headerRow} onPress={toggleCollapse} activeOpacity={0.8}>
-        
-        <View style={styles.leftRow}>
-          <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
-            <Icon source="account" size={26} color={colors.primary} />
-          </View>
+      <View style={styles.headerRow}>
 
-          <View>
-            <Text style={[styles.name, { color: colors.onSurface }]}>
-              {roster ? `${roster.first_name} ${roster.last_name}` : "Unassigned"}
-            </Text>
-            <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
-              {gear?.gear_type?.gear_type} • {gear?.serial_number}
-            </Text>
+
+        {/* RIGHT SIDE - FIREFIGHTER INFO WITH COLLAPSE */}
+        <TouchableOpacity 
+          style={styles.rightSection} 
+          onPress={toggleCollapse} 
+          activeOpacity={0.8}
+        >
+          <View style={styles.firefighterInfo}>
+            <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
+              <Icon source="account" size={26} color={colors.primary} />
+            </View>
+
+            <View style={styles.firefighterDetails}>
+              <Text style={[styles.name, { color: colors.onSurface }]}>
+                {roster ? `${roster.first_name} ${roster.last_name}` : "Unassigned"}
+              </Text>
+              <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                {gear?.gear_type?.gear_type} • {gear?.serial_number}
+              </Text>
+            </View>
+
+            {/* Expand / Collapse Icon */}
+            <Icon
+              source={isCollapsed ? "chevron-down" : "chevron-up"}
+              size={26}
+              color={colors.primary}
+            />
           </View>
+        </TouchableOpacity>
+
+                {/* LEFT SIDE - COLOR BUTTON */}
+        <View style={styles.leftSection}>
+          {tagColor ? (
+            <Button
+              mode="outlined"
+              icon="pencil"
+              onPress={() => {
+                if (!isColorLocked) {
+                  // Handle color change if needed
+                }
+              }}
+              disabled={isColorLocked}
+              style={[styles.colorButton, { backgroundColor: tagColor }]}
+              labelStyle={styles.colorButtonLabel}
+              contentStyle={styles.colorButtonContent}
+            >
+              <Text
+                style={{
+                  textShadowColor: 'rgba(0,0,0,0.3)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 2,
+                  fontWeight: '600',
+                  fontSize: 14,
+                  color: "white"
+                }}
+              >
+                {isColorLocked ? "Color Locked" : "Change Color"}
+              </Text>
+            </Button>
+          ) : (
+            <Button
+              mode="outlined"
+              onPress={() => {
+                // Handle color selection if needed
+              }}
+              icon="palette"
+              style={styles.colorButton}
+              labelStyle={styles.colorButtonLabel}
+            >
+              Select Color
+            </Button>
+          )}
         </View>
-
-        {/* Expand / Collapse Icon */}
-        <Icon
-          source={isCollapsed ? "chevron-down" : "chevron-up"}
-          size={26}
-          color={colors.primary}   // RED ICON
-        />
-      </TouchableOpacity>
+      </View>
 
       {/* EXPANDED CONTENT */}
       {!isCollapsed && (
@@ -94,7 +206,7 @@ export const InspectionHeader = ({ gear, roster }: any) => {
                     <IconButton
                       icon="dots-vertical"
                       size={22}
-                      iconColor={colors.primary}  // RED
+                      iconColor={colors.primary}
                       onPress={() => setMenuVisible(true)}
                     />
                   }
@@ -104,7 +216,6 @@ export const InspectionHeader = ({ gear, roster }: any) => {
                     title="Update Firefighter"
                     leadingIcon="account-edit"
                   />
-
                   <Menu.Item
                     onPress={handleRemove}
                     title="Remove Firefighter"
@@ -158,6 +269,14 @@ export const InspectionHeader = ({ gear, roster }: any) => {
                 <Text style={[styles.value, { color: colors.onSurface }]}>{gear?.serial_number}</Text>
               </View>
 
+              {/* MANUFACTURING DATE - NEW */}
+              <View style={styles.rowItem}>
+                <Icon source="calendar" size={18} color={colors.primary} />
+                <Text style={[styles.value, { color: colors.onSurface }]}>
+                  MFG: {formatManufacturingDate(gear?.manufacturing_date)}
+                </Text>
+              </View>
+
               <View style={styles.rowItem}>
                 <Icon source="factory" size={18} color={colors.primary} />
                 <Text style={[styles.value, { color: colors.onSurface }]}>
@@ -186,30 +305,57 @@ const styles = StyleSheet.create({
     width: "100%",
     zIndex: 99,
     elevation: 10,
-    paddingBottom: 6,
+    // paddingBottom: 6,
   },
-
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: "700",
+  headerWithHistory: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 4,
+    // paddingTop: 10,
   },
-
+  historyButton: {
+    position: "absolute",
+    right: 10,
+    marginRight: 0,
+  },
+  tagColorBar: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  tagColorText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 8,
+    gap:32,
     alignItems: "center",
   },
+  leftSection: {
+   width:"20%"
 
-  leftRow: {
+  },
+  rightSection: {
+   width:"20%"
+  },
+  firefighterInfo: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
-
   avatar: {
     width: 44,
     height: 44,
@@ -218,51 +364,59 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-
+  firefighterDetails: {
+    flex: 1,
+  },
   name: {
     fontSize: 16,
     fontWeight: "600",
   },
-
   detail: {
     fontSize: 12,
   },
-
+  colorButton: {
+    borderRadius: 8,
+    minWidth: 120,
+  },
+  colorButtonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  colorButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    height: 40,
+  },
   expandedCard: {
     padding: 16,
     borderTopWidth: 1,
   },
-
   infoRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 16,
   },
-
   infoCard: {
     flex: 1,
     minWidth: "48%",
   },
-
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
   },
-
   rowItem: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 6,
     gap: 8,
   },
-
   value: {
     fontSize: 14,
   },

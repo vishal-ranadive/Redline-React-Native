@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import Header from '../../components/common/Header';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
@@ -109,13 +109,19 @@ const FirefighterFlowScreen = () => {
   const [colorPickerVisible, setColorPickerVisible] = useState<boolean>(false);
 
 
-  // Fetch gear types on mount
-  useEffect(() => {
-    // This will ensure gear types are available for categorization
-    if(firefighter){
-      handleFirefighterSelect(firefighter)
+useFocusEffect(
+  React.useCallback(() => {
+    console.log("🔥 Screen Focused – Re-loading firefighter:", firefighter);
+
+    if (firefighter) {
+      handleFirefighterSelect(firefighter);
     }
-  }, []);
+
+    return () => {
+      // optional cleanup if needed
+    };
+  }, [firefighter])
+);
 
 
 

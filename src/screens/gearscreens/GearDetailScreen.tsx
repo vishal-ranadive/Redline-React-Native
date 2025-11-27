@@ -401,9 +401,9 @@ const GearDetailScreen = () => {
         </Card>
 
         {/* CTA Button */}
-        <Button
+        {/* <Button
           mode="contained"
-          onPress={() => navigation.navigate('UpadateInspection',{gearId: gear_id} )}
+          onPress={() => navigation.navigate('UpadateInspection',{gearId: gear_id, mode:"update"} )}
           buttonColor={colors.primary}
           textColor={colors.surface}
           style={styles.ctaButton}
@@ -412,7 +412,7 @@ const GearDetailScreen = () => {
           contentStyle={{ paddingVertical: p(8) }}
         >
           START GEAR INSPECTION
-        </Button>
+        </Button> */}
       </ScrollView>
 
       {/* Roster Modal */}

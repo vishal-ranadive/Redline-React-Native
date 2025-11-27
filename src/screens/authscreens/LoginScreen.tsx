@@ -185,14 +185,14 @@ const LoginScreen = () => {
           </Button>
 
           {/* Forgot Password */}
-          <Button
+          {/* <Button
             onPress={() => navigation.navigate('ForgotPassword')}
             textColor={paperTheme.colors.primary}
             labelStyle={{ fontSize: p(17) }}
             disabled={isLoading}
           >
             Forgot password?
-          </Button>
+          </Button> */}
 
           {/* Footer */}
           <Text style={[styles.footer, { color: paperTheme.colors.outline }]}>

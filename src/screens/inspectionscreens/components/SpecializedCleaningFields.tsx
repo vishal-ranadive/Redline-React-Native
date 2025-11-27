@@ -1,20 +1,17 @@
 // src/screens/inspectionscreens/components/SpecializedCleaningFields.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, TextInput, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
+import Input from '../../../components/Input';
 
 interface SpecializedCleaningFieldsProps {
-  why: string;
-  how: string;
-  onWhyChange: (text: string) => void;
-  onHowChange: (text: string) => void;
+  specializedCleaningDetails: string;
+  onSpecializedCleaningChange: (text: string) => void;
 }
 
 export const SpecializedCleaningFields: React.FC<SpecializedCleaningFieldsProps> = ({
-  why,
-  how,
-  onWhyChange,
-  onHowChange,
+  specializedCleaningDetails,
+  onSpecializedCleaningChange,
 }) => {
   const { colors } = useTheme();
 
@@ -24,26 +21,16 @@ export const SpecializedCleaningFields: React.FC<SpecializedCleaningFieldsProps>
         Specialized Cleaning Details
       </Text>
       
-      <TextInput
-        mode="outlined"
-        label="Why specialized cleaning is needed?"
-        value={why}
-        onChangeText={onWhyChange}
-        placeholder="Describe why specialized cleaning is required..."
+      <Input
+        placeholder="Why specialized cleaning is needed and how should it be cleaned?"
+        value={specializedCleaningDetails}
+        onChangeText={onSpecializedCleaningChange}
         multiline
-        numberOfLines={3}
-        style={styles.textInput}
-      />
-      
-      <TextInput
-        mode="outlined"
-        label="How should it be cleaned?"
-        value={how}
-        onChangeText={onHowChange}
-        placeholder="Describe the cleaning procedure..."
-        multiline
-        numberOfLines={3}
-        style={styles.textInput}
+        numberOfLines={4}
+        enableVoice
+        appendVoiceResults
+        style={{ minHeight: 100, fontSize: 14 }}
+        containerStyle={{ alignItems: 'flex-start' }}
       />
     </View>
   );
@@ -58,8 +45,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-  },
-  textInput: {
-    minHeight: 90,
   },
 });

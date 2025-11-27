@@ -1,6 +1,5 @@
-
 // src/screens/inspectionscreens/UpdateInspectionScreen.tsx
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,9 +7,10 @@ import {
   Alert,
   Animated,
   TouchableOpacity,
-
   Keyboard,
   Platform,
+  Image,
+  Modal,
 } from 'react-native';
 import {
   Text,
@@ -31,8 +31,6 @@ import { printTable } from '../../utils/printTable';
 import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
 import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal';
 import { launchImageLibrary } from 'react-native-image-picker';
-import Svg, { Path } from 'react-native-svg';
-import ViewShot from 'react-native-view-shot';
 import { useGearStore } from '../../store/gearStore';
 import { 
   InspectionHeader,
@@ -43,78 +41,73 @@ import {
 } from './components';
 import { CustomDropdown, MultiSelectModal, ColorPickerModal } from '../../components/common';
 import { INSPECTION_CONSTANTS } from '../../constants/inspection';
-import {p} from "../../utils/responsive"
-// Gear Findings options
-const GEAR_FINDINGS = [
-  { value: 'MFR_LABEL_DAMAGED_LOOSE', label: 'Mfr. Info Label Damaged/Loose' },
-  { value: 'MFR_LABEL_MISSING_UNREADABLE', label: 'Mfr. Info Label Missing/Unreadable (Critical Fail)' },
-  { value: 'GEAR_SHELL_DAMAGED', label: 'Gear Shell Damaged' },
-  { value: 'IMPACT_CAP_DAMAGED', label: 'Impact Cap Damaged' },
-  { value: 'SUSPENSION_SYSTEM_DAMAGED', label: 'Suspension System Damaged' },
-  { value: 'SUSPENSION_SYSTEM_MISSING', label: 'Suspension System Missing (Critical Fail)' },
-  { value: 'RATCHETING_STRAP_DAMAGED', label: 'Ratcheting Strap Damaged' },
-  { value: 'EAR_COVER_STAINING', label: 'Ear Cover/Shroud Staining' },
-  { value: 'EAR_COVER_MISSING', label: 'Ear Cover/Shroud Missing' },
-  { value: 'EAR_COVER_DAMAGED', label: 'Ear Cover/Shroud Damaged' },
-  { value: 'EYE_PROTECTION_DAMAGED', label: 'Eye Protection Damaged' },
-  { value: 'EYE_PROTECTION_MISSING', label: 'Eye Protection Missing (Critical Fail)' },
-  { value: 'CHIN_STRAP_DAMAGED', label: 'Chin Strap Damaged' },
-  { value: 'CHIN_STRAP_MISSING', label: 'Chin Strap Missing' },
-  { value: 'REFLECTIVE_TRIM_DAMAGED_FADED', label: 'Reflective Trim Damaged/Faded' },
-  { value: 'REFLECTIVE_TRIM_MISSING', label: 'Reflective Trim Missing' },
-  { value: 'D_RING_MISSING_DAMAGED', label: 'D-Ring Missing/Damaged' },
-  { value: 'OTHER', label: 'Other' }
+import { p } from "../../utils/responsive";
+
+// Default images for inspection
+const DEFAULT_IMAGES = [
+  "https://example.com/images/inspection_1030.jpg",
+  "https://example.com/images/inspection_1031.jpg",
+  "https://example.com/images/inspection_1032.jpg"
 ];
+
+  // "https://i.ebayimg.com/thumbs/images/g/wqIAAeSw1eRpI3v7/s-l1200.webp",
+  // "https://i.ebayimg.com/thumbs/images/g/wqIAAeSw1eRpI3v7/s-l1200.webp",
+  // "https://i.ebayimg.com/thumbs/images/g/wqIAAeSw1eRpI3v7/s-l1200.webp"
+
+// Gear types that require hydro test
+const HYDRO_TEST_GEAR_TYPES = ['JACKET LINER', 'PANT LINER'];
 
 export default function UpdateInspectionScreen() {
   const { colors } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { fetchGearById } = useGearStore();
+  const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings } = useGearStore();
+  const { currentLead } = useLeadStore();
 
-  const { gearId, inspectionId, mode, firefighter,tagColor, colorLocked } = route.params;
+  const { gearId, inspectionId, mode, firefighter, tagColor, colorLocked } = route.params;
 
-
-  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter })
+  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, tagColor, colorLocked });
   
   // State for gear data
   const [gear, setGear] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [size, setSize] = useState(gear?.gear_size ?? 'L');
-  const [serialNumber, setSerial] = useState(gear?.serial_number ?? '');
-  const [remarks, setRemarks] = useState<string>(gear?.remarks ?? '');
-
 
   // Form state
   const [formData, setFormData] = useState({
     status: 'PASS',
     serviceType: 'INSPECTED_AND_CLEANED',
-    harnessType: 'CLASS_3',
-    size: 'L',
+    harnessType: false, // Changed to boolean
+    size: '', // Changed to text input
     selectedGearFindings: [] as string[],
     serialNumber: '',
-    hydroPerformed: false,
+    hydroPerformed: false, // Default to false
     hydroResult: undefined as string | undefined,
+    hydroFailureReason: '',
     repairNeeded: false,
     cost: '0',
     remarks: '',
     selectedLoad: '1',
-    selectedColor: 'RED',
-    whySpecializedCleaning: '',
-    howSpecializedCleaning: '',
+    selectedColor: tagColor || 'red', // Use passed color in lowercase
+    specializedCleaningDetails: '',
   });
 
   // UI state
-  // const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
-  // const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
-  // const [colorPickerVisible, setColorPickerVisible] = useState(false);
-  // const scrollY = useRef(new Animated.Value(0)).current;
-
-  // Get gear ID from route params
-  // const gearId = route.params?.gearId;
-
+  const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
+  const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
+  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isColorLocked, setIsColorLocked] = useState(colorLocked || false);
   
+  // Images state
+  const [images, setImages] = useState<string[]>(DEFAULT_IMAGES);
+  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
   // Fetch gear data
   useEffect(() => {
     const fetchGear = async () => {
@@ -131,9 +124,9 @@ export default function UpdateInspectionScreen() {
           // Initialize form with gear data
           setFormData(prev => ({
             ...prev,
-            size: response.gear_size || 'L',
+            size: response.gear_size || '',
             serialNumber: response.serial_number || '',
-            // @ts-ignore
+            //@ts-ignore
             remarks: response.remarks || '',
           }));
         } else {
@@ -150,75 +143,39 @@ export default function UpdateInspectionScreen() {
     fetchGear();
   }, [gearId]);
 
-  // Helper functions
-  const getHarnessTypeLabel = (harnessValue: string) => {
-    const harness = INSPECTION_CONSTANTS.HARNESS_TYPES.find(option => option.value === harnessValue);
-    return harness?.label || 'Select Harness Type';
-  };
+  // Load gear findings and images
+  useEffect(() => {
+    const loadFindingsAndImage = async () => {
+      if (!gear) return;
 
-  const getSizeLabel = (sizeValue: string) => {
-    const sizeOption = INSPECTION_CONSTANTS.SIZE_OPTIONS.find(option => option.value === sizeValue);
-    return sizeOption?.label || 'Select Size';
-  };
+      await fetchGearFindings(gear.gear_type.gear_type_id);
 
-  const getLoadLabel = (loadValue: string) => {
-    const load = INSPECTION_CONSTANTS.LOAD_OPTIONS.find(option => option.value === loadValue);
-    return load?.label || 'Select Load';
-  };
+      // Use gear image if available, otherwise use default images
+      if (gear.gear_image_url) {
+        setImages([gear.gear_image_url, ...DEFAULT_IMAGES]);
+      }
+    };
 
-  const getColorLabel = (colorValue: string) => {
-    const color = INSPECTION_CONSTANTS.COLOR_OPTIONS.find(option => option.value === colorValue);
-    return color?.label || 'Select Color';
-  };
+    loadFindingsAndImage();
+  }, [gear]);
 
-  const getSelectedGearFindingsLabels = () => {
-    return formData.selectedGearFindings.map(finding => {
-      const found = GEAR_FINDINGS.find(option => option.value === finding);
-      return found?.label || finding;
-    });
-  };
+  // Format gear findings for multi-select modal
+  const formattedFindings = useMemo(() => {
+    return gearFindings.map(f => ({
+      label: f.findings,
+      value: f.id.toString(), // Convert to string for multi-select
+    }));
+  }, [gearFindings]);
+
+  console.log("formattedFindings", formattedFindings);
+  console.log("🔥 Gear Findings Fetched:", gearFindings);
 
   // Check if gear requires hydro test
-  const requiresHydroTest = INSPECTION_CONSTANTS.HYDRO_TEST_GEAR_TYPES.includes(
-    gear?.gear_type?.gear_type?.toUpperCase()
-  );
-  const [selectedColor, setSelectedColor] = useState('RED');
-  const [colorPickerVisible, setColorPickerVisible] = useState(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  
-  // Modal states
-  const [gearFindingsModalVisible, setGearFindingsModalVisible] = useState(false);
-  const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(false);
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  // Multiple images state
-  const [images, setImages] = useState<string[]>([]);
-
-  // Update form fields when gear data loads
-  useEffect(() => {
-    if (gear) {
-      setSize(gear.gear_size || 'L');
-      setSerial(gear.serial_number || '');
-      setRemarks(gear.remarks || '');
-    }
+  const requiresHydroTest = useMemo(() => {
+    return HYDRO_TEST_GEAR_TYPES.includes(gear?.gear_type?.gear_type?.toUpperCase());
   }, [gear]);
 
-  // Handle form field changes
-  const handleFieldChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
-  // Update images when gear image URL is available
-  useEffect(() => {
-    if (gear?.gear_image_url) {
-      setImages([gear.gear_image_url]);
-    }
-  }, [gear]);
-
-  // Track keyboard visibility to adjust bottom padding
+  // Track keyboard visibility
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -238,7 +195,64 @@ export default function UpdateInspectionScreen() {
     { useNativeDriver: false }
   );
 
-  const saveChanges = () => {
+  // Helper functions
+  const getLoadLabel = (loadValue: string) => {
+    const load = INSPECTION_CONSTANTS.LOAD_OPTIONS.find(option => option.value === loadValue);
+    return load?.label || 'Select Load';
+  };
+
+  const getSelectedGearFindingsLabels = () => {
+    return formData.selectedGearFindings.map(findingId => {
+      const found = gearFindings.find(f => f.id.toString() === findingId);
+      return found?.findings || `Finding ${findingId}`;
+    });
+  };
+
+  // Handle form field changes
+  const handleFieldChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, []);
+
+  // Image handling functions
+  const handleImagePress = (imageUri: string) => {
+    setSelectedImage(imageUri);
+    setImagePreviewVisible(true);
+  };
+
+  const addNewImage = () => {
+    setShowImageSourceModal(true);
+  };
+
+  const handleCameraCaptured = (uri: string) => {
+    setImages(prev => [...prev, uri]);
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const response = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+        includeBase64: false,
+      });
+
+      if (response.didCancel) {
+        return;
+      }
+
+      const uri = response.assets?.[0]?.uri;
+      if (uri) {
+        setImages(prev => [...prev, uri]);
+      }
+    } catch (error) {
+      Alert.alert('Image picker error', 'Unable to select image from gallery.');
+    }
+  };
+
+  // Save inspection data
+  const saveChanges = async () => {
     if (!gear) {
       Alert.alert('Error', 'No gear data available');
       return;
@@ -246,23 +260,137 @@ export default function UpdateInspectionScreen() {
 
     console.log('Save', { 
       gearId: gear.gear_id,
+      mode,
       ...formData
     });
-    
-    // navigation.navigate('FirefighterFlow');
-    navigation.navigate("FirefighterFlow", {
-  firefighter: firefighter   // 👈 SEND THIS BACK
-});
+
+    try {
+      // Prepare gear findings as array of objects
+      const gearFindingsData = formData.selectedGearFindings.map(findingId => {
+        const finding = gearFindings.find(f => f.id.toString() === findingId);
+        return {
+          id: parseInt(findingId),
+          findings: finding?.findings || ''
+        };
+      });
+
+      const inspectionData = {
+        lead_id: currentLead?.lead_id,
+        mu_id: 1,
+        firestation_id: gear.firestation?.id,
+        franchise_id: gear.franchise?.id,
+        gear_id: gear.gear_id,
+        roster_id: firefighter?.roster_id,
+        
+        inspection_date: new Date().toISOString().split('T')[0],
+        inspection_status: 'POST-INSPECTION',
+        
+        hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
+        hydro_test_performed: formData.hydroPerformed,
+        hydro_failure_reason: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
+        // @mitesh
+        gear_findings : JSON.stringify(gearFindingsData), //stringified
+        finding_id: 1,
+        
+        // gear_findings: gearFindingsData, // Array of 
+
+        // should_Be like this 
+        // finding_ids:gearFindingsData.map(item => item.id), //[30, 31, 32, 33, 34]
+
+        inspection_cost: formData.repairNeeded ? parseFloat(formData.cost) : 0,
+        
+        inspection_image_url: images,
+        remarks: formData.remarks,
+        
+        load_number: parseInt(formData.selectedLoad),
+        specialisedcleaning_remarks: formData.serviceType === 'SPECIALIZED_CLEANING' ? formData.specializedCleaningDetails : null,
+        
+        gear_status_id: mapStatusToId(formData.status),
+        service_type_id: mapServiceTypeToId(formData.serviceType),
+        tag_color: formData.selectedColor.toLowerCase(), // Ensure lowercase
+        harness_type: formData.harnessType,
+        gear_size: formData.size,
+        
+      };
+
+      console.log('Inspection Data:', inspectionData);
+
+      // TODO: Uncomment when API is ready
+      // let response;
+      // if (mode === 'create') {
+      //   response = await inspectionApi.createInspection(inspectionData);
+      // } else {
+      //   response = await inspectionApi.updateInspection(inspectionId, inspectionData);
+      // }
+
+      // if (response.status) {
+        Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+        // navigation.navigate("FirefighterFlow", { firefighter });
+      // } else {
+      //   Alert.alert('Error', response.message || 'Failed to save inspection');
+      // }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Network error');
+    }
+  };
+
+  // Helper functions to map status to IDs
+  const mapStatusToId = (status: string) => {
+    const statusMap: { [key: string]: number } = {
+      'PASS': 1,
+      'REPAIR':2,
+      'CORRECTIVE_ACTION_REQUIRED': 5,
+      'RECOMMENDED_OOS': 4,
+      'EXPIRED': 3
+    };
+    return statusMap[status] || 1;
+  };
+
+  /*
+  {
+    "status": true,
+    "message": "Gear status fetched successfully",
+    "data": [
+        {
+            "id": 1,
+            "status": "Pass"
+        },
+        {
+            "id": 2,
+            "status": "Repair"
+        },
+        {
+            "id": 3,
+            "status": "Expired"
+        },
+        {
+            "id": 4,
+            "status": "Recommended Out Of Service"
+        },
+        {
+            "id": 5,
+            "status": "Corrective Action Required"
+        }
+    ]
+}
+  
+  */
+
+  const mapServiceTypeToId = (serviceType: string) => {
+    const serviceMap: { [key: string]: number } = {
+      'CLEANED_ONLY': 1, 
+      'INSPECTED_ONLY': 2,
+      'INSPECTED_AND_CLEANED': 3,
+      'SPECIALIZED_CLEANING': 4,
+      'OTHER': 5
+    };
+    return serviceMap[serviceType] || 1;
   };
 
   // Show loading state
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* <Header 
-          title="Update Gear Status"
-          showBackButton={true}
-        /> */}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading gear data...</Text>
@@ -276,7 +404,7 @@ export default function UpdateInspectionScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header 
-          title="Update Gear Status"
+          title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
           showBackButton={true}
         />
         <View style={styles.errorContainer}>
@@ -303,7 +431,7 @@ export default function UpdateInspectionScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header 
-          title="Update Gear Status"
+          title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
           showBackButton={true}
         />
         <View style={styles.errorContainer}>
@@ -325,17 +453,26 @@ export default function UpdateInspectionScreen() {
     );
   }
 
+  const saveButtonText = mode === 'create' ? 'Create Inspection' : 'Save Changes';
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-
 
       {/* Sticky Gear Information */}
       <InspectionHeader
         gear={gear}
-        roster={gear.roster}
+        roster={firefighter}
         isCollapsed={isGearInfoCollapsed}
         onToggleCollapse={() => setIsGearInfoCollapsed(!isGearInfoCollapsed)}
         scrollY={scrollY}
+        tagColor={tagColor}
+        isColorLocked={isColorLocked}
+        onHistoryPress={() => {
+          if (gear?.gear_id) {
+            navigation.navigate('GearDetail', { gearId: gear.gear_id });
+          }
+        }}
+        mode={mode}
       />
 
       <ScrollView 
@@ -361,16 +498,14 @@ export default function UpdateInspectionScreen() {
           </View>
         )}
 
-
         {/* Main form grid */}
         <View style={styles.row}>
-          {/* Details column */}
+          {/* Left Column - Inspection Details */}
           <View style={[styles.col, { marginRight: 8 }]}>
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <Text style={[styles.cardTitle, { color: colors.onSurface }]}>
                 Inspection Details
               </Text>
-
 
               <ServiceTypeSelection
                 selectedServiceType={formData.serviceType}
@@ -380,33 +515,109 @@ export default function UpdateInspectionScreen() {
               {/* Specialized Cleaning Fields - Conditionally Rendered */}
               {formData.serviceType === 'SPECIALIZED_CLEANING' && (
                 <SpecializedCleaningFields
-                  why={formData.whySpecializedCleaning}
-                  how={formData.howSpecializedCleaning}
-                  onWhyChange={(text) => handleFieldChange('whySpecializedCleaning', text)}
-                  onHowChange={(text) => handleFieldChange('howSpecializedCleaning', text)}
+                  specializedCleaningDetails={formData.specializedCleaningDetails}
+                  onSpecializedCleaningChange={(text) => handleFieldChange('specializedCleaningDetails', text)}
                 />
               )}
 
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness Type</Text>
+              {/* Harness Type as Toggle */}
+              <View style={styles.rowSpace}>
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness Type</Text>
+                <View style={styles.toggleContainer}>
+                  {/* <Text style={[styles.toggleLabel, { color: colors.onSurfaceVariant }]}>
+                    {formData.harnessType ? 'Class 3 - Full Body' : 'Class 2 - Chest'}
+                  </Text> */}
+                  <Switch 
+                    value={formData.harnessType} 
+                    onValueChange={(value) => handleFieldChange('harnessType', value)} 
+                    />
+                </View>
+              </View>
+                   
+
+
+
+              {/* Size as Text Input */}
+
+
+
+
+              {/* Load Selection */}
+              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Select Load</Text>
               <CustomDropdown
-                options={INSPECTION_CONSTANTS.HARNESS_TYPES}
-                selectedValue={formData.harnessType}
-                onSelect={(value) => handleFieldChange('harnessType', value)}
-                placeholder="Select Harness Type"
-                getLabel={getHarnessTypeLabel}
+                options={INSPECTION_CONSTANTS.LOAD_OPTIONS}
+                selectedValue={formData.selectedLoad}
+                onSelect={(value) => handleFieldChange('selectedLoad', value)}
+                placeholder="Select Load"
+                getLabel={getLoadLabel}
                 style={styles.dropdownContainer}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
-              <CustomDropdown
-                options={INSPECTION_CONSTANTS.SIZE_OPTIONS}
-                selectedValue={formData.size}
-                onSelect={(value) => handleFieldChange('size', value)}
-                placeholder="Select Size"
-                getLabel={getSizeLabel}
-                style={styles.dropdownContainer}
-              />
+              {/* Color Picker - Only show if not locked */}
+              {/* {!isColorLocked && (
+                <>
+                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Color</Text>
+                  <TouchableOpacity
+                    style={[styles.colorPickerButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+                    onPress={() => setColorPickerVisible(true)}
+                  >
+                    <View style={styles.colorPickerButtonContent}>
+                      <View style={[styles.selectedColorCircle, { 
+                        backgroundColor: INSPECTION_CONSTANTS.COLOR_OPTIONS.find(c => c.value === formData.selectedColor)?.color 
+                      }]} />
+                      <Text style={[styles.colorPickerButtonText, { color: colors.onSurface }]}>
+                        {formData.selectedColor.charAt(0).toUpperCase() + formData.selectedColor.slice(1)}
+                      </Text>
+                    </View>
+                    <IconButton
+                      icon="chevron-right"
+                      size={20}
+                      iconColor={colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
+                </>
+              )} */}
 
+              {/* Status Selection */}
+              <StatusSelection
+                selectedStatus={formData.status}
+                onStatusChange={(status) => handleFieldChange('status', status)}
+              />
+            </View>
+
+            {/* Remarks */}
+            <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
+              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
+              <Input
+                placeholder="Add notes or remarks..."
+                value={formData.remarks}
+                onChangeText={(text) => handleFieldChange('remarks', text)}
+                multiline
+                numberOfLines={4}
+                enableVoice
+                appendVoiceResults
+                style={{ minHeight: 90, fontSize: p(14) }}
+                containerStyle={{ alignItems: 'flex-start' }}
+              />
+            </View>
+          </View>
+
+          {/* Right Column - Images, Hydro Test, and Repair */}
+          <View style={styles.col}>
+            {/* Gear Images */}
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+
+
+                            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
+              <Input
+                placeholder="Enter gear size (e.g., L, XL, 42)"
+                value={formData.size}
+                onChangeText={(text) => handleFieldChange('size', text)}
+                style={styles.textInput}
+              />
+              
+
+                            {/* Gear Findings */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
               <TouchableOpacity
                 style={[styles.gearFindingsButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
@@ -425,155 +636,143 @@ export default function UpdateInspectionScreen() {
                 />
               </TouchableOpacity>
 
-              {/* Show selected gear findings */}
+              {/* Show selected gear findings with better layout */}
               {formData.selectedGearFindings.length > 0 && (
                 <View style={styles.selectedFindingsContainer}>
-                  {getSelectedGearFindingsLabels().slice(0, 2).map((label, index) => (
-                    <Chip
-                      key={index}
-                      style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
-                      textStyle={{ color: colors.onPrimaryContainer, fontSize: 10 }}
-                      onClose={() => {
-                        const newFindings = [...formData.selectedGearFindings];
-                        newFindings.splice(index, 1);
-                        handleFieldChange('selectedGearFindings', newFindings);
-                      }}
-                    >
-                      {label.length > 30 ? label.substring(0, 30) + '...' : label}
-                    </Chip>
+                  {getSelectedGearFindingsLabels().map((label, index) => (
+                    <View key={index} style={styles.findingItem}>
+                      <Chip
+                        style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
+                        textStyle={{ color: colors.onPrimaryContainer, fontSize: 12 }}
+                        onClose={() => {
+                          const newFindings = [...formData.selectedGearFindings];
+                          newFindings.splice(index, 1);
+                          handleFieldChange('selectedGearFindings', newFindings);
+                        }}
+                      >
+                        {label}
+                      </Chip>
+                    </View>
                   ))}
-                  {formData.selectedGearFindings.length > 2 && (
-                    <Chip
-                      style={[styles.findingChip, { backgroundColor: colors.secondaryContainer }]}
-                      textStyle={{ color: colors.onSecondaryContainer, fontSize: 10 }}
-                    >
-                      +{formData.selectedGearFindings.length - 2} more
-                    </Chip>
-                  )}
                 </View>
               )}
 
-              <View style={styles.rowSpace}>
-                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Performed</Text>
-                <Switch 
-                  value={formData.hydroPerformed} 
-                  onValueChange={(value) => handleFieldChange('hydroPerformed', value)} 
-                />
+              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+              <View style={styles.imagesContainer}>
+                {images.map((imageUri, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.imageBox}
+                    onPress={() => handleImagePress(imageUri)}
+                  >
+                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity 
+                  style={[styles.imageBox, styles.addImageBox]}
+                  onPress={addNewImage}
+                >
+                  <Text style={styles.addImageText}>+</Text>
+                  <Text style={styles.addImageLabel}>Add Image</Text>
+                </TouchableOpacity>
               </View>
+            </View>
 
-              {formData.hydroPerformed && (
+            {/* Hydro Test Section - Only for liners */}
+            {requiresHydroTest && (
+              <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
+                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Hydro Test</Text>
+                
                 <View style={styles.rowSpace}>
-                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Result</Text>
-                  <View style={styles.rowWrap}>
-                    <Chip
-                      selected={formData.hydroResult === 'Pass'}
-                      onPress={() => handleFieldChange('hydroResult', 'Pass')}
-                      style={[
-                        styles.smallChoice,
-                        { 
-                          backgroundColor: formData.hydroResult === 'Pass' ? '#34A853' : colors.surfaceVariant 
-                        }
-                      ]}
-                      textStyle={{ 
-                        color: formData.hydroResult === 'Pass' ? '#fff' : colors.onSurfaceVariant,
-                        fontSize: 12
-                      }}
-                    >
-                      Pass
-                    </Chip>
-                    <Chip
-                      selected={formData.hydroResult === 'Fail'}
-                      onPress={() => handleFieldChange('hydroResult', 'Fail')}
-                      style={[
-                        styles.smallChoice,
-                        { 
-                          backgroundColor: formData.hydroResult === 'Fail' ? '#EA4335' : colors.surfaceVariant 
-                        }
-                      ]}
-                      textStyle={{ 
-                        color: formData.hydroResult === 'Fail' ? '#fff' : colors.onSurfaceVariant,
-                        fontSize: 12
-                      }}
-                    >
-                      Fail
-                    </Chip>
-                  </View>
+                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Performed</Text>
+                  <Switch 
+                    value={formData.hydroPerformed} 
+                    onValueChange={(value) => handleFieldChange('hydroPerformed', value)} 
+                  />
                 </View>
-              )}
 
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Select Load</Text>
-              <CustomDropdown
-                options={INSPECTION_CONSTANTS.LOAD_OPTIONS}
-                selectedValue={formData.selectedLoad}
-                onSelect={(value) => handleFieldChange('selectedLoad', value)}
-                placeholder="Select Load"
-                getLabel={getLoadLabel}
-                style={styles.dropdownContainer}
-              />
+                {formData.hydroPerformed && (
+                  <>
+                    <View style={styles.rowSpace}>
+                      <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Result</Text>
+                      <View style={styles.rowWrap}>
+                        <Chip
+                          selected={formData.hydroResult === 'Pass'}
+                          onPress={() => handleFieldChange('hydroResult', 'Pass')}
+                          style={[
+                            styles.smallChoice,
+                            { 
+                              backgroundColor: formData.hydroResult === 'Pass' ? '#34A853' : colors.surfaceVariant 
+                            }
+                          ]}
+                          textStyle={{ 
+                            color: formData.hydroResult === 'Pass' ? '#fff' : colors.onSurfaceVariant,
+                            fontSize: 12
+                          }}
+                        >
+                          Pass
+                        </Chip>
+                        <Chip
+                          selected={formData.hydroResult === 'Fail'}
+                          onPress={() => handleFieldChange('hydroResult', 'Fail')}
+                          style={[
+                            styles.smallChoice,
+                            { 
+                              backgroundColor: formData.hydroResult === 'Fail' ? '#EA4335' : colors.surfaceVariant 
+                            }
+                          ]}
+                          textStyle={{ 
+                            color: formData.hydroResult === 'Fail' ? '#fff' : colors.onSurfaceVariant,
+                            fontSize: 12
+                          }}
+                        >
+                          Fail
+                        </Chip>
+                      </View>
+                    </View>
 
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Color</Text>
-              <TouchableOpacity
-                style={[styles.colorPickerButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
-                onPress={() => setColorPickerVisible(true)}
-              >
-                <View style={styles.colorPickerButtonContent}>
-                  <View style={[styles.selectedColorCircle, { backgroundColor: INSPECTION_CONSTANTS.COLOR_OPTIONS.find(c => c.value === formData.selectedColor)?.color }]} />
-                  <Text style={[styles.colorPickerButtonText, { color: colors.onSurface }]}>
-                    {getColorLabel(formData.selectedColor)}
-                  </Text>
-                </View>
-                <IconButton
-                  icon="chevron-right"
-                  size={20}
-                  iconColor={colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
+                    {/* HYDRO TEST FAILURE REASON */}
+                    {formData.hydroResult === 'Fail' && (
+                      <View style={styles.hydroFailureSection}>
+                        <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
+                          Why did the hydro test fail?
+                        </Text>
+                        <Input
+                          placeholder="Describe the reason for hydro test failure..."
+                          value={formData.hydroFailureReason}
+                          onChangeText={(text) => handleFieldChange('hydroFailureReason', text)}
+                          multiline
+                          numberOfLines={3}
+                          enableVoice
+                          appendVoiceResults
+                          style={{ minHeight: 80, fontSize: p(14) }}
+                          containerStyle={{ alignItems: 'flex-start' }}
+                        />
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
 
-
-              
-              <StatusSelection
-                selectedStatus={formData.status}
-                onStatusChange={(status) => handleFieldChange('status', status)}
-              />
-            </View>
-
-            {/* Remarks */}
-            <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
-              <Text style={styles.cardTitle}>Remarks</Text>
-              <Input
-                placeholder="Add notes or remarks..."
-                value={formData.remarks}
-                onChangeText={(text) => handleFieldChange('remarks', text)}
-                multiline
-                numberOfLines={4}
-                enableVoice
-                appendVoiceResults
-                style={{ minHeight: 90, fontSize: p(14) }}
-                containerStyle={{ alignItems: 'flex-start' }}
-                onVoiceError={(message) => Alert.alert('Voice Input', message)}
-              />
-            </View>
-          </View>
-
-          {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
-          {formData.status === 'CORRECTIVE_ACTION_REQUIRED' && (
-            <View style={styles.col}>
-              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
+            {formData.status === 'CORRECTIVE_ACTION_REQUIRED' && (
+              <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 12 }]}>
                 <RepairCostFields
                   cost={formData.cost}
                   repairNeeded={formData.repairNeeded}
-                  onCostChange={(cost:any) => handleFieldChange('cost', cost)}
-                  onRepairNeededChange={(needed:any) => handleFieldChange('repairNeeded', needed)}
+                  onCostChange={(cost) => handleFieldChange('cost', cost)}
+                  onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
                 />
               </View>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
         {/* Actions */}
         <View style={styles.actions}>
           <Button 
-            mode="text" 
+            mode="outlined" 
             onPress={() => navigation.goBack()} 
             style={{ marginRight: 12 }}
           >
@@ -583,7 +782,7 @@ export default function UpdateInspectionScreen() {
             mode="contained" 
             onPress={saveChanges}
           >
-            Save Changes
+            {saveButtonText}
           </Button>
         </View>
       </ScrollView>
@@ -592,9 +791,9 @@ export default function UpdateInspectionScreen() {
       <MultiSelectModal
         visible={gearFindingsModalVisible}
         onClose={() => setGearFindingsModalVisible(false)}
-        options={GEAR_FINDINGS}
+        options={formattedFindings}
         selectedValues={formData.selectedGearFindings}
-        onSelectionChange={(values) => handleFieldChange('selectedGearFindings', values)}
+        onSelectionChange={(values) => handleFieldChange("selectedGearFindings", values)}
         title="Gear Findings"
       />
 
@@ -604,6 +803,52 @@ export default function UpdateInspectionScreen() {
         selectedColor={formData.selectedColor}
         onColorSelect={(color) => handleFieldChange('selectedColor', color)}
       />
+
+      {/* Image Source Picker Modal */}
+      <ImageSourcePickerModal
+        visible={showImageSourceModal}
+        onDismiss={() => setShowImageSourceModal(false)}
+        onPickCamera={() => {
+          setShowImageSourceModal(false);
+          setShowCameraModal(true);
+        }}
+        onPickGallery={() => {
+          setShowImageSourceModal(false);
+          handlePickFromGallery();
+        }}
+      />
+
+      {/* Camera Modal */}
+      <CameraCaptureModal
+        visible={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onPhotoCaptured={handleCameraCaptured}
+      />
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={imagePreviewVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImagePreviewVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <TouchableOpacity 
+            style={styles.modalBackground}
+            onPress={() => setImagePreviewVisible(false)}
+            activeOpacity={1}
+          >
+            <Image source={{ uri: selectedImage }} style={styles.enlargedImage} />
+          </TouchableOpacity>
+          <Button 
+            mode="contained" 
+            onPress={() => setImagePreviewVisible(false)}
+            style={styles.closeButton}
+          >
+            Close
+          </Button>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -612,8 +857,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: {},
-  // scrollView: { flex: 1, marginTop:0, },
-  // scrollContent: { paddingBottom: 40 },
   
   // Loading and error styles
   loadingContainer: {
@@ -661,7 +904,6 @@ const styles = StyleSheet.create({
   row: { 
     flexDirection: 'row', 
     paddingHorizontal: 14, 
-    // marginTop: 80, // Space for sticky header
   },
   col: { flex: 1 },
 
@@ -696,6 +938,21 @@ const styles = StyleSheet.create({
     marginRight: 6 
   },
 
+  // Toggle styles
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  toggleLabel: {
+    fontSize: 14,
+  },
+
+  // Text input styles
+  textInput: {
+    marginBottom: 16,
+  },
+
   // Dropdown styles
   dropdownContainer: {
     marginBottom: 16,
@@ -718,14 +975,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectedFindingsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     marginBottom: 16,
+  },
+  findingItem: {
+    marginBottom: 8,
   },
   findingChip: {
     marginRight: 6,
-    marginBottom: 6,
   },
 
   // Color Picker Styles
@@ -754,6 +1010,71 @@ const styles = StyleSheet.create({
   colorPickerButtonText: {
     fontSize: 14,
     flex: 1,
+  },
+
+  // Hydro Test Failure Section
+  hydroFailureSection: {
+    marginTop: 12,
+    marginBottom: 16,
+  },
+
+  // Image styles
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  imageBox: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  addImageBox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#ccc',
+    backgroundColor: 'transparent',
+  },
+  addImageText: {
+    fontSize: 20,
+    color: '#666',
+    marginBottom: 4,
+  },
+  addImageLabel: {
+    fontSize: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.9)',
+  },
+  modalBackground: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  enlargedImage: {
+    width: '90%',
+    height: '70%',
+    resizeMode: 'contain',
+  },
+  closeButton: {
+    position: 'absolute',
+    bottom: 40,
   },
 
   actions: {
