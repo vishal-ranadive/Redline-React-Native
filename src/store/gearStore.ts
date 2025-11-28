@@ -43,6 +43,7 @@ export interface Gear {
     gear_type: string;
   };
   manufacturing_date: string;
+  remarks?:string;
   gear_size: string | null;
   active_status: boolean;
   is_deleted: boolean;

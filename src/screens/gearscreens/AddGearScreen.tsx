@@ -303,8 +303,10 @@ const AddGearScreen = () => {
           resetForm();
           navigation.navigate('UpadateInspection', {
             gearId: Number(createdGear.gear_id),
+            firefighter: assignedRoster, 
+            mode:"create"
           });
-        }, 1500);
+        }, 500);
       } else {
         // showSnackbar('Failed to add gear. Please try again.');
         Toast.show({

@@ -41,9 +41,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 8 ,
+    fontSize: 16, 
+    fontWeight: '700', 
   },
   dropdownContainer: {
     marginBottom: 0,

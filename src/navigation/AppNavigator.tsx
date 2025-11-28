@@ -61,7 +61,7 @@ export type RootStackParamList = {
   GearScreen:{load:any, bin:any}
 
   //Fire Fighter Flow
-  FirefighterGearsScreen:{roster: FirefighterRoster};
+  FirefighterGearsScreen:{roster: FirefighterRoster, leadId:number};
   FirefighterListScreen:any;
   ViewInspectionScreen:undefined;
 

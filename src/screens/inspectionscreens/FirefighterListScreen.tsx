@@ -94,7 +94,7 @@ export default function FirefighterListScreen() {
   }, [effectiveLeadId, effectiveInspectionId, fetchFirefighterInspectionView]);
 
   const handleViewGears = (roster: Firefighter) => {
-    navigation.navigate('FirefighterGearsScreen', { roster });
+    navigation.navigate('FirefighterGearsScreen', { roster ,leadId:currentLead.lead_id });
   };
 
   const getInitials = (name: string) => {

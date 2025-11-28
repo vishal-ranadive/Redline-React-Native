@@ -2,16 +2,23 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Chip, useTheme } from 'react-native-paper';
-import { INSPECTION_CONSTANTS } from '../../../constants/inspection';
+
+interface StatusOption {
+  value: string;
+  label: string;
+  color: string;
+}
 
 interface StatusSelectionProps {
   selectedStatus: string;
   onStatusChange: (status: string) => void;
+  statusOptions: StatusOption[];
 }
 
 export const StatusSelection: React.FC<StatusSelectionProps> = ({
   selectedStatus,
   onStatusChange,
+  statusOptions,
 }) => {
   const { colors } = useTheme();
 
@@ -19,7 +26,7 @@ export const StatusSelection: React.FC<StatusSelectionProps> = ({
     <View style={styles.container}>
       <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
       <View style={styles.rowWrap}>
-        {INSPECTION_CONSTANTS.STATUS_OPTIONS.map((option) => (
+        {statusOptions.map((option) => (
           <Chip
             key={option.value}
             selected={selectedStatus === option.value}
@@ -50,9 +57,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 8 ,
+    fontSize: 16, 
+    fontWeight: '700', 
   },
   rowWrap: {
     flexDirection: 'row',

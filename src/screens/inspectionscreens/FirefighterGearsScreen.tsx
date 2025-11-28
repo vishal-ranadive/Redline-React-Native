@@ -8,7 +8,7 @@ import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGearStore, type Gear } from '../../store/gearStore';
-import { type FirefighterRoster, type FirefighterGearSummary } from '../../store/inspectionStore';
+import { useInspectionStore } from '../../store/inspectionStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
@@ -20,7 +20,7 @@ const GEAR_IMAGES = {
   'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
   'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
   'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
-  'Axe': 'data:image/png;base64,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',
+  'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
   'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
   'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
 };
@@ -42,10 +42,21 @@ const getGearImage = (gearType: string | null) => {
   return GEAR_IMAGES.default;
 };
 
+// Types based on API response
+type ApiGearInspection = {
+  gear_id: number;
+  gear_type_id: number;
+  gear_usage: any;
+  gear_name: string;
+  current_inspection: any | null;
+  previous_inspection: any | null;
+};
+
 type GearCard = {
-  summary: FirefighterGearSummary;
+  gear: ApiGearInspection;
   detail: Gear | null;
   color: string | null;
+  gearStatus?: string;
 };
 
 const normalizeTagColor = (color?: string | null) => {
@@ -66,8 +77,9 @@ export default function FirefighterGearsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'FirefighterGearsScreen'>>();
-  const { roster } = route.params;
+  const { roster, leadId } = route.params;
   const { fetchGearById } = useGearStore();
+  const { fetchFirefighterGears, firefighterGears, loading: inspectionLoading, error } = useInspectionStore();
 
   const [gearCards, setGearCards] = useState<GearCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,14 +89,19 @@ export default function FirefighterGearsScreen() {
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(8);
   const numberOfItemsPerPageList = [4, 8, 12, 16];
 
-  const rosterTagColor = useMemo(
-    () => normalizeTagColor(roster?.gear?.[0]?.tag_color),
-    [roster],
-  );
+  // Get tag color from the first gear's current inspection
+  const rosterTagColor = useMemo(() => {
+    if (firefighterGears.length > 0 && firefighterGears[0].current_inspection) {
+      return normalizeTagColor(firefighterGears[0].current_inspection.tag_color);
+    }
+    return null;
+  }, [firefighterGears]);
+
+  console.log("!leadId || !roster?.id", {leadId ,roster : roster?.id}) 
 
   const loadGears = useCallback(
     async (refresh = false) => {
-      if (!roster?.gear?.length) {
+      if (!leadId || !roster?.id) {
         setGearCards([]);
         setLoading(false);
         setRefreshing(false);
@@ -98,16 +115,35 @@ export default function FirefighterGearsScreen() {
       }
 
       try {
+        // Fetch gear inspection data from API
+        await fetchFirefighterGears(leadId, roster.id);
+        
+        // Process the API response and create gear cards
         const cards = await Promise.all(
-          roster.gear.map(async (summary) => {
-            const detail = await fetchGearById(summary.id);
+          firefighterGears.map(async (gear) => {
+            const detail = await fetchGearById(gear.gear_id);
+            
+            // Get gear status from current inspection
+            let gearStatus = '';
+            if (gear.current_inspection?.gear_status) {
+              gearStatus = gear.current_inspection.gear_status.status;
+            }
+            
+            // Get tag color from current inspection
+            let tagColor = null;
+            if (gear.current_inspection?.tag_color) {
+              tagColor = normalizeTagColor(gear.current_inspection.tag_color);
+            }
+
             return {
-              summary,
+              gear,
               detail,
-              color: normalizeTagColor(summary.tag_color),
+              color: tagColor,
+              gearStatus,
             } as GearCard;
           }),
         );
+        
         setGearCards(cards);
       } catch (error) {
         console.error('Error fetching gears:', error);
@@ -116,12 +152,12 @@ export default function FirefighterGearsScreen() {
         setRefreshing(false);
       }
     },
-    [fetchGearById, roster],
+    [fetchFirefighterGears, fetchGearById, leadId, roster?.id, firefighterGears],
   );
 
   useEffect(() => {
     loadGears();
-  }, [loadGears]);
+  }, []);
 
   useEffect(() => {
     setPage(0);
@@ -132,12 +168,12 @@ export default function FirefighterGearsScreen() {
       return gearCards;
     }
     const query = searchQuery.toLowerCase();
-    return gearCards.filter(({ detail, summary }) => {
-      const name = (detail?.gear_name ?? summary.gear_name ?? '').toLowerCase();
+    return gearCards.filter(({ detail, gear }) => {
+      const name = (detail?.gear_name ?? gear.gear_name ?? '').toLowerCase();
       const serial = (detail?.serial_number ?? '').toLowerCase();
       const type = (
         detail?.gear_type?.gear_type ??
-        summary.type?.name ??
+        gear.gear_name ??
         ''
       ).toLowerCase();
       return name.includes(query) || serial.includes(query) || type.includes(query);
@@ -150,9 +186,12 @@ export default function FirefighterGearsScreen() {
   const currentGears = filteredGears.slice(from, to);
 
   const handleUpdateGear = (card: GearCard) => {
-    const gearId = card.detail?.gear_id ?? card.summary.id;
+    const gearId = card.detail?.gear_id ?? card.gear.gear_id;
+    const inspectionId = card.gear.current_inspection?.inspection_id;
+    
     navigation.navigate('UpadateInspection', {
       gearId,
+      inspectionId,
       mode: 'update',
       firefighter: roster,
       tagColor: card.color ?? undefined,
@@ -178,7 +217,6 @@ export default function FirefighterGearsScreen() {
     return colors[index];
   };
 
-  // Filter gears based on search
   const handleRefresh = useCallback(() => {
     setPage(0);
     loadGears(true);
@@ -190,15 +228,15 @@ export default function FirefighterGearsScreen() {
   const renderGear = useCallback(
     ({ item }: { item: GearCard }) => {
       const detail = item.detail;
-      const summary = item.summary;
+      const gear = item.gear;
       const tagColor = item.color ?? colors.primary;
-      const gearId = detail?.gear_id ?? summary.id;
-      const gearName = detail?.gear_name ?? summary.gear_name ?? 'Gear';
+      const gearId = detail?.gear_id ?? gear.gear_id;
+      const gearName = detail?.gear_name ?? gear.gear_name ?? 'Gear';
       const serialNumber = detail?.serial_number ?? 'N/A';
       const manufacturerName =
         detail?.manufacturer?.manufacturer_name ?? 'Unknown manufacturer';
       const gearTypeName =
-        detail?.gear_type?.gear_type ?? summary.type?.name ?? 'Gear';
+        detail?.gear_type?.gear_type ?? gear.gear_name ?? 'Gear';
 
       return (
         <TouchableOpacity
@@ -223,11 +261,24 @@ export default function FirefighterGearsScreen() {
                 </Text>
               </View>
 
+              {/* Gear Status */}
+              {item.gearStatus && (
+                <View style={styles.gearStatusContainer}>
+                  <Chip 
+                    mode="outlined" 
+                    textStyle={{ fontSize: 12 }}
+                    style={[styles.gearStatusChip, { borderColor: tagColor }]}
+                  >
+                    {item.gearStatus}
+                  </Chip>
+                </View>
+              )}
+
               {/* Gear Image and Basic Info */}
               <View style={styles.gearImageContainer}>
                 <Image
                   source={{
-                    uri: getGearImage(detail?.gear_type?.gear_type ?? summary.type?.name ?? null),
+                    uri: getGearImage(detail?.gear_type?.gear_type ?? gear.gear_name ?? null),
                   }}
                   style={styles.gearImage}
                   resizeMode="cover"
@@ -260,7 +311,7 @@ export default function FirefighterGearsScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <Icon source="tag-outline" size={16} color="#555" />
                   <Text style={{ marginLeft: 6 }}>
-                    {detail?.gear_type?.gear_type ?? summary.type?.name ?? 'N/A'}
+                    {detail?.gear_type?.gear_type ?? gear.gear_name ?? 'N/A'}
                   </Text>
                 </View>
 
@@ -291,7 +342,7 @@ export default function FirefighterGearsScreen() {
     [colors, navigation],
   );
 
-  if (loading && !refreshing) {
+  if ((loading || inspectionLoading) && !refreshing) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header 
@@ -364,7 +415,7 @@ export default function FirefighterGearsScreen() {
       <FlatList
         data={currentGears}
         renderItem={renderGear}
-        keyExtractor={(item) => item.summary.id.toString()}
+        keyExtractor={(item) => item.gear.gear_id.toString()}
         numColumns={2}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.columnWrapper}
@@ -499,13 +550,21 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: p(1),
     borderRadius: p(10),
-    minHeight: p(260),
+    minHeight: p(280),
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: p(8),
+  },
+  gearStatusContainer: {
+    marginBottom: p(8),
+    alignItems: 'flex-start',
+  },
+  gearStatusChip: {
+    height: p(24),
   },
   cardTagBadge: {
     position: 'absolute',
@@ -529,6 +588,7 @@ const styles = StyleSheet.create({
   },
   gearImageContainer: {
     alignItems: 'center',
+    marginBottom: p(8),
   },
   gearImage: {
     width: p(80),

@@ -20,9 +20,9 @@ export const RepairCostFields: React.FC<RepairCostFieldsProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Estimated Cost</Text>
+      <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Estimated Cost (USD)</Text>
 
-      <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Cost (USD)</Text>
+      {/* <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Cost </Text> */}
       <TextInput
         mode="outlined"
         placeholder="$0.00"
@@ -76,12 +76,12 @@ export const RepairCostFields: React.FC<RepairCostFieldsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   fieldLabel: {
     fontSize: 14,
@@ -89,13 +89,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   rowSpace: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    // marginBottom: 16,
   },
   rowWrap: {
     flexDirection: 'row',
@@ -103,6 +103,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   smallChoice: {
-    marginRight: 6,
+    // marginRight: 6,
   },
 });
