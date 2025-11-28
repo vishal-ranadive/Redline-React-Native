@@ -426,6 +426,17 @@ const handleGearPress = (gear: any) => {
                       </Text>
                     </View>
                     <IconButton
+                      icon="history"
+                      size={20}
+                      iconColor={colors.primary}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (gear.gear_id) {
+                          navigation.navigate('GearDetail', { gear_id: gear.gear_id });
+                        }
+                      }}
+                    />
+                    <IconButton
                       icon="chevron-right"
                       size={20}
                       iconColor={colors.onSurfaceVariant}

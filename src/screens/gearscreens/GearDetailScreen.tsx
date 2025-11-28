@@ -86,14 +86,14 @@ const GearDetailScreen = () => {
     Alert.alert('Add Roster', 'Navigate to add roster form');
   };
 
-  const handleUpdateRoster = () => {
-    setRosterModalVisible(true);
+  const handleUpdateFirefighter = () => {
     setMenuVisible(false);
+    setRosterModalVisible(true);
   };
 
-  const handleRemoveRoster = () => {
+  const handleRemoveFirefighter = () => {
     setMenuVisible(false);
-    Alert.alert('Success', 'Roster removed from gear');
+    Alert.alert('Remove Firefighter', 'This action will unassign the firefighter from the gear.');
   };
 
   const formatDate = (dateString: string) => {
@@ -163,15 +163,30 @@ const GearDetailScreen = () => {
                   <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
                     Assigned Fire Fighter
                   </Text>
-                  {/* Disabled menu button */}
-                  <Button 
-                    mode="text" 
-                    onPress={() => setMenuVisible(true)}
-                    compact
-                    disabled={true}
+                  <Menu
+                    visible={menuVisible}
+                    onDismiss={() => setMenuVisible(false)}
+                    anchor={
+                      <Button 
+                        mode="text" 
+                        onPress={() => setMenuVisible(true)}
+                        compact
+                      >
+                        <Icon source="dots-vertical" size={p(20)} color={colors.onSurfaceVariant} />
+                      </Button>
+                    }
                   >
-                    <Icon source="dots-vertical" size={p(20)} color={colors.onSurfaceVariant} />
-                  </Button>
+                    <Menu.Item
+                      onPress={handleUpdateFirefighter}
+                      title="Update Firefighter"
+                      leadingIcon="account-edit"
+                    />
+                    <Menu.Item
+                      onPress={handleRemoveFirefighter}
+                      title="Remove Firefighter"
+                      leadingIcon="account-remove"
+                    />
+                  </Menu>
                 </View>
                 <Divider style={{ marginBottom: p(12) }} />
 

@@ -25,6 +25,15 @@ const GEAR_IMAGES = {
   'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
 };
 
+const statusColorMap: { [key: string]: string } = {
+  Pass: '#34A853',
+  Repair: '#F9A825',
+  Expired: '#ff0303ff',
+  'Recommended Out Of Service': '#f15719ff',
+  'Corrective Action Required': '#F9A825',
+  Fail: '#8B4513',
+};
+
 // Function to get appropriate image based on gear type
 const getGearImage = (gearType: string | null) => {
   if (!gearType) return GEAR_IMAGES.default;
@@ -115,21 +124,41 @@ export default function FirefighterGearsScreen() {
       }
 
       try {
-        // Fetch gear inspection data from API
         await fetchFirefighterGears(leadId, roster.id);
-        
-        // Process the API response and create gear cards
+      } catch (error) {
+        console.error('Error fetching gears:', error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [fetchFirefighterGears, leadId, roster?.id],
+  );
+
+  useEffect(() => {
+    loadGears();
+  }, [loadGears]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const buildCards = async () => {
+      if (!firefighterGears.length) {
+        if (isMounted) {
+          setGearCards([]);
+        }
+        return;
+      }
+
+      try {
         const cards = await Promise.all(
           firefighterGears.map(async (gear) => {
             const detail = await fetchGearById(gear.gear_id);
-            
-            // Get gear status from current inspection
+
             let gearStatus = '';
             if (gear.current_inspection?.gear_status) {
               gearStatus = gear.current_inspection.gear_status.status;
             }
-            
-            // Get tag color from current inspection
+
             let tagColor = null;
             if (gear.current_inspection?.tag_color) {
               tagColor = normalizeTagColor(gear.current_inspection.tag_color);
@@ -143,21 +172,21 @@ export default function FirefighterGearsScreen() {
             } as GearCard;
           }),
         );
-        
-        setGearCards(cards);
-      } catch (error) {
-        console.error('Error fetching gears:', error);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [fetchFirefighterGears, fetchGearById, leadId, roster?.id, firefighterGears],
-  );
 
-  useEffect(() => {
-    loadGears();
-  }, []);
+        if (isMounted) {
+          setGearCards(cards);
+        }
+      } catch (err) {
+        console.error('Error building gear cards:', err);
+      }
+    };
+
+    buildCards();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [firefighterGears, fetchGearById]);
 
   useEffect(() => {
     setPage(0);
@@ -237,106 +266,114 @@ export default function FirefighterGearsScreen() {
         detail?.manufacturer?.manufacturer_name ?? 'Unknown manufacturer';
       const gearTypeName =
         detail?.gear_type?.gear_type ?? gear.gear_name ?? 'Gear';
+      const statusColor = item.gearStatus
+        ? statusColorMap[item.gearStatus] ?? tagColor
+        : '#9E9E9E';
 
       return (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleUpdateGear(item)}
-          style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
-        >
-          <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
-          <Card style={{ backgroundColor: colors.surface }}>
-            <Card.Content>
-              {/* Card Header with Gear ID and Type */}
-              <View style={styles.cardHeader}>
-                <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-                  #{gearId}
-                </Text>
-                <Text
-                  variant="titleMedium"
-                  style={{ fontWeight: 'bold', fontSize: 12, color: '#555' }}
-                  numberOfLines={1}
-                >
-                  {gearTypeName}
-                </Text>
-              </View>
-
-              {/* Gear Status */}
-              {item.gearStatus && (
-                <View style={styles.gearStatusContainer}>
-                  <Chip 
-                    mode="outlined" 
-                    textStyle={{ fontSize: 12 }}
-                    style={[styles.gearStatusChip, { borderColor: tagColor }]}
-                  >
-                    {item.gearStatus}
-                  </Chip>
-                </View>
-              )}
-
-              {/* Gear Image and Basic Info */}
-              <View style={styles.gearImageContainer}>
-                <Image
-                  source={{
-                    uri: getGearImage(detail?.gear_type?.gear_type ?? gear.gear_name ?? null),
-                  }}
-                  style={styles.gearImage}
-                  resizeMode="cover"
-                />
-              </View>
-
-              {/* Gear Details */}
-              <View style={styles.gearDetails}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Icon source="barcode" size={16} color="#555" />
-                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
-                    {serialNumber}
-                  </Text>
+        <View style={styles.cardWrapper}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleUpdateGear(item)}
+            style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
+          >
+            <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
+            <Card style={{ backgroundColor: colors.surface }}>
+              <Card.Content>
+                {/* Card Header with Gear ID and Type */}
+                <View style={styles.cardHeader}>
+                  {item.gearStatus ? (
+                    <Chip 
+                      mode="outlined" 
+                      textStyle={[styles.gearStatusText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: statusColor, borderColor: statusColor },
+                      ]}
+                    >
+                      {item.gearStatus}
+                    </Chip>
+                  ) : (
+                    <Chip
+                      mode="outlined"
+                      textStyle={[styles.gearStatusText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: statusColor, borderColor: statusColor },
+                      ]}
+                    >
+                      No Status
+                    </Chip>
+                  )}
+                  {/* <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
+                    #{gearId}
+                  </Text> */}
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Icon source="hard-hat" size={16} color="#555" />
-                  <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                    {gearName}
-                  </Text>
+                {/* Gear Image and Basic Info */}
+                <View style={styles.gearImageContainer}>
+                  <Image
+                    source={{
+                      uri: getGearImage(detail?.gear_type?.gear_type ?? gear.gear_name ?? null),
+                    }}
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Icon source="factory" size={16} color="#555" />
-                  <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                    {manufacturerName}
-                  </Text>
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Icon source="tag-outline" size={16} color="#555" />
-                  <Text style={{ marginLeft: 6 }}>
-                    {detail?.gear_type?.gear_type ?? gear.gear_name ?? 'N/A'}
-                  </Text>
-                </View>
-
-                {detail?.gear_size && (
+                {/* Gear Details */}
+                <View style={styles.gearDetails}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Icon source="ruler" size={16} color="#555" />
-                    <Text style={{ marginLeft: 6 }}>{detail.gear_size}</Text>
+                    <Icon source="barcode" size={16} color="#555" />
+                    <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
+                      {serialNumber}
+                    </Text>
                   </View>
-                )}
-              </View>
 
-              {/* Update Button */}
-              <Button
-                mode="contained"
-                onPress={() => handleUpdateGear(item)}
-                icon="clipboard-edit-outline"
-                style={styles.updateButton}
-                contentStyle={styles.updateButtonContent}
-                buttonColor={tagColor}
-              >
-                Update
-              </Button>
-            </Card.Content>
-          </Card>
-        </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Icon source="hard-hat" size={16} color="#555" />
+                    <Text style={{ marginLeft: 6 }} numberOfLines={1}>
+                      {gearName}
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Icon source="factory" size={16} color="#555" />
+                    <Text style={{ marginLeft: 6 }} numberOfLines={1}>
+                      {manufacturerName}
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Icon source="tag-outline" size={16} color="#555" />
+                    <Text style={{ marginLeft: 6 }}>
+                      {detail?.gear_type?.gear_type ?? gear.gear_name ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <Icon source="ruler" size={16} color="#555" />
+                  <Text style={{ marginLeft: 6 }}>
+                    {detail?.gear_size ?? 'N/A'}
+                  </Text>
+                </View>
+                </View>
+
+                {/* Update Button */}
+                <Button
+                  mode="contained"
+                  onPress={() => handleUpdateGear(item)}
+                  icon="clipboard-edit-outline"
+                  style={styles.updateButton}
+                  contentStyle={styles.updateButtonContent}
+                  buttonColor={tagColor}
+                >
+                  Update
+                </Button>
+              </Card.Content>
+            </Card>
+          </TouchableOpacity>
+        </View>
       );
     },
     [colors, navigation],
@@ -533,11 +570,14 @@ const styles = StyleSheet.create({
   grid: {
     paddingBottom: p(100),
     paddingHorizontal: p(5),
-    gap: p(10),
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    gap: p(10),
+    paddingHorizontal: p(9),
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: p(12),
   },
   shadow: {
     shadowColor: '#000',
@@ -547,24 +587,33 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   card: {
-    flex: 1,
-    margin: p(1),
+    marginHorizontal: 0,
     borderRadius: p(10),
     minHeight: p(280),
     overflow: 'hidden',
+  },
+  cardTypeText: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#555',
+    textAlign: 'left',
+    paddingRight: p(6),
+    maxWidth: '75%',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: p(8),
+    paddingRight: p(12),
   },
-  gearStatusContainer: {
-    marginBottom: p(8),
-    alignItems: 'flex-start',
+  headerStatusChip: {
+    height: p(26),
+    alignSelf: 'flex-start',
+    marginRight: p(6),
   },
-  gearStatusChip: {
-    height: p(24),
+  gearStatusText: {
+    fontSize: 11,
   },
   cardTagBadge: {
     position: 'absolute',
