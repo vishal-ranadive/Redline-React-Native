@@ -51,7 +51,9 @@ export const gearApi = {
 
   // Update gear
   updateGear: async (id: number, gearData: any): Promise<any> => {
+    console.log(`➡️ API CALL PUT /gear/${id}/ with`, gearData);
     const response = await axiosInstance.put(`/gear/${id}/`, gearData);
+    console.log(`✅ API Response PUT /gear/${id}/`, response.data);
     return response.data;
   },
 

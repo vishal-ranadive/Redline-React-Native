@@ -1,6 +1,6 @@
 // src/screens/inspectionscreens/components/InspectionHeader.tsx
 import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -46,6 +46,26 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const rosterName = useMemo(() => {
+    if (!roster) {
+      return "Unassigned";
+    }
+    if (roster.name) {
+      return roster.name;
+    }
+    const parts = [
+      roster.first_name,
+      roster.middle_name,
+      roster.last_name,
+    ].filter((part) => typeof part === "string" && part.trim().length > 0);
+
+    return parts.length > 0 ? parts.join(" ") : "Unassigned";
+  }, [roster]);
+
+  const rosterEmail = roster?.email ?? roster?.email_address ?? "-";
+  const rosterPhone = roster?.phone ?? roster?.phone_number ?? "-";
+  const rosterStation = roster?.station ?? roster?.firestation ?? "-";
 
   const toggleCollapse = () => {
     LayoutAnimation.easeInEaseOut();
@@ -132,11 +152,11 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
             </View>
 
             <View style={styles.firefighterDetails}>
-              <Text style={[styles.name, { color: colors.onSurface }]}>
-                {roster ? `${roster.first_name} ${roster.last_name}` : "Unassigned"}
+              <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
+                {rosterName}
               </Text>
               <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
-                {gear?.gear_type?.gear_type} • {gear?.serial_number}
+                {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
               </Text>
             </View>
 
@@ -228,28 +248,34 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
                 </Menu>
               </View>
 
-              {roster ? (
+                {roster ? (
                 <>
                   <View style={styles.rowItem}>
                     <Icon source="account" size={18} color={colors.primary} />
-                    <Text style={[styles.value, { color: colors.onSurface }]}>
-                      {roster.first_name} {roster.middle_name ?? ""} {roster.last_name}
+                    <Text style={[styles.value, { color: colors.onSurface }]} numberOfLines={1}>
+                      {rosterName}
                     </Text>
                   </View>
 
                   <View style={styles.rowItem}>
                     <Icon source="email" size={18} color={colors.primary} />
-                    <Text style={[styles.value, { color: colors.onSurface }]}>{roster.email}</Text>
+                    <Text style={[styles.value, { color: colors.onSurface }]} numberOfLines={1}>
+                      {rosterEmail}
+                    </Text>
                   </View>
 
                   <View style={styles.rowItem}>
                     <Icon source="phone" size={18} color={colors.primary} />
-                    <Text style={[styles.value, { color: colors.onSurface }]}>{roster.phone}</Text>
+                    <Text style={[styles.value, { color: colors.onSurface }]} numberOfLines={1}>
+                      {rosterPhone}
+                    </Text>
                   </View>
 
                   <View style={styles.rowItem}>
                     <Icon source="office-building" size={18} color={colors.primary} />
-                    <Text style={[styles.value, { color: colors.onSurface }]}>{roster.station}</Text>
+                    <Text style={[styles.value, { color: colors.onSurface }]} numberOfLines={1}>
+                      {rosterStation}
+                    </Text>
                   </View>
                 </>
               ) : (

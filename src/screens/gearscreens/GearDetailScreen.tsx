@@ -1,6 +1,6 @@
 // src/screens/gearscreens/GearDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image, Linking, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Linking, Alert, Modal, TouchableOpacity } from 'react-native';
 import { 
   Text, 
   Button, 
@@ -8,13 +8,13 @@ import {
   Divider, 
   Icon, 
   useTheme,
-  Menu,
   ActivityIndicator,
+  IconButton,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import RosterModal from '../../components/common/Modal/RosterModal';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useGearStore } from '../../store/gearStore';
 import { printTable } from '../../utils/printTable';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,19 +32,21 @@ const GearDetailScreen = () => {
   const route = useRoute();
   const { gear_id } = route.params as any;
   
-  const { currentGear, loading, fetchGearById } = useGearStore();
+  const { currentGear, loading, fetchGearById, updateGear } = useGearStore();
   
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [actionModalVisible, setActionModalVisible] = useState(false);
 
   console.log("gear_id-Gear-details screen", gear_id);
 
   // Fetch gear details when component mounts
-  useEffect(() => {
+  useFocusEffect(React.useCallback(() => {
     if (gear_id) {
       fetchGearById(gear_id);
     }
-  }, [gear_id]);
+  }, [gear_id]));
+
+  console.log("currentGear", currentGear)
 
   // Mock inspection history (keep as is)
   const inspectionHistory = [
@@ -77,23 +79,101 @@ const GearDetailScreen = () => {
     return colors.onSurfaceVariant;
   };
 
-  const handleRosterSelect = (roster: any) => {
-    console.log("rosterhandleRosterSelect", roster);
-    Alert.alert('Success', `Roster assigned to ${roster.roster_name}`);
+  const handleRosterSelect = async (roster: any) => {
+    if (!currentGear || !gear_id) {
+      Alert.alert('Error', 'Gear information not available');
+      return;
+    }
+
+    try {
+      const rosterId = roster.roster_id || roster.id;
+      const gearData = {
+        gear_name: currentGear.gear_name,
+        serial_number: currentGear.serial_number,
+        gear_type_id: currentGear.gear_type.gear_type_id,
+        manufacturer_id: currentGear.manufacturer.manufacturer_id,
+        firestation_id: currentGear.firestation.id,
+        franchise_id: currentGear.franchise.id,
+        roster_id: rosterId,
+        gear_size: currentGear.gear_size,
+        manufacturing_date: currentGear.manufacturing_date,
+        active_status: currentGear.active_status,
+        remarks: currentGear.remarks || '',
+      };
+
+      const updatedGear = await updateGear(gear_id, gearData);
+      if (updatedGear) {
+        Alert.alert('Success', `Firefighter ${roster.roster_name || `${roster.first_name} ${roster.last_name}`} assigned successfully`);
+        setRosterModalVisible(false);
+        // Refresh gear data
+        fetchGearById(gear_id);
+      } else {
+        Alert.alert('Error', 'Failed to update gear');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update gear');
+    }
   };
 
   const handleAddRosterManual = () => {
     Alert.alert('Add Roster', 'Navigate to add roster form');
   };
 
-  const handleUpdateRoster = () => {
+  const handleUpdateFirefighter = () => {
+    setActionModalVisible(false);
     setRosterModalVisible(true);
-    setMenuVisible(false);
   };
 
-  const handleRemoveRoster = () => {
-    setMenuVisible(false);
-    Alert.alert('Success', 'Roster removed from gear');
+  const handleRemoveFirefighter = async () => {
+    setActionModalVisible(false);
+    
+    Alert.alert(
+      'Remove Firefighter',
+      'Are you sure you want to remove this firefighter from the gear?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentGear || !gear_id) {
+              Alert.alert('Error', 'Gear information not available');
+              return;
+            }
+
+            try {
+              const gearData = {
+                gear_name: currentGear.gear_name,
+                serial_number: currentGear.serial_number,
+                gear_type_id: currentGear.gear_type.gear_type_id,
+                manufacturer_id: currentGear.manufacturer.manufacturer_id,
+                firestation_id: currentGear.firestation.id,
+                franchise_id: currentGear.franchise.id,
+                roster_id: null,
+                gear_size: currentGear.gear_size,
+                manufacturing_date: currentGear.manufacturing_date,
+                active_status: currentGear.active_status,
+                remarks: currentGear.remarks || '',
+              };
+
+              const updatedGear = await updateGear(gear_id, gearData);
+              if (updatedGear) {
+                Alert.alert('Success', 'Firefighter removed successfully');
+                // Refresh gear data
+                fetchGearById(gear_id);
+              } else {
+                Alert.alert('Error', 'Failed to remove firefighter');
+              }
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to remove firefighter');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -163,15 +243,14 @@ const GearDetailScreen = () => {
                   <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
                     Assigned Fire Fighter
                   </Text>
-                  {/* Disabled menu button */}
-                  <Button 
-                    mode="text" 
-                    onPress={() => setMenuVisible(true)}
-                    compact
-                    disabled={true}
-                  >
-                    <Icon source="dots-vertical" size={p(20)} color={colors.onSurfaceVariant} />
-                  </Button>
+                  {currentGear?.roster && (
+                    <IconButton
+                      icon="dots-vertical"
+                      size={p(20)}
+                      iconColor={colors.onSurfaceVariant}
+                      onPress={() => setActionModalVisible(true)}
+                    />
+                  )}
                 </View>
                 <Divider style={{ marginBottom: p(12) }} />
 
@@ -415,6 +494,42 @@ const GearDetailScreen = () => {
         </Button> */}
       </ScrollView>
 
+      {/* Custom Action Modal */}
+      <Modal
+        visible={actionModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActionModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setActionModalVisible(false)}
+        >
+          <View style={[styles.actionModalContent, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={styles.actionModalItem}
+              onPress={handleUpdateFirefighter}
+            >
+              <Icon source="account-edit" size={p(24)} color={colors.primary} />
+              <Text style={[styles.actionModalText, { color: colors.onSurface }]}>
+                Update Firefighter
+              </Text>
+            </TouchableOpacity>
+            <Divider />
+            <TouchableOpacity
+              style={styles.actionModalItem}
+              onPress={handleRemoveFirefighter}
+            >
+              <Icon source="account-remove" size={p(24)} color={colors.error} />
+              <Text style={[styles.actionModalText, { color: colors.error }]}>
+                Remove Firefighter
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Roster Modal */}
       <RosterModal
         visible={rosterModalVisible}
@@ -551,6 +666,28 @@ const styles = StyleSheet.create({
     fontSize: p(18),
     marginBottom: p(16),
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionModalContent: {
+    width: '80%',
+    borderRadius: p(12),
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  actionModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: p(16),
+    gap: p(12),
+  },
+  actionModalText: {
+    fontSize: p(16),
+    fontWeight: '500',
   },
 });
 

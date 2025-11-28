@@ -65,7 +65,19 @@ export default function UpdateInspectionScreen() {
 
   const { gearId, inspectionId, mode, firefighter, tagColor, colorLocked } = route.params;
 
-  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, tagColor, colorLocked });
+  const resolvedRosterId = useMemo(() => {
+    if (!firefighter) {
+      return undefined;
+    }
+    return (
+      firefighter.roster_id ??
+      firefighter.rosterId ??
+      firefighter.id ??
+      firefighter.roster?.id
+    );
+  }, [firefighter]);
+
+  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, resolvedRosterId, tagColor, colorLocked });
   
   // State for gear data
   const [gear, setGear] = useState<any>(null);
@@ -459,7 +471,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         firestation_id: gear.firestation?.id,
         franchise_id: gear.franchise?.id,
         gear_id: gear.gear_id,
-        roster_id: firefighter?.roster_id,
+        roster_id: resolvedRosterId,
         
         inspection_date: new Date().toISOString().split('T')[0],
         inspection_status:  mode === 'create' ? 'PRE-INSPECTION': 'ONGOING-INSPECTION',
@@ -691,7 +703,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
               <StatusSelection
                 selectedStatus={formData.status}
                 onStatusChange={(status) => handleFieldChange('status', status)}
-                statusOptions={formattedStatusOptions}
+                {...({ statusOptions: formattedStatusOptions } as any)}
               />
 
               {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}

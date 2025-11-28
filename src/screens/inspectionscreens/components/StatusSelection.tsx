@@ -3,13 +3,13 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Chip, useTheme } from 'react-native-paper';
 
-interface StatusOption {
+export interface StatusOption {
   value: string;
   label: string;
   color: string;
 }
 
-interface StatusSelectionProps {
+export interface StatusSelectionProps {
   selectedStatus: string;
   onStatusChange: (status: string) => void;
   statusOptions: StatusOption[];
