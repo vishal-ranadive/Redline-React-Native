@@ -87,6 +87,7 @@ interface GearState {
   fetchGearStatus: ()=> Promise<void>;
   fetchGearFindings: (gearTypeId: number) => Promise<void>; 
   createGear: (gearData: any) => Promise<Gear | null>;
+  updateGear: (id: number, gearData: any) => Promise<Gear | null>;
   fetchGearById: (id: number) => Promise<Gear | null>;
   searchGears: (params?: any) => Promise<{success: boolean, message?: string}>;
   ScanGearsWithBarcode: (params?: any) => Promise<void>;
@@ -159,6 +160,35 @@ export const useGearStore = create<GearState>()(
           } else {
             set({
               error: response.message || 'Failed to create gear',
+              loading: false,
+            });
+            return null;
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Network error',
+            loading: false,
+          });
+          return null;
+        }
+      },
+
+      // Update gear
+      updateGear: async (id: number, gearData: any) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await gearApi.updateGear(id, gearData);
+          if (response.status) {
+            const updatedGear = response.gear;
+            set({ 
+              loading: false, 
+              error: null,
+              currentGear: updatedGear 
+            });
+            return updatedGear;
+          } else {
+            set({
+              error: response.message || 'Failed to update gear',
               loading: false,
             });
             return null;
