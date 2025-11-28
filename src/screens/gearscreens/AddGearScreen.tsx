@@ -268,7 +268,8 @@ const AddGearScreen = () => {
       manufacturer_id: manufacturer?.manufacturer_id,
       roster_id: assignedRoster?.roster_id,
       serial_number: serialNumber.trim(),
-      status: selectedStatus,
+      // status: selectedStatus,
+      status: "in_service",
       active_status: true,
       firestation_id:
         currentLead?.firestation?.id || assignedRoster?.firestation.id,

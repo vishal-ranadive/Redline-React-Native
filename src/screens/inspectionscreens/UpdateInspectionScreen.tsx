@@ -54,7 +54,7 @@ const DEFAULT_IMAGES = [
 ];
 
 // Gear types that require hydro test
-const HYDRO_TEST_GEAR_TYPES = ['JACKET LINER', 'PANT LINER'];
+const HYDRO_TEST_GEAR_TYPES = ['JACKET LINER', 'PANTS LINER',  'jacket liner', 'pant liner'];
 
 export default function UpdateInspectionScreen() {
   const { colors } = useTheme();
@@ -74,8 +74,8 @@ export default function UpdateInspectionScreen() {
 
   // Form state
   const [formData, setFormData] = useState({
-    status: 'PASS',
-    serviceType: 'INSPECTED_AND_CLEANED',
+    status: '',
+    serviceType: '',
     harnessType: false,
     size: '',
     selectedGearFindings: [] as string[],
@@ -179,8 +179,8 @@ export default function UpdateInspectionScreen() {
           // Populate form data with inspection data
           setFormData(prev => ({
             ...prev,
-            status: getStatusValue(inspectionData.gear_status?.status) || 'PASS',
-            serviceType: getServiceTypeValue(inspectionData.service_type?.status) || 'INSPECTED_AND_CLEANED',
+            status: getStatusValue(inspectionData.gear_status?.status) || '',
+            serviceType: getServiceTypeValue(inspectionData.service_type?.status) || '',
             harnessType: inspectionData.harness_type || false,
             size: inspectionData.gear?.gear_size || '',
             selectedGearFindings: inspectionData.finding ? [inspectionData.finding.id.toString()] : [],
@@ -223,7 +223,7 @@ export default function UpdateInspectionScreen() {
 
   // Helper functions to map API values to form values
   const getStatusValue = (status: string) => {
-    if (!status) return 'PASS';
+    if (!status) return '';
     
     // Map API status to form status values
     const statusMap: { [key: string]: string } = {
@@ -238,16 +238,18 @@ export default function UpdateInspectionScreen() {
     return statusMap[status] || status.toUpperCase();
   };
 
-  const getServiceTypeValue = (serviceType: string) => {
-    const serviceMap: { [key: string]: string } = {
-      'Cleaned Only': 'CLEANED_ONLY',
-      'Inspected Only': 'INSPECTED_ONLY', 
-      'Inspected and Cleaned': 'INSPECTED_AND_CLEANED',
-      'Specialised Cleaning': 'SPECIALIZED_CLEANING',
-      'Other': 'OTHER'
-    };
-    return serviceMap[serviceType] || 'INSPECTED_AND_CLEANED';
+const getServiceTypeValue = (serviceType: string) => {
+  if (!serviceType) return ''; // Return empty instead of default
+  
+  const serviceMap: { [key: string]: string } = {
+    'Cleaned Only': 'CLEANED_ONLY',
+    'Inspected Only': 'INSPECTED_ONLY', 
+    'Inspected and Cleaned': 'INSPECTED_AND_CLEANED',
+    'Specialised Cleaning': 'SPECIALIZED_CLEANING',
+    'Other': 'OTHER'
   };
+  return serviceMap[serviceType] || '';
+};
 
   // Map status to ID using the gearStatus from API
   const mapStatusToId = (status: string) => {
@@ -322,12 +324,21 @@ export default function UpdateInspectionScreen() {
 
   console.log("Formatted status options:", formattedStatusOptions);
   console.log("Current gearStatus from API:", gearStatus);
-
+  
   // Check if gear requires hydro test
+  // const requiresHydroTest = useMemo(() => {
+  //   return HYDRO_TEST_GEAR_TYPES.includes(gear?.gear_type?.gear_type?.toUpperCase());
+  // }, [gear]);
   const requiresHydroTest = useMemo(() => {
-    return HYDRO_TEST_GEAR_TYPES.includes(gear?.gear_type?.gear_type?.toUpperCase());
-  }, [gear]);
-
+  if (!gear?.gear_type?.gear_type) return false;
+  
+  const gearType = gear.gear_type.gear_type.toUpperCase().trim();
+  
+  // More flexible matching
+  return gearType.includes('LINER') && (gearType.includes('JACKET') || gearType.includes('PANT'));
+}, [gear]);
+  
+  console.log("requiresHydroTest", requiresHydroTest, gear?.gear_type?.gear_type?.toUpperCase());
   // Track keyboard visibility
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -362,12 +373,28 @@ export default function UpdateInspectionScreen() {
   };
 
   // Handle form field changes
-  const handleFieldChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({
+// Handle form field changes
+const handleFieldChange = useCallback((field: string, value: any) => {
+  setFormData(prev => {
+    const updatedFormData = {
       ...prev,
       [field]: value
-    }));
-  }, []);
+    };
+    
+    // Automatically set repairNeeded to true when status is REPAIR or CORRECTIVE_ACTION_REQUIRED
+    if (field === 'status' && (value === 'REPAIR' || value === 'CORRECTIVE_ACTION_REQUIRED')) {
+      updatedFormData.repairNeeded = true;
+    }
+    
+    // If status changes away from REPAIR/CORRECTIVE_ACTION_REQUIRED, set repairNeeded to false
+    if (field === 'status' && !(value === 'REPAIR' || value === 'CORRECTIVE_ACTION_REQUIRED')) {
+      updatedFormData.repairNeeded = false;
+      updatedFormData.cost = '0';
+    }
+    
+    return updatedFormData;
+  });
+}, []);
 
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
@@ -422,6 +449,10 @@ export default function UpdateInspectionScreen() {
       const gearStatusId = mapStatusToId(formData.status);
       console.log("Using gear_status_id:", gearStatusId);
 
+      // Auto-set repairNeeded and cost for repair-related statuses
+      const isRepairStatus = formData.status === 'REPAIR' || formData.status === 'CORRECTIVE_ACTION_REQUIRED';
+      const inspectionCost = isRepairStatus ? parseFloat(formData.cost) || 0 : 0;
+
       const inspectionData = {
         lead_id: currentLead?.lead_id,
         mu_id: 1,
@@ -431,7 +462,7 @@ export default function UpdateInspectionScreen() {
         roster_id: firefighter?.roster_id,
         
         inspection_date: new Date().toISOString().split('T')[0],
-        inspection_status: 'POST-INSPECTION',
+        inspection_status:  mode === 'create' ? 'PRE-INSPECTION': 'ONGOING-INSPECTION',
         
         hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
         hydro_test_performed: formData.hydroPerformed,
@@ -440,7 +471,7 @@ export default function UpdateInspectionScreen() {
         gear_findings: JSON.stringify(formData.selectedGearFindings),
         finding_id: 1,
         
-        inspection_cost: formData.repairNeeded ? parseFloat(formData.cost) : 0,
+        inspection_cost:inspectionCost,
         
         inspection_image_url: images,
         remarks: formData.remarks,
@@ -457,21 +488,23 @@ export default function UpdateInspectionScreen() {
 
       console.log('Inspection Data:', inspectionData);
 
-      // let response;
-      // if (mode === 'create') {
-      //   response = await inspectionApi.createGearInspection(inspectionData);
-      // } else {
-      //   response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
-      // }
+      if(true){
+              let response;
+          if (mode === 'create') {
+            response = await inspectionApi.createGearInspection(inspectionData);
+          } else {
+            response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
+          }
 
-      // if (response.status) {
-      //   Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-      //   navigation.navigate("FirefighterFlow", { firefighter });
-      // } else {
-      //   Alert.alert('Error', response.message || 'Failed to save inspection');
-      // }
+          if (response.status) {
+            Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+            navigation.navigate("FirefighterFlow", { firefighter });
+          } else {
+            Alert.alert('Error', response.message || 'Failed to save inspection');
+          }
 
-      // console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response);
+          console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response);
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Network error');
     }
