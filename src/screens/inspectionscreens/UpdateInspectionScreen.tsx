@@ -482,6 +482,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         
         gear_findings: JSON.stringify(formData.selectedGearFindings),
         finding_id: 1,
+        // finding_id: formData.selectedGearFindings.map(findingId => parseInt(findingId)),
         
         inspection_cost:inspectionCost,
         

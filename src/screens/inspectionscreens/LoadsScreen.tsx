@@ -1,84 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { Text, Card, Icon, useTheme, Chip, Portal, Dialog, TextInput, DataTable, Button } from 'react-native-paper';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Card, Icon, useTheme, Portal, Dialog, TextInput, DataTable, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useLeadStore } from '../../store/leadStore';
+import { inspectionApi } from '../../services/inspectionApi';
 
-type LoadStatus = 'Sorting' | 'Cleaning' | 'Hand Over' | 'Complete';
+type ApiLoad = {
+  load_number: number;
+  total_gears: number;
+  total_rosters: number;
+};
 
 type Load = {
   id: string;
   name: string;
-  status: LoadStatus;
-  binCount: number;
-  createdDate: string;
+  loadNumber: number;
+  totalGears: number;
+  totalRosters: number;
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'BinsScreen'>;
-
-// Mock data with updated statuses
-const MOCK_LOADS: Load[] = [
-  {
-    id: 'L1',
-    name: 'Load 1',
-    status: 'Sorting',
-    binCount: 2,
-    createdDate: '2025-11-10'
-  },
-  {
-    id: 'L2',
-    name: 'Load 2',
-    status: 'Cleaning',
-    binCount: 1,
-    createdDate: '2025-11-09'
-  },
-  {
-    id: 'L3',
-    name: 'Load 3',
-    status: 'Complete',
-    binCount: 1,
-    createdDate: '2025-11-08'
-  },
-  {
-    id: 'L4',
-    name: 'Load 4',
-    status: 'Hand Over',
-    binCount: 1,
-    createdDate: '2025-11-07'
-  },
-  {
-    id: 'L5',
-    name: 'Load 5',
-    status: 'Sorting',
-    binCount: 3,
-    createdDate: '2025-11-06'
-  },
-  {
-    id: 'L6',
-    name: 'Load 6',
-    status: 'Cleaning',
-    binCount: 2,
-    createdDate: '2025-11-05'
-  }
-];
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScreen'>;
 
 export default function LoadsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
+  const { currentLead } = useLeadStore();
   
-  const [loads, setLoads] = useState<Load[]>(MOCK_LOADS);
+  const [loads, setLoads] = useState<Load[]>([]);
   const [addLoadDialog, setAddLoadDialog] = useState(false);
   
   const [newLoadName, setNewLoadName] = useState('');
-  const [newLoadStatus, setNewLoadStatus] = useState<LoadStatus>('Sorting');
 
-  // Search & Filter
+  // Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LoadStatus | 'All'>('All');
+  const [loading, setLoading] = useState(true);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -89,30 +49,61 @@ export default function LoadsScreen() {
   const from = page * numberOfItemsPerPage;
   const to = Math.min((page + 1) * numberOfItemsPerPage, loads.length);
 
-  // Filter loads by search and status
+  // Filter loads by search
   const filteredLoads = loads.filter(load => {
     const matchesSearch =
       load.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       load.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'All' || load.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const currentLoads = filteredLoads.slice(from, to);
 
   useEffect(() => {
+    fetchLoads();
+  }, [currentLead]);
+
+  useEffect(() => {
     setPage(0);
   }, [numberOfItemsPerPage, filteredLoads.length]);
 
-  const getLoadStatusColor = (status: LoadStatus) => {
-    switch (status) {
-      case 'Sorting': return '#FFB300';
-      case 'Cleaning': return '#FF9800';
-      case 'Hand Over': return '#4CAF50';
-      case 'Complete': return '#2196F3';
-      default: return '#9E9E9E';
+  const fetchLoads = async () => {
+    if (!currentLead?.lead_id) {
+      console.log('Missing lead_id for loads API');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await inspectionApi.getLeadLoads(currentLead.lead_id);
+
+      const apiLoads: ApiLoad[] = response?.loads || [];
+
+      const mapped: Load[] = apiLoads.map((l) => ({
+        id: `L${l.load_number}`,
+        name: `Load ${l.load_number}`,
+        loadNumber: l.load_number,
+        totalGears: l.total_gears,
+        totalRosters: l.total_rosters,
+      }));
+
+      setLoads(mapped);
+    } catch (error) {
+      console.error('Error fetching loads:', error);
+      // Fallback single dummy load if API fails
+      setLoads([
+        {
+          id: 'L1',
+          name: 'Load 1',
+          loadNumber: 1,
+          totalGears: 0,
+          totalRosters: 0,
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,19 +115,18 @@ export default function LoadsScreen() {
     const newLoad: Load = {
       id: `L${loads.length + 1}`,
       name: newLoadName,
-      status: newLoadStatus,
-      binCount: 0,
-      createdDate: new Date().toISOString().split('T')[0]
+      loadNumber: loads.length + 1,
+      totalGears: 0,
+      totalRosters: 0,
     };
 
     setLoads(prev => [...prev, newLoad]);
     setNewLoadName('');
-    setNewLoadStatus('Sorting');
     setAddLoadDialog(false);
   };
 
   const handleCardPress = (load: Load) => {
-    navigation.navigate('BinsScreen', { load });
+    navigation.navigate('GearScreen', { load });
   };
 
   const renderLoadCard = (load: Load) => (
@@ -145,34 +135,14 @@ export default function LoadsScreen() {
         <Card.Content style={styles.cardContent}>
           <View style={styles.loadMainRow}>
             <View style={styles.loadInfo}>
-              <Icon source="truck" size={p(20)} color={colors.primary} />
-              <View style={styles.loadText}>
-                <Text variant="titleMedium" style={styles.loadName}>
-                  {load.name}
-                </Text>
-                <Text variant="bodySmall" style={[styles.loadDate, { color: colors.onSurfaceVariant }]}>
-                  {load.id} • Created: {load.createdDate}
-                </Text>
+              <View style={styles.loadIconContainer}>
+                <Icon source="truck" size={p(22)} color={colors.primary} />
               </View>
+              <Text variant="titleMedium" style={styles.loadName}>
+                {load.name}
+              </Text>
             </View>
-            
-            <View style={styles.loadMeta}>
-              <View 
-                style={[styles.statusChip, { backgroundColor: getLoadStatusColor(load.status) }]}
-                // textStyle={styles.statusChipText}
-                // compact
-              >
-                <Text style={styles.statusChipText}>{load.status}</Text>
-              </View>
-              <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />
-            </View>
-          </View>
-
-          <View style={styles.binCountContainer}>
-            <Icon source="package-variant" size={p(16)} color={colors.primary} />
-            <Text variant="bodyMedium" style={styles.binCountText}>
-              {load.binCount} {load.binCount === 1 ? 'Bin' : 'Bins'}
-            </Text>
+            <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />
           </View>
         </Card.Content>
       </Card>
@@ -183,7 +153,7 @@ export default function LoadsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="Inspection Loads" />
 
-      {/* 🔍 Search & Filter */}
+      {/* 🔍 Search */}
       <View style={[styles.searchFilterContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
@@ -194,40 +164,23 @@ export default function LoadsScreen() {
           style={styles.searchInput}
           dense
         />
-        <View style={styles.filterChips}>
-          {(['All', 'Sorting', 'Cleaning', 'Hand Over', 'Complete'] as (LoadStatus | 'All')[]).map(status => (
-            <Chip
-              key={status}
-              selected={statusFilter === status}
-              onPress={() => setStatusFilter(status)}
-              style={[
-                styles.filterChip,
-                { 
-                  backgroundColor: statusFilter === status 
-                    ? status === 'All' ? colors.primary : getLoadStatusColor(status as LoadStatus)
-                    : colors.surfaceVariant 
-                }
-              ]}
-              textStyle={{
-                color: statusFilter === status ? '#fff' : colors.onSurfaceVariant,
-                fontSize: p(10)
-              }}
-              compact
-            >
-              {status}
-            </Chip>
-          ))}
-        </View>
       </View>
 
       {/* Loads List */}
-      <FlatList
-        data={currentLoads}
-        renderItem={({ item }) => renderLoadCard(item)}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 16, color: colors.onSurfaceVariant }}>Loading loads...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={currentLoads}
+          renderItem={({ item }) => renderLoadCard(item)}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
 
       {/* Pagination at Bottom */}
       <View style={styles.paginationContainer}>
@@ -257,26 +210,6 @@ export default function LoadsScreen() {
               placeholder="e.g., Emergency Response Load"
               style={styles.input}
             />
-            
-            <Text variant="titleSmall" style={[styles.sectionLabel, { color: colors.onSurface }]}>
-              Load Status
-            </Text>
-            <View style={styles.statusOptions}>
-              {(['Sorting', 'Cleaning', 'Hand Over', 'Complete'] as LoadStatus[]).map(status => (
-                <Chip
-                  key={status}
-                  selected={newLoadStatus === status}
-                  onPress={() => setNewLoadStatus(status)}
-                  style={[
-                    styles.statusChipOption,
-                    { backgroundColor: newLoadStatus === status ? getLoadStatusColor(status) : colors.surface }
-                  ]}
-                  textStyle={{ color: newLoadStatus === status ? '#fff' : colors.onSurface }}
-                >
-                  {status}
-                </Chip>
-              ))}
-            </View>
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setAddLoadDialog(false)}>Cancel</Button>
@@ -304,15 +237,6 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: p(8),
   },
-  filterChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: p(4),
-  },
-  filterChip: {
-    marginRight: p(4),
-    marginBottom: p(4),
-  },
   paginationContainer: {
     position: 'absolute',
     bottom: 0,
@@ -334,68 +258,28 @@ const styles = StyleSheet.create({
   loadMainRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: p(8),
+    alignItems: 'center',
   },
   loadInfo: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  loadText: {
-    marginLeft: p(12),
-    flex: 1,
+    alignItems: 'center',
   },
   loadName: {
     fontWeight: '600',
-    fontSize: p(14),
-    lineHeight: p(18),
+    fontSize: p(16),
+    lineHeight: p(20),
   },
-  loadDate: {
-    fontSize: p(11),
-    marginTop: p(2),
-  },
-  loadMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: p(8),
-  },
-  statusChip: {
-    height: p(24),
-    width:p(75),
-    borderRadius:p(4),
-    padding:p(4),
-    textAlign:'center',
-  },
-  statusChipText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: p(14),
-    lineHeight: p(14),
-    margin:'auto',
-  },
-  binCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: p(6),
-  },
-  binCountText: {
-    fontSize: p(12),
-    fontWeight: '500',
+  loadIconContainer: {
+    marginRight: p(12),
   },
   input: {
     marginBottom: p(12),
   },
-  sectionLabel: {
-    marginBottom: p(8),
-    fontWeight: '600',
-  },
-  statusOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: p(6),
-  },
-  statusChipOption: {
-    marginBottom: p(4),
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: p(40),
   },
 });

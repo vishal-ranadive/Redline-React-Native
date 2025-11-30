@@ -15,7 +15,6 @@ import GearDetailScreen from '../screens/gearscreens/GearDetailScreen';
 import UpdateInspectionStatusScreen from '../screens/inspectionscreens/UpdateInspectionScreen';
 import AddGearScreen from '../screens/gearscreens/AddGearScreen';
 import UpdateProfileScreen from '../screens/settingsscreens/UpdateProfileScreen';
-import BinsScreen from '../screens/inspectionscreens/BinsScreen';
 import LoadsScreen from '../screens/inspectionscreens/LoadsScreen';
 import GearsScreen from '../screens/inspectionscreens/GearsScreen';
 import ProfileScreen from '../screens/settingsscreens/Profile';
@@ -55,10 +54,9 @@ export type RootStackParamList = {
    UpdateProfile: undefined;
    Profile:undefined;
 
-  //Load Bin flow
+  //Load flow
   LoadsScreen:undefined;
-  BinsScreen:{ load: any };
-  GearScreen:{load:any, bin:any}
+  GearScreen:{load:any}
 
   //Fire Fighter Flow
   FirefighterGearsScreen:{roster: FirefighterRoster, leadId:any};
@@ -100,7 +98,6 @@ export default function AppNavigator() {
 
     {/* Load flow */}
       <Stack.Screen name="LoadsScreen" component={withMainLayout(LoadsScreen) } />
-      <Stack.Screen name="BinsScreen" component={withMainLayout(BinsScreen)} />
       <Stack.Screen name="GearScreen" component={withMainLayout(GearsScreen)} />
 
       {/*  Fire Fighter Flow*/}

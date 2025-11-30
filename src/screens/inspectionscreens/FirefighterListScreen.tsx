@@ -7,24 +7,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useInspectionStore, FirefighterRoster } from '../../store/inspectionStore';
 import { useLeadStore } from '../../store/leadStore';
+import { inspectionApi } from '../../services/inspectionApi';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
-type Firefighter = FirefighterRoster;
+
+type Firefighter = {
+  id: number;
+  name: string;
+  email: string;
+  total_gear_scan_count: number;
+  color_tag: string;
+};
 
 export default function FirefighterListScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
 
-  const {
-    firefighterInspectionView,
-    firefighterInspectionViewLoading,
-    firefighterInspectionViewError,
-    fetchFirefighterInspectionView,
-  } = useInspectionStore();
   const { currentLead } = useLeadStore();
 
+  const [rosters, setRosters] = useState<Firefighter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,24 +36,52 @@ export default function FirefighterListScreen() {
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const MANUAL_LEAD_ID = 101;
-  const MANUAL_INSPECTION_ID = 2017;
   const currentLeadId = currentLead?.lead_id;
-  const currentInspectionId = (currentLead as any)?.inspection_id;
+  const MANUAL_LEAD_ID = 101;
   const effectiveLeadId = currentLeadId ?? MANUAL_LEAD_ID;
-  const effectiveInspectionId = currentInspectionId ?? MANUAL_INSPECTION_ID;
-  const isUsingManualIds = !currentLeadId || !currentInspectionId;
 
   useFocusEffect(
     useCallback(() => {
-      fetchFirefighterInspectionView(effectiveLeadId, effectiveInspectionId);
-    }, [effectiveLeadId, effectiveInspectionId, fetchFirefighterInspectionView]),
+      fetchRosters(effectiveLeadId);
+    }, [effectiveLeadId]),
   );
 
-  const rosters = useMemo(
-    () => (Array.isArray(firefighterInspectionView) ? (firefighterInspectionView as Firefighter[]) : []),
-    [firefighterInspectionView],
-  );
+  const fetchRosters = async (leadId: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await inspectionApi.getInspectionRosters(leadId);
+      const apiRosters: Firefighter[] = Array.isArray(response?.roster)
+        ? response.roster
+        : [];
+
+      if (apiRosters.length) {
+        setRosters(apiRosters);
+      } else {
+        // Fallback dummy data if API returns empty
+        setRosters([
+          { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'red' },
+          { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'green' },
+          { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'yellow' },
+          { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'black' },
+        ]);
+      }
+    } catch (e: any) {
+      console.error('Error fetching inspection rosters:', e);
+      setError('Failed to load firefighters. Showing sample data.');
+      // Fallback to dummy data on error
+      setRosters([
+        { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'red' },
+        { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'green' },
+        { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'yellow' },
+        { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'black' },
+      ]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const filteredFirefighters = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -59,8 +91,7 @@ export default function FirefighterListScreen() {
     return rosters.filter((roster) => {
       const nameMatch = roster.name?.toLowerCase().includes(query);
       const emailMatch = roster.email?.toLowerCase().includes(query);
-      const gearMatch = roster.gear?.some((gear) => gear.gear_name?.toLowerCase().includes(query));
-      return nameMatch || emailMatch || gearMatch;
+      return nameMatch || emailMatch;
     });
   }, [rosters, searchQuery]);
 
@@ -82,16 +113,10 @@ export default function FirefighterListScreen() {
     }
   }, [page, totalPages]);
 
-  const isLoading = firefighterInspectionViewLoading && !refreshing;
-
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try {
-      await fetchFirefighterInspectionView(effectiveLeadId, effectiveInspectionId);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [effectiveLeadId, effectiveInspectionId, fetchFirefighterInspectionView]);
+    await fetchRosters(effectiveLeadId);
+  }, [effectiveLeadId]);
 
   const handleViewGears = (roster: Firefighter) => {
     navigation.navigate('FirefighterGearsScreen', { roster ,leadId:currentLead.lead_id });
@@ -119,13 +144,7 @@ export default function FirefighterListScreen() {
   };
 
   const getTagColor = (roster: Firefighter) => {
-    if (!Array.isArray(roster.gear)) {
-      return null;
-    }
-    const gearWithTag = roster.gear.find(
-      gear => typeof gear.tag_color === 'string' && gear.tag_color.trim().length > 0,
-    );
-    const rawColor = gearWithTag?.tag_color?.trim();
+    const rawColor = roster.color_tag?.trim();
     if (!rawColor) {
       return null;
     }
@@ -170,7 +189,7 @@ export default function FirefighterListScreen() {
       <View style={styles.rightSection}>
         <View style={styles.gearCountContainer}>
           <Icon source="tools" size={p(16)} color={colors.primary} />
-          <Text style={styles.gearCountText}>{item.total_scan_count ?? item.gear?.length ?? 0}</Text>
+          <Text style={styles.gearCountText}>{item.total_gear_scan_count ?? 0}</Text>
           <Text style={styles.gearLabel}>Total Scanned Gears</Text>
         </View>
         <Icon source="chevron-right" size={p(20)} color="#666" />
@@ -179,7 +198,7 @@ export default function FirefighterListScreen() {
   );
   };
 
-  if (isLoading) {
+  if (loading && !refreshing) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header title="Firefighters" showBackButton={true} />
@@ -210,11 +229,11 @@ export default function FirefighterListScreen() {
 
     
 
-      {firefighterInspectionViewError && (
+      {error && (
         <View style={[styles.errorBanner, { backgroundColor: colors.errorContainer }]}>
           <Icon source="alert-circle" size={20} color={colors.error} />
           <Text style={[styles.errorText, { color: colors.error }]}>
-            {firefighterInspectionViewError}
+            {error}
           </Text>
         </View>
       )}
@@ -229,14 +248,14 @@ export default function FirefighterListScreen() {
         refreshing={refreshing}
         onRefresh={handleRefresh}
         ListEmptyComponent={
-          !firefighterInspectionViewLoading ? (
+          !loading ? (
             <View style={styles.emptyContainer}>
               <Icon source="account-search" size={64} color={colors.outline} />
               <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-                {firefighterInspectionViewError ? 'No roster available' : 'No Firefighters Found'}
+                {error ? 'No roster available' : 'No Firefighters Found'}
               </Text>
               <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-                {firefighterInspectionViewError ?? (searchQuery ? 'Try adjusting your search criteria' : 'No firefighters available')}
+                {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No firefighters available')}
               </Text>
             </View>
           ) : null

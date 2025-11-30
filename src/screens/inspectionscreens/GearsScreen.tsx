@@ -1,310 +1,127 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { Text, Card, Button, Icon, useTheme, Chip, DataTable, TextInput } from 'react-native-paper';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Card, Button, Icon, useTheme, Chip, TextInput } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { inspectionApi } from '../../services/inspectionApi';
+import { useLeadStore } from '../../store/leadStore';
 
-type GearStatus = 'PASS' | 'REPAIR' | 'EXPIRED' | 'RECOMMEND OOS' | 'CORRECTIVE ACTION REQUIRED';
+type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required';
 
-type Gear = {
-  gear_id: string;
+type GearInspection = {
+  gear: {
+    gear_id: number;
+    gear_name: string;
+    manufacturer: {
+      manufacturer_id: number;
+      manufacturer_name: string;
+    };
+    gear_type: {
+      gear_type_id: number;
+      gear_type: string;
+    };
+    manufacturing_date: string;
+    gear_size: string;
+    serial_number: string;
+  };
   roster: {
-    roster_id: string;
-    first_name: string;
-    middle_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
+    name: string; // firstName + MiddleName + LastName
+    color_tag: string;
   };
-  gear_name: string;
-  manufacturer: {
-    manufacturer_id: string;
-    manufacturer_name: string;
+  inspection_id: number;
+  inspection_date: string;
+  hydro_test_result: 'PASS' | 'FAIL';
+  hydro_test_performed: 'YES' | 'NO';
+  gear_findings: string;
+  inspection_cost: number;
+  remarks: string;
+  gear_status: {
+    id: number;
+    status: GearStatus;
   };
-  franchise: {
-    id: string;
-    name: string;
+  service_type: {
+    id: number;
+    status: 'cleaned and inspected' | 'cleaned only' | 'inspected only' | 'specialized cleaning' | 'other';
   };
-  firestation: {
-    id: string;
-    name: string;
-  };
-  gear_type: string | null;
-  manufacturing_date: string | null;
-  gear_size: string | null;
-  active_status: boolean;
-  is_deleted: boolean;
-  gear_image_url: string;
-  serial_number: string;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  updated_by: string;
-  status?: GearStatus;
-  lastInspection?: string;
-  condition?: string;
-  remarks?: string;
-};
-
-type Bin = {
-  id: string;
-  name: string;
-  gearType: string;
-  status: string;
 };
 
 type Load = {
   id: string;
   name: string;
-  status: string;
+  loadNumber: number;
 };
 
 type RouteProps = {
   load: Load;
-  bin: Bin;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-// Mock data matching your API structure
-const MOCK_GEARS: Gear[] = [
+// Mock data matching new API structure
+const MOCK_GEAR_INSPECTIONS: GearInspection[] = [
   {
-    gear_id: '1',
+    gear: {
+      gear_id: 14,
+      gear_name: "Fire Helmet Pro",
+      manufacturer: { manufacturer_id: 12, manufacturer_name: "Fire Safety Equipment Inc." },
+      gear_type: { gear_type_id: 1, gear_type: "Helmet" },
+      manufacturing_date: "2022-10-15",
+      gear_size: "small",
+      serial_number: "SN-001-2024"
+    },
     roster: {
-      roster_id: '1',
-      first_name: 'Jane',
-      middle_name: 'M',
-      last_name: 'Doe',
-      email: 'jane.doe@fire.com',
-      phone: '5551234567'
+      name: "Jane M Doe",
+      color_tag: "red"
     },
-    gear_name: 'Fire Helmet Pro',
-    manufacturer: {
-      manufacturer_id: '12',
-      manufacturer_name: 'Fire Safety Equipment Inc.'
+    inspection_id: 1,
+    inspection_date: "2025-11-08",
+    hydro_test_result: "PASS",
+    hydro_test_performed: "YES",
+    gear_findings: "Gear is in good condition with minor wear",
+    inspection_cost: 250.75,
+    remarks: "Inspection scheduled for tomorrow morning.",
+    gear_status: {
+      id: 1,
+      status: "Pass"
     },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2024-01-15',
-    gear_size: 'Large',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-001-2025',
-    created_at: '2025-11-07T19:16:15.123345Z',
-    updated_at: '2025-11-12T20:47:24.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'PASS',
-    lastInspection: '2025-11-01',
-    condition: 'Excellent',
-    remarks: 'Minor scratches'
+    service_type: {
+      id: 1,
+      status: "cleaned and inspected"
+    }
   },
   {
-    gear_id: '2',
+    gear: {
+      gear_id: 15,
+      gear_name: "Fire Helmet Pro",
+      manufacturer: { manufacturer_id: 12, manufacturer_name: "Fire Safety Equipment Inc." },
+      gear_type: { gear_type_id: 1, gear_type: "Helmet" },
+      manufacturing_date: "2022-10-15",
+      gear_size: "medium",
+      serial_number: "SN-002-2024"
+    },
     roster: {
-      roster_id: '2',
-      first_name: 'John',
-      middle_name: 'A',
-      last_name: 'Smith',
-      email: 'john.smith@fire.com',
-      phone: '5551234568'
+      name: "John A Smith",
+      color_tag: "blue"
     },
-    gear_name: 'Rescue Helmet X1',
-    manufacturer: {
-      manufacturer_id: '13',
-      manufacturer_name: 'Rescue Gear Co.'
+    inspection_id: 2,
+    inspection_date: "2025-11-08",
+    hydro_test_result: "FAIL",
+    hydro_test_performed: "YES",
+    gear_findings: "Cracked visor needs replacement",
+    inspection_cost: 300.50,
+    remarks: "Requires immediate attention.",
+    gear_status: {
+      id: 2,
+      status: "Expired"
     },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2024-03-20',
-    gear_size: 'Medium',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-002-2025',
-    created_at: '2025-11-08T10:20:30.123345Z',
-    updated_at: '2025-11-12T21:30:15.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'REPAIR',
-    lastInspection: '2025-11-01',
-    condition: 'Needs Repair',
-    remarks: 'Cracked visor'
-  },
-  {
-    gear_id: '3',
-    roster: {
-      roster_id: '3',
-      first_name: 'Mike',
-      middle_name: 'R',
-      last_name: 'Johnson',
-      email: 'mike.johnson@fire.com',
-      phone: '5551234569'
-    },
-    gear_name: 'Tactical Helmet T2',
-    manufacturer: {
-      manufacturer_id: '14',
-      manufacturer_name: 'Tactical Gear Ltd.'
-    },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2023-12-10',
-    gear_size: 'Small',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-003-2025',
-    created_at: '2025-11-09T14:15:45.123345Z',
-    updated_at: '2025-11-12T22:15:30.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'EXPIRED',
-    lastInspection: '2025-10-15',
-    condition: 'Expired',
-    remarks: 'Certification expired'
-  },
-  {
-    gear_id: '4',
-    roster: {
-      roster_id: '4',
-      first_name: 'Sarah',
-      middle_name: 'L',
-      last_name: 'Wilson',
-      email: 'sarah.wilson@fire.com',
-      phone: '5551234570'
-    },
-    gear_name: 'Fire Helmet Pro',
-    manufacturer: {
-      manufacturer_id: '12',
-      manufacturer_name: 'Fire Safety Equipment Inc.'
-    },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2024-02-28',
-    gear_size: 'Large',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-004-2025',
-    created_at: '2025-11-10T09:45:20.123345Z',
-    updated_at: '2025-11-12T23:00:45.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'RECOMMEND OOS',
-    lastInspection: '2025-11-05',
-    condition: 'Poor',
-    remarks: 'Structural damage'
-  },
-  {
-    gear_id: '5',
-    roster: {
-      roster_id: '5',
-      first_name: 'David',
-      middle_name: 'K',
-      last_name: 'Brown',
-      email: 'david.brown@fire.com',
-      phone: '5551234571'
-    },
-    gear_name: 'Rescue Helmet X1',
-    manufacturer: {
-      manufacturer_id: '13',
-      manufacturer_name: 'Rescue Gear Co.'
-    },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2024-04-15',
-    gear_size: 'Medium',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-005-2025',
-    created_at: '2025-11-11T11:30:10.123345Z',
-    updated_at: '2025-11-13T08:20:15.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'CORRECTIVE ACTION REQUIRED',
-    lastInspection: '2025-11-02',
-    condition: 'Good',
-    remarks: 'Needs calibration'
-  },
-    {
-    gear_id: '6',
-    roster: {
-      roster_id: '5',
-      first_name: 'David',
-      middle_name: 'K',
-      last_name: 'Brown',
-      email: 'david.brown@fire.com',
-      phone: '5551234571'
-    },
-    gear_name: 'Rescue Helmet X1',
-    manufacturer: {
-      manufacturer_id: '13',
-      manufacturer_name: 'Rescue Gear Co.'
-    },
-    franchise: {
-      id: '19',
-      name: 'Beta Motors Franchise'
-    },
-    firestation: {
-      id: '10',
-      name: 'Central Fire Station'
-    },
-    gear_type: 'Helmet',
-    manufacturing_date: '2024-04-15',
-    gear_size: 'Medium',
-    active_status: true,
-    is_deleted: false,
-    gear_image_url: 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-    serial_number: 'SN-005-2025',
-    created_at: '2025-11-11T11:30:10.123345Z',
-    updated_at: '2025-11-13T08:20:15.394818Z',
-    created_by: 'admin_user',
-    updated_by: 'steve Schnepp',
-    status: 'CORRECTIVE ACTION REQUIRED',
-    lastInspection: '2025-11-02',
-    condition: 'Good',
-    remarks: 'Needs calibration'
+    service_type: {
+      id: 2,
+      status: "inspected only"
+    }
   }
 ];
 
@@ -312,74 +129,88 @@ export default function GearsScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const { load, bin } = route.params as RouteProps;
+  const { load } = route.params as RouteProps;
+  const { currentLead } = useLeadStore();
   
-  const [gears, setGears] = useState<Gear[]>(MOCK_GEARS);
-  
+  const [gearInspections, setGearInspections] = useState<GearInspection[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GearStatus | 'All'>('All');
 
-  // Pagination state
-  const [page, setPage] = useState(0);
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(8);
-  const numberOfItemsPerPageList = [4, 8, 12, 16];
+  // Fetch gear inspections on mount
+  useEffect(() => {
+    fetchGearInspections();
+  }, [load, currentLead]);
 
-  // Pagination calculations
-  const from = page * numberOfItemsPerPage;
-  const to = Math.min((page + 1) * numberOfItemsPerPage, gears.length);
+  const fetchGearInspections = async () => {
+    if (!load?.loadNumber || !currentLead?.lead_id) {
+      console.log('Missing loadId or leadId');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await inspectionApi.getGearInspections(load.loadNumber, currentLead.lead_id);
+      
+      if (response?.gear_inspections) {
+        setGearInspections(response.gear_inspections);
+      } else {
+        // Fallback to mock data for development
+        setGearInspections(MOCK_GEAR_INSPECTIONS);
+      }
+    } catch (error) {
+      console.error('Error fetching gear inspections:', error);
+      // Fallback to mock data on error
+      setGearInspections(MOCK_GEAR_INSPECTIONS);
+    } finally {
+      setLoading(false);
+    }
+  };
   
-  const filteredGears = gears.filter(gear => {
+  const filteredGearInspections = gearInspections.filter(inspection => {
     const matchesSearch =
-      gear.gear_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      gear.serial_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${gear.roster.first_name} ${gear.roster.last_name}`.toLowerCase().includes(searchQuery.toLowerCase());
+      inspection.gear.gear_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inspection.gear.serial_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inspection.roster.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'All' || gear.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || inspection.gear_status.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  const currentGears = filteredGears.slice(from, to);
-
-  useEffect(() => {
-    setPage(0);
-  }, [numberOfItemsPerPage, searchQuery, statusFilter]);
-
   const getGearStatusColor = (status: GearStatus) => {
     switch (status) {
-      case 'PASS': return '#34A853';
-      case 'REPAIR': return '#1E88E5';
-      case 'EXPIRED': return '#E53935';
-      case 'RECOMMEND OOS': return '#F9A825';
-      case 'CORRECTIVE ACTION REQUIRED': return '#9C27B0';
+      case 'Pass': return '#34A853';
+      case 'Expired': return '#E53935';
+      case 'Recommended OOS': return '#F9A825';
+      case 'Corrective Action Required': return '#9C27B0';
       default: return '#9E9E9E';
     }
   };
 
   const getStatusIcon = (status: GearStatus) => {
     switch (status) {
-      case 'PASS': return 'check-circle';
-      case 'REPAIR': return 'wrench';
-      case 'EXPIRED': return 'clock-alert';
-      case 'RECOMMEND OOS': return 'alert-circle';
-      case 'CORRECTIVE ACTION REQUIRED': return 'alert-triangle';
+      case 'Pass': return 'check-circle';
+      case 'Expired': return 'clock-alert';
+      case 'Recommended OOS': return 'alert-circle';
+      case 'Corrective Action Required': return 'alert-triangle';
       default: return 'help-circle';
     }
   };
 
-  const handleUpdateGear = (gear: Gear) => {
-    // navigation.navigate('UpadateInspection', { gear });
-    navigation.navigate('UpadateInspection');
-  };
-
-  const getRosterFullName = (roster: Gear['roster']) => {
-    return `${roster.first_name} ${roster.middle_name ? roster.middle_name + ' ' : ''}${roster.last_name}`;
+  const handleUpdateGear = (inspection: GearInspection) => {
+    navigation.navigate('UpadateInspection', {
+      gearId: inspection.gear.gear_id,
+      inspectionId: inspection.inspection_id,
+      mode: 'update'
+    });
   };
 
   /**
-   * Render individual gear card
+   * Render individual gear inspection card
    */
-  const renderGear = useCallback(({ item }: { item: Gear }) => (
+  const renderGear = useCallback(({ item }: { item: GearInspection }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => handleUpdateGear(item)}
@@ -390,29 +221,20 @@ export default function GearsScreen() {
           {/* Card Header with Gear ID and Status */}
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-              #{item.gear_id}
+              #{item.gear.gear_id}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
               {/* Status indicator dot */}
               <View
                 style={[
                   styles.statusDot,
-                  { backgroundColor: getGearStatusColor(item.status!) },
+                  { backgroundColor: getGearStatusColor(item.gear_status.status) },
                 ]}
               />
               <Text variant="titleMedium" style={{ fontWeight: 'bold', fontSize: 12 }}>
-                {item.status}
+                {item.gear_status.status}
               </Text>
             </View>
-          </View>
-
-          {/* Gear Image and Basic Info */}
-          <View style={styles.gearImageContainer}>
-            <Image 
-              source={{ uri: item.gear_image_url }} 
-              style={styles.gearImage}
-              resizeMode="cover"
-            />
           </View>
 
           {/* Gear Details */}
@@ -420,20 +242,20 @@ export default function GearsScreen() {
             {/* Serial Number - Show First */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Icon source="barcode" size={16} color="#555" />
-              <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>{item.serial_number}</Text>
+              <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>{item.gear.serial_number}</Text>
             </View>
 
             {/* Gear Name */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Icon source="hard-hat" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }} numberOfLines={1}>{item.gear_name}</Text>
+              <Text style={{ marginLeft: 6 }} numberOfLines={1}>{item.gear.gear_name}</Text>
             </View>
 
             {/* Firefighter Name */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Icon source="account" size={16} color="#555" />
               <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                {getRosterFullName(item.roster)}
+                {item.roster.name}
               </Text>
             </View>
 
@@ -441,23 +263,27 @@ export default function GearsScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Icon source="factory" size={16} color="#555" />
               <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                {item.manufacturer.manufacturer_name}
+                {item.gear.manufacturer.manufacturer_name}
               </Text>
             </View>
 
             {/* Gear Type */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Icon source="tag-outline" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }}>{item.gear_type || 'Helmet'}</Text>
+              <Text style={{ marginLeft: 6 }}>{item.gear.gear_type.gear_type}</Text>
             </View>
 
-            {/* Condition */}
-            {item.condition && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Icon source="clipboard-check" size={16} color="#555" />
-                <Text style={{ marginLeft: 6 }}>{item.condition}</Text>
-              </View>
-            )}
+            {/* Inspection Date */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Icon source="calendar" size={16} color="#555" />
+              <Text style={{ marginLeft: 6 }}>{item.inspection_date}</Text>
+            </View>
+
+            {/* Color Tag */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <View style={[styles.colorTag, { backgroundColor: item.roster.color_tag }]} />
+              <Text style={{ marginLeft: 6 }}>Color: {item.roster.color_tag}</Text>
+            </View>
           </View>
 
           {/* Update Button */}
@@ -467,7 +293,7 @@ export default function GearsScreen() {
             icon="clipboard-edit-outline"
             style={styles.updateButton}
             contentStyle={styles.updateButtonContent}
-            buttonColor={getGearStatusColor(item.status!)}
+            buttonColor={getGearStatusColor(item.gear_status.status)}
           >
             Update
           </Button>
@@ -479,30 +305,22 @@ export default function GearsScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header 
-        title={`Gears - ${bin.name}`}
+        title={`Gears - ${load.name}`}
         showBackButton={true}
       />
 
-      {/* Bin Info Card */}
+      {/* Load Info Card */}
       <Card style={[styles.binInfoCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.binCompactRow}>
             <View style={{ flex: 1 }}>
               <Text variant="titleSmall" style={{ fontWeight: '600' }}>
-                {load.name || 'Load Name'} / {bin.name}
+                {load.name || 'Load Name'}
               </Text>
               <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: p(2) }}>
-                {bin.gearType} • {gears.length} Gears
+                {gearInspections.length} Gear Inspections
               </Text>
             </View>
-            <Chip
-              mode="outlined"
-              icon={getStatusIcon(bin.status as GearStatus)}
-              style={{ marginLeft: p(8) }}
-              compact
-            >
-              {bin.status}
-            </Chip>
           </View>
         </Card.Content>
       </Card>
@@ -520,7 +338,7 @@ export default function GearsScreen() {
         />
 
         <View style={styles.filterChips}>
-          {(['All', 'PASS', 'REPAIR', 'EXPIRED', 'RECOMMEND OOS', 'CORRECTIVE ACTION REQUIRED'] as (GearStatus | 'All')[]).map(status => (
+          {(['All', 'Pass', 'Expired', 'Recommended OOS', 'Corrective Action Required'] as (GearStatus | 'All')[]).map(status => (
             <Chip
               key={status}
               selected={statusFilter === status}
@@ -547,29 +365,35 @@ export default function GearsScreen() {
       </View>
 
       {/* Gears Grid - Two Columns */}
-
-      <FlatList
-        data={currentGears}
-        renderItem={renderGear}
-        keyExtractor={(item) => item.gear_id}
-        numColumns={2}
-        contentContainerStyle={styles.grid}
-        columnWrapperStyle={styles.columnWrapper}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Icon source="package-variant-closed" size={64} color={colors.outline} />
-            <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-              No gears found
-            </Text>
-            <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-              {searchQuery || statusFilter !== 'All' 
-                ? 'Try adjusting your search or filter criteria' 
-                : 'No gears available in this bin.'}
-            </Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 16, color: colors.onSurfaceVariant }}>Loading gear inspections...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredGearInspections}
+          renderItem={renderGear}
+          keyExtractor={(item) => item.inspection_id.toString()}
+          numColumns={2}
+          contentContainerStyle={styles.grid}
+          columnWrapperStyle={styles.columnWrapper}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon source="package-variant-closed" size={64} color={colors.outline} />
+              <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
+                No gears found
+              </Text>
+              <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
+                {searchQuery || statusFilter !== 'All' 
+                  ? 'Try adjusting your search or filter criteria' 
+                  : 'No gear inspections available for this load.'}
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Pagination at Bottom */}
       {/* <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
@@ -647,7 +471,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 1,
+
   },
   card: {
     flex: 1,
@@ -697,5 +521,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  colorTag: {
+    width: p(16),
+    height: p(16),
+    borderRadius: p(8),
   },
 });

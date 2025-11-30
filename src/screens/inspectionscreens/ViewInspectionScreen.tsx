@@ -85,7 +85,7 @@ export default function ViewInspectionScreen() {
 
         <FlowCard
           title="View by Load"
-          description="Drill down by load → bin → gear to inspect"
+          description="Drill down by load →  gear to inspect"
           icon="📦"
           gradient={[colors.surface, dark ? '#15202b' : '#eef2f7']}
           onPress={() => navigation.navigate('LoadsScreen' as never)}
