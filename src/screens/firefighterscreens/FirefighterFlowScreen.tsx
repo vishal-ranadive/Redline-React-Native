@@ -9,6 +9,7 @@ import {
   Image,
   FlatList,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import {
   Text,
@@ -173,6 +174,7 @@ const FirefighterFlowScreen = () => {
   const [rosterColor, setRosterColor] = useState<string >("");
   const [colorLocked, setColorLocked] = useState<boolean>(false);
   const [colorPickerVisible, setColorPickerVisible] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
@@ -224,6 +226,23 @@ useFocusEffect(
       Alert.alert('Error', 'Failed to fetch gears');
     }
   };
+
+  // Handle pull-to-refresh
+  const onRefresh = useCallback(async () => {
+    if (!selectedFirefighter || !currentLead) {
+      setRefreshing(false);
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      await fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to refresh gears');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedFirefighter, currentLead, fetchFirefighterGears]);
 
   // Clear gears when firefighter is deselected
   useEffect(() => {
@@ -520,6 +539,7 @@ const handleGearPress = (gear: any) => {
   };
 
   const handleRosterSelect = (roster: any) => {
+    console.log("handleRosterSelect", roster);  
     handleFirefighterSelect(roster);
   };
 
@@ -954,6 +974,14 @@ const handleGearPress = (gear: any) => {
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* Firefighter Selection Card */}
         {selectedFirefighter ? (
