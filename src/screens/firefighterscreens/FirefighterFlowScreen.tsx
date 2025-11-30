@@ -1,11 +1,13 @@
 // src/screens/firefighterscreens/FirefighterFlowScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
+  FlatList,
 } from 'react-native';
 import {
   Text,
@@ -15,6 +17,8 @@ import {
   IconButton,
   ActivityIndicator,
   Divider,
+  Icon,
+  Chip,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
@@ -29,12 +33,12 @@ import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
 
-// Gear categories with icons and matching gear types
+// Gear categories with emojis and matching gear types
 const GEAR_CATEGORIES = [
   {
     id: 'jackets',
     title: 'Jackets',
-    icon: 'jacket',
+    emoji: '🧥',
     color: '#FF6B6B',
     gearTypes: ['JACKET LINER', 'JACKET SHELL'],
     fields: ['Primary Liner', 'Primary Shell', 'Moisture Barrier']
@@ -42,7 +46,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'pants',
     title: 'Pants',
-    icon: 'tshirt-crew',
+    emoji: '👖',
     color: '#4ECDC4',
     gearTypes: ['PANT LINER', 'PANT SHELL'],
     fields: ['Primary Shell', 'Primary Liner', 'Moisture Barrier']
@@ -50,7 +54,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'helmets',
     title: 'Helmets',
-    icon: 'hard-hat',
+    emoji: '⛑️',
     color: '#45B7D1',
     gearTypes: ['HELMET'],
     fields: ['Helmet', 'Face Shield', 'Suspension System']
@@ -58,7 +62,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'gloves',
     title: 'Gloves',
-    icon: 'hand-back-left',
+    emoji: '🧤',
     color: '#96CEB4',
     gearTypes: ['GLOVES'],
     fields: ['Gloves', 'Wristlets', 'Knit Wrist']
@@ -66,7 +70,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'boots',
     title: 'Boots',
-    icon: 'shoe-formal',
+    emoji: '👢',
     color: '#FFEAA7',
     gearTypes: ['BOOTS'],
     fields: ['Boots', 'Steel Toe', 'Outsole']
@@ -74,7 +78,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'others',
     title: 'Others',
-    icon: 'toolbox-outline',
+    emoji: '📦',
     color: '#DDA0DD',
     gearTypes: ['HOOD', 'SCBA'],
     fields: ['Jump Suit', 'Hood', 'SCBA Harness']
@@ -82,6 +86,59 @@ const GEAR_CATEGORIES = [
 ];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
+
+// Different gear images for different gear types
+const GEAR_IMAGES = {
+  'Helmet': 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+  'Gloves': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+  'Boots': 'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
+  'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
+  'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
+  'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
+  'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
+  'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
+  'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
+};
+
+const statusColorMap: { [key: string]: string } = {
+  Pass: '#34A853',
+  Repair: '#F9A825',
+  Expired: '#ff0303ff',
+  'Recommended Out Of Service': '#f15719ff',
+  'Corrective Action Required': '#F9A825',
+  Fail: '#8B4513',
+};
+
+// Function to get appropriate image based on gear type
+const getGearImage = (gearType: string | null) => {
+  if (!gearType) return GEAR_IMAGES.default;
+  
+  const type = gearType.toLowerCase();
+  if (type.includes('helmet')) return GEAR_IMAGES.Helmet;
+  if (type.includes('glove')) return GEAR_IMAGES.Gloves;
+  if (type.includes('boot')) return GEAR_IMAGES.Boots;
+  if (type.includes('jacket')) return GEAR_IMAGES.Jacket;
+  if (type.includes('mask')) return GEAR_IMAGES.Mask;
+  if (type.includes('harness')) return GEAR_IMAGES.Harness;
+  if (type.includes('axe')) return GEAR_IMAGES.Axe;
+  if (type.includes('hose')) return GEAR_IMAGES.Hose;
+  
+  return GEAR_IMAGES.default;
+};
+
+const normalizeTagColor = (color?: string | null) => {
+  if (!color) {
+    return null;
+  }
+  const trimmed = color.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.toLowerCase();
+};
 
 const FirefighterFlowScreen = () => {
   
@@ -279,7 +336,8 @@ const getStatusColor = (status: string) => {
       Alert.alert('Select Firefighter', 'Please select a firefighter first');
       return;
     }
-    setSelectedCategory(categoryId);
+    // Toggle category - if same category clicked, deselect it
+    setSelectedCategory(selectedCategory === categoryId ? null : categoryId);
   };
 
 
@@ -289,13 +347,32 @@ const getStatusColor = (status: string) => {
 const handleGearPress = (gear: any) => {
   console.log("handleGearPress", gear);
   
+  // Use roster from gear's current_inspection if available, otherwise use selectedFirefighter
+  const roster = gear.current_inspection?.roster 
+    ? {
+        roster_id: gear.current_inspection.roster.roster_id,
+        id: gear.current_inspection.roster.roster_id,
+        first_name: gear.current_inspection.roster.first_name,
+        middle_name: gear.current_inspection.roster.middle_name,
+        last_name: gear.current_inspection.roster.last_name,
+        email: gear.current_inspection.roster.email,
+        phone: gear.current_inspection.roster.phone,
+        name: `${gear.current_inspection.roster.first_name} ${gear.current_inspection.roster.middle_name || ''} ${gear.current_inspection.roster.last_name}`.trim(),
+      }
+    : selectedFirefighter;
+  
+  // Use tag color from inspection if available, otherwise use selected color
+  const inspectionTagColor = gear.current_inspection?.tag_color 
+    ? normalizeTagColor(gear.current_inspection.tag_color)
+    : rosterColor;
+  
   navigation.navigate("UpadateInspection", {
     gearId: gear.gear_id,
     inspectionId: gear.current_inspection?.inspection_id,
     mode: gear.current_inspection ? "update" : "create",
-    firefighter: selectedFirefighter,
-    tagColor: rosterColor, // ← Pass the selected color
-    colorLocked: colorLocked // ← Pass whether color is locked
+    firefighter: roster,
+    tagColor: inspectionTagColor || rosterColor,
+    colorLocked: gear.current_inspection?.tag_color ? true : colorLocked
   });
 };
 
@@ -351,108 +428,260 @@ const handleGearPress = (gear: any) => {
     console.log('Firefighter added successfully');
   };
 
-  // Render category drill-down view
+  /**
+   * Render inspection details section
+   */
+  const renderInspectionDetails = useCallback(
+    (inspection: any, isPrevious: boolean = false) => {
+      if (!inspection) return null;
+
+      const sectionTitle = isPrevious ? 'Previous Inspection' : 'Current Inspection';
+      const inspectionDate = inspection.inspection_date || 'N/A';
+      const hydroTestResult = inspection.hydro_test_result || 'N/A';
+      const hydroTestPerformed = inspection.hydro_test_performed !== null 
+        ? (inspection.hydro_test_performed ? 'Yes' : 'No')
+        : 'N/A';
+      const inspectionCost = inspection.inspection_cost !== null && inspection.inspection_cost !== undefined
+        ? `$${inspection.inspection_cost.toFixed(2)}`
+        : 'N/A';
+      const remarks = inspection.remarks || 'N/A';
+      const serviceType = inspection.service_type?.status || 'N/A';
+      const finding = inspection.finding?.findings || 'N/A';
+      const hydrotestRemarks = inspection.hydrotest_remarks || null;
+      const specialisedCleaningRemarks = inspection.specialisedcleaning_remarks || null;
+
+      return (
+        <View style={styles.inspectionSection}>
+          <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
+            {sectionTitle}
+          </Text>
+          
+          <View style={styles.detailRow}>
+            <Icon source="calendar" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailValue}>{inspectionDate}</Text>
+          </View>
+
+          {hydroTestResult !== 'N/A' && (
+            <>
+              <View style={styles.detailRow}>
+                <Icon source="water" size={14} color="#666" />
+                <Text style={styles.detailLabel}>Hydro Test:</Text>
+                <Text style={styles.detailValue}>{hydroTestResult}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon source="check-circle" size={14} color="#666" />
+                <Text style={styles.detailLabel}>Hydro Performed:</Text>
+                <Text style={styles.detailValue}>{hydroTestPerformed}</Text>
+              </View>
+            </>
+          )}
+
+          <View style={styles.detailRow}>
+            <Icon source="currency-usd" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Cost:</Text>
+            <Text style={styles.detailValue}>{inspectionCost}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="note-text" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Remarks:</Text>
+            <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+              {remarks}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="wrench" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Service:</Text>
+            <Text style={styles.detailValue}>{serviceType}</Text>
+          </View>
+
+          {finding !== 'N/A' && (
+            <View style={styles.detailRow}>
+              <Icon source="alert-circle" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Finding:</Text>
+              <Text style={[styles.detailValue, styles.findingText]} numberOfLines={1}>
+                {finding}
+              </Text>
+            </View>
+          )}
+
+          {hydrotestRemarks && (
+            <View style={styles.detailRow}>
+              <Icon source="water" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Hydro Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+                {hydrotestRemarks}
+              </Text>
+            </View>
+          )}
+
+          {specialisedCleaningRemarks && (
+            <View style={styles.detailRow}>
+              <Icon source="brush" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Cleaning Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+                {specialisedCleaningRemarks}
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [colors],
+  );
+
+  /**
+   * Render individual gear card
+   */
+  const renderGearCard = useCallback(
+    (gear: any) => {
+      const gearStatus = getGearStatus(gear);
+      const statusColor = statusColorMap[gearStatus] || '#9E9E9E';
+      const tagColor = normalizeTagColor(gear.current_inspection?.tag_color) || colors.primary;
+      const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id)?.gear_type || gear.gear_name || 'Other';
+      const serialNumber = gear.current_inspection?.gear?.serial_number || 'N/A';
+      const manufacturerName = gear.current_inspection?.gear?.manufacturer?.manufacturer_name || 'N/A';
+      const gearSize = gear.current_inspection?.gear?.gear_size || 'N/A';
+
+      return (
+        <View style={styles.cardWrapper}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleGearPress(gear)}
+            style={[styles.gearCardNew, styles.shadow, { borderColor: colors.outline }]}
+          >
+            <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
+            <Card style={{ backgroundColor: colors.surface }}>
+              <Card.Content>
+                {/* Card Header with Gear Status */}
+                <View style={styles.cardHeader}>
+                  {gearStatus && gearStatus !== 'Not Inspected' ? (
+                    <Chip 
+                      mode="outlined" 
+                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: statusColor, borderColor: statusColor },
+                      ]}
+                    >
+                      {gearStatus}
+                    </Chip>
+                  ) : (
+                    <Chip
+                      mode="outlined"
+                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: '#9E9E9E', borderColor: '#9E9E9E' },
+                      ]}
+                    >
+                      No Status
+                    </Chip>
+                  )}
+                </View>
+
+                {/* Gear Image */}
+                <View style={styles.gearImageContainer}>
+                  <Image
+                    source={{
+                      uri: getGearImage(gearTypeName),
+                    }}
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
+                </View>
+
+                {/* Gear Details */}
+                <View style={styles.gearDetails}>
+                  <View style={styles.detailRow}>
+                    <Icon source="barcode" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Serial:</Text>
+                    <Text style={styles.detailValue}>{serialNumber}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="tag-outline" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Type:</Text>
+                    <Text style={[styles.detailValue]} numberOfLines={1}>
+                      {gearTypeName}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="factory" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Manufacturer:</Text>
+                    <Text style={[styles.detailValue]} numberOfLines={1}>
+                      {manufacturerName}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="ruler" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Size:</Text>
+                    <Text style={styles.detailValue}>{gearSize}</Text>
+                  </View>
+                </View>
+
+                {/* Current Inspection Details */}
+                {renderInspectionDetails(gear.current_inspection, false)}
+
+                {/* Previous Inspection Details */}
+                {gear.previous_inspection && renderInspectionDetails(gear.previous_inspection, true)}
+
+                {/* Update Button */}
+                <Button
+                  mode="contained"
+                  onPress={() => handleGearPress(gear)}
+                  icon="clipboard-edit-outline"
+                  style={styles.updateButton}
+                  contentStyle={styles.updateButtonContent}
+                  buttonColor={tagColor}
+                >
+                  Update
+                </Button>
+              </Card.Content>
+            </Card>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [colors, navigation, renderInspectionDetails, gearTypes],
+  );
+
+  // Render category gears in 2-column grid
   const renderCategoryGears = () => {
     if (!selectedCategory) return null;
 
-    const category = GEAR_CATEGORIES.find(cat => cat.id === selectedCategory);
     const categoryGears = getGearsByCategory(selectedCategory);
 
-    if (!category) return null;
+    if (categoryGears.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Icon source="package-variant-closed" size={64} color={colors.outline} />
+          <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
+            No gears found
+          </Text>
+        </View>
+      );
+    }
 
     return (
-      <View style={styles.categoryDetailSection}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={handleBackToCategories}
-        >
-          <IconButton icon="arrow-left" size={24} />
-          <Text style={[styles.backText, { color: colors.primary }]}>
-            Back to Categories
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-          {category.title} ({categoryGears.length})
-        </Text>
-
-        {categoryGears.length === 0 ? (
-          <Card style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-            <Card.Content style={styles.emptyContent}>
-              <IconButton
-                icon="package-variant"
-                size={48}
-                iconColor={colors.onSurfaceVariant}
-              />
-              <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>
-                No {category.title.toLowerCase()} assigned to this firefighter
-              </Text>
-            </Card.Content>
-          </Card>
-        ) : (
-          categoryGears.map((gear) => {
-            const gearStatus = getGearStatus(gear);
-            const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id);
-            
-            return (
-              <Card 
-                key={gear.gear_id}
-                style={[styles.gearCard, { backgroundColor: colors.surface }]}
-                onPress={() => handleGearPress(gear)}
-              >
-                <Card.Content style={styles.gearContent}>
-                  <View style={styles.gearInfo}>
-                    <Text style={[styles.gearName, { color: colors.onSurface }]}>
-                      {gear.gear_name}
-                    </Text>
-                    {/* <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
-                      Type: {gearType?.gear_type || 'Unknown'}
-                    </Text> */}
-                    {gear.current_inspection?.inspection_date && (
-                      <Text style={[styles.gearType, { color: colors.onSurfaceVariant }]}>
-                        Last Inspection: {gear.current_inspection.inspection_date}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.gearStatus}>
-                    <View 
-                      style={[
-                        styles.gearStatusBadge, 
-                        { backgroundColor: getStatusColor(gearStatus) }
-                      ]}
-                    >
-                      <Text style={styles.gearStatusText}>
-                        {gearStatus}
-                      </Text>
-                    </View>
-                    <IconButton
-                      icon="history"
-                      size={20}
-                      iconColor={colors.primary}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (gear.gear_id) {
-                          navigation.navigate('GearDetail', { gear_id: gear.gear_id });
-                        }
-                      }}
-                    />
-                    <IconButton
-                      icon="chevron-right"
-                      size={20}
-                      iconColor={colors.onSurfaceVariant}
-                    />
-                  </View>
-                </Card.Content>
-              </Card>
-            );
-          })
-        )}
+      <View style={styles.gearsGridContainer}>
+        {categoryGears.map((gear) => (
+          <React.Fragment key={gear.gear_id}>
+            {renderGearCard(gear)}
+          </React.Fragment>
+        ))}
       </View>
     );
   };
 
-  // Render main categories view - ALWAYS render categories even if empty
+  // Render main categories view
   const renderCategories = () => {
+    // Hide categories when one is selected
     if (selectedCategory) return null;
 
     return (
@@ -467,98 +696,99 @@ const handleGearPress = (gear: any) => {
         
         <View style={styles.categoriesGrid}>
           {GEAR_CATEGORIES.map((category) => {
-  const categoryGears = getGearsByCategory(category.id);
-  const inspectionSummary = getCategoryInspectionSummary(category.id); 
+            const categoryGears = getGearsByCategory(category.id);
+            const inspectionSummary = getCategoryInspectionSummary(category.id);
+            const isSelected = selectedCategory === category.id;
 
-  return (
-    <Card
-      key={category.id}
-      style={[styles.categoryCard, { backgroundColor: colors.surface }]}
-      onPress={() => handleCategoryPress(category.id)}
-    >
-      <Card.Content style={styles.categoryContent}>
+            return (
+              <Card
+                key={category.id}
+                style={[
+                  styles.categoryCard, 
+                  { backgroundColor: colors.surface },
+                  isSelected && { backgroundColor: colors.primaryContainer }
+                ]}
+                onPress={() => handleCategoryPress(category.id)}
+              >
+                <Card.Content style={styles.categoryContent}>
+                  {/* Category Header with Emoji */}
+                  <View style={styles.categoryHeader}>
+                    <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                    <View style={styles.categoryHeaderText}>
+                      <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
+                        {category.title}
+                      </Text>
+                      <Text style={[styles.gearCount, { color: colors.onSurfaceVariant }]}>
+                        {categoryGears.length} items
+                      </Text>
+                    </View>
+                  </View>
 
-        {/* Category Header */}
-        <View style={[styles.categoryIcon, { backgroundColor: category.color }]}>
-          <IconButton icon={category.icon} size={24} iconColor="#fff" />
-        </View>
+                  {/* Inspection Summary */}
+                  <View style={{ marginTop: 12, width: "100%" }}>
+                    {/* Current Inspection */}
+                    <Text style={[styles.sectionTitleInspection, { color: colors.onSurface, fontSize: p(14) }]}>
+                      Current Inspection
+                    </Text>
 
-        <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
-          {category.title}
-        </Text>
+                    {inspectionSummary.some(i => i.current_status !== "No Current Inspection") ? (
+                      inspectionSummary.map(gear => (
+                        <View key={gear.gear_id} style={styles.inspectionRowItem}>
+                          <View style={styles.gearNameStatusContainer}>
+                            <Text style={styles.gearNameText}>
+                              {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                            </Text>
+                            <Text 
+                              style={[
+                                styles.gearStatusTextCategory,
+                                { color: getStatusColor(gear.current_status) }
+                              ]}
+                            >
+                              {gear.current_status}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: p(12) }}>No current inspections</Text>
+                    )}
 
-        <Text style={[styles.gearCount, { color: colors.onSurfaceVariant }]}>
-          {categoryGears.length} items
-        </Text>
+                    {/* Previous Inspection */}
+                    <Text
+                      style={[
+                        styles.sectionTitleInspection,
+                        { color: colors.onSurface, marginTop: 16 }
+                      ]}
+                    >
+                      Previous Inspection
+                    </Text>
 
-        {/* ------------------ INSPECTION SUMMARY LIST ------------------ */}
-<View style={{ marginTop: 12 , width:"100%"}}>
-
-  {/* ---------- CURRENT INSPECTION ---------- */}
-  <Text style={[styles.sectionTitleInspection, {color: colors.onSurface,     fontSize: p(14), }]}>
-    Current Inspection
-  </Text>
-
-  {inspectionSummary.some(i => i.current_status !== "No Current Inspection") ? (
-    inspectionSummary.map(gear => (
-      <View key={gear.gear_id} style={styles.rowItem}>
-        <Text style={styles.rowLeft}>
-          {gear.gear_usage} — {gear.gear_name}
-        </Text>
-
-        <Text 
-          style={[
-            styles.rowRight,
-            { color: getStatusColor(gear.current_status) }
-          ]}
-        >
-          {gear.current_status}
-        </Text>
-      </View>
-    ))
-  ) : (
-    <Text style={{ color: colors.onSurfaceVariant }}>No current inspections</Text>
-  )}
-
-  {/* ---------- PREVIOUS INSPECTION ---------- */}
-  <Text
-    style={[
-      styles.sectionTitleInspection,
-      { color: colors.onSurface, marginTop: 16 }
-    ]}
-  >
-    Previous Inspection
-  </Text>
-
-  {inspectionSummary.some(i => i.previous_status !== "No Previous Inspection") ? (
-    inspectionSummary.map(gear => (
-      <View key={gear.gear_id} style={styles.rowItem}>
-        <Text style={styles.rowLeft}>
-          {gear.gear_usage} — {gear.gear_name}
-        </Text>
-
-        <Text
-          style={[
-            styles.rowRight,
-            { color: colors.onSurfaceVariant }
-          ]}
-        >
-          {gear.previous_status}
-        </Text>
-      </View>
-    ))
-  ) : (
-    <Text style={{ color: colors.onSurfaceVariant }}>No previous inspections</Text>
-  )}
-
-</View>
-
-        {/* ---------------- END SUMMARY LIST ---------------- */}
-      </Card.Content>
-    </Card>
-  );
-})}
-
+                    {inspectionSummary.some(i => i.previous_status !== "No Previous Inspection") ? (
+                      inspectionSummary.map(gear => (
+                        <View key={gear.gear_id} style={styles.inspectionRowItem}>
+                          <View style={styles.gearNameStatusContainer}>
+                            <Text style={styles.gearNameText}>
+                              {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.gearStatusTextCategory,
+                                { color: colors.onSurfaceVariant }
+                              ]}
+                            >
+                              {gear.previous_status}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ color: colors.onSurfaceVariant, fontSize: p(12) }}>No previous inspections</Text>
+                    )}
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          })}
         </View>
       </View>
     );
@@ -571,7 +801,11 @@ const handleGearPress = (gear: any) => {
         showBackButton={true}
       />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Firefighter Selection Card */}
         {selectedFirefighter ? (
           <Card style={[styles.firefighterCard, { backgroundColor: colors.surface }]}>
@@ -722,12 +956,39 @@ const handleGearPress = (gear: any) => {
           </View>
         )}
 
-        {/* Render either categories or category detail view */}
-        {renderCategories()}
-        {renderCategoryGears()}
+        {/* Render categories and gears */}
+        {selectedCategory ? (
+          // When category selected, show gears in full width
+          <View style={styles.gearsSectionFull}>
+            <View style={styles.gearsHeaderWithBack}>
+              <TouchableOpacity 
+                onPress={() => setSelectedCategory(null)}
+                style={styles.backButton}
+              >
+                <IconButton icon="arrow-left" size={24} iconColor={colors.primary} />
+                <Text style={[styles.backText, { color: colors.primary }]}>
+                  Back to Categories
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.gearsHeader}>
+              <Divider style={styles.divider} />
+              <Text style={[styles.gearsTitle, { color: colors.onSurfaceVariant, backgroundColor: colors.background }]}>
+                Gears
+              </Text>
+              <Divider style={styles.divider} />
+            </View>
+            <View style={styles.gearsContainer}>
+              {renderCategoryGears()}
+            </View>
+          </View>
+        ) : (
+          // When no category selected, show categories in 2 columns
+          renderCategories()
+        )}
 
         {/* Bottom Action Buttons */}
-        {!selectedCategory && selectedFirefighter && (
+        {selectedFirefighter && (
           <View style={styles.bottomActions}>
             <Button
               mode="outlined"
@@ -786,6 +1047,9 @@ const styles = StyleSheet.create({
     padding: p(16),
     paddingBottom: p(32),
     gap: p(16),
+  },
+  gearsContainer: {
+    flex: 1,
   },
   // Firefighter Card Styles
   firefighterCard: {
@@ -878,13 +1142,32 @@ const styles = StyleSheet.create({
     fontSize: p(14),
   },
   // Categories Section
+  mainContent: {
+    flexDirection: 'row',
+    gap: p(12),
+    minHeight: 400,
+  },
   categoriesSection: {
     marginTop: p(8),
+    flex: 1,
   },
   gearsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: p(16),
+  },
+  gearsHeaderWithBack: {
+    marginTop: p(8),
+    marginBottom: p(8),
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backText: {
+    fontSize: p(16),
+    fontWeight: '600',
+    marginLeft: p(4),
   },
   divider: {
     flex: 1,
@@ -895,28 +1178,15 @@ const styles = StyleSheet.create({
     fontSize: p(16),
     fontWeight: '600',
   },
-  categoryDetailSection: {
-    marginBottom: p(20),
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: p(16),
-  },
-  backText: {
-    fontSize: p(16),
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: p(18),
-    fontWeight: '700',
-    marginBottom: p(16),
-  },
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: p(12),
+  },
+  gearsSectionFull: {
+    flex: 1,
+    marginTop: p(8),
   },
   categoryCard: {
     width: '48%',
@@ -925,29 +1195,163 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   categoryContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  categoryIcon: {
-    width: p(50),
-    height: p(50),
-    borderRadius: p(25),
-    justifyContent: 'center',
+  categoryHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: p(8),
+    width: '100%',
+  },
+  categoryEmoji: {
+    fontSize: p(32),
+    marginRight: p(12),
+  },
+  categoryHeaderText: {
+    flex: 1,
+  },
+  inspectionRowItem: {
+    marginBottom: p(6),
+  },
+  gearNameStatusContainer: {
+    flexDirection: 'column',
+  },
+  gearNameText: {
+    fontSize: p(12),
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: p(2),
+  },
+  gearStatusTextCategory: {
+    fontSize: p(11),
+    fontWeight: '600',
+  },
+  gearsSection: {
+    marginTop: p(8),
+    flex: 0.65,
+  },
+  gearsGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(5),
+    paddingBottom: p(20),
+    gap: p(10),
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: p(12),
+  },
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  gearCardNew: {
+    marginHorizontal: 0,
+    borderRadius: p(10),
+    minHeight: p(400),
+    overflow: 'hidden',
+  },
+  cardTagBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: p(30),
+    height: p(24),
+    borderTopRightRadius: p(10),
+    borderBottomLeftRadius: p(10),
+    zIndex: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: p(8),
+    paddingRight: p(12),
+  },
+  headerStatusChip: {
+    height: p(26),
+    alignSelf: 'flex-start',
+    marginRight: p(6),
+  },
+  gearStatusChipText: {
+    fontSize: 11,
+  },
+  gearImageContainer: {
+    alignItems: 'center',
+    marginBottom: p(8),
+  },
+  gearImage: {
+    width: p(80),
+    height: p(80),
+    borderRadius: p(8),
+  },
+  gearDetails: {
+    marginBottom: p(10),
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+    flexWrap: 'wrap',
+  },
+  detailLabel: {
+    fontSize: p(11),
+    color: '#666',
+    marginLeft: p(6),
+    marginRight: p(4),
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: p(11),
+    color: '#333',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  remarksText: {
+    fontSize: p(10),
+    fontStyle: 'italic',
+    color: '#555',
+  },
+  findingText: {
+    color: '#d32f2f',
+    fontWeight: '500',
+  },
+  inspectionSection: {
+    marginTop: p(10),
+    marginBottom: p(8),
+    paddingTop: p(8),
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  sectionTitle: {
+    fontSize: p(12),
+    fontWeight: 'bold',
+    marginBottom: p(6),
+  },
+  updateButton: {
+    borderRadius: p(8),
+    marginTop: p(8),
+  },
+  updateButtonContent: {
+    paddingVertical: p(4),
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
   },
   categoryTitle: {
     fontSize: p(14),
     fontWeight: '600',
     marginBottom: p(4),
-    textAlign: 'center',
   },
   gearCount: {
     fontSize: p(12),
-    marginBottom: p(8),
-  },
-  inspectionSection: {
-    width: '100%',
-    marginBottom: p(8),
   },
   inspectionLabel: {
     fontSize: p(10),
