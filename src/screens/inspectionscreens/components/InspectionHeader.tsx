@@ -65,7 +65,15 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
 
   const rosterEmail = roster?.email ?? roster?.email_address ?? "-";
   const rosterPhone = roster?.phone ?? roster?.phone_number ?? "-";
-  const rosterStation = roster?.station ?? roster?.firestation ?? "-";
+  
+  // Handle station which could be an object or string
+  const getStationName = (station: any): string => {
+    if (!station) return "-";
+    if (typeof station === "string") return station;
+    if (typeof station === "object" && station.name) return station.name;
+    return "-";
+  };
+  const rosterStation = getStationName(roster?.station ?? roster?.firestation);
 
   const toggleCollapse = () => {
     LayoutAnimation.easeInEaseOut();
@@ -290,13 +298,15 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
               <View style={styles.rowItem}>
                 <Icon source="format-list-text" size={18} color={colors.primary} />
                 <Text style={[styles.value, { color: colors.onSurface }]}>
-                  {gear?.gear_type?.gear_type}
+                  {gear?.gear_type?.gear_type ?? "-"}
                 </Text>
               </View>
 
               <View style={styles.rowItem}>
                 <Icon source="barcode" size={18} color={colors.primary} />
-                <Text style={[styles.value, { color: colors.onSurface }]}>{gear?.serial_number}</Text>
+                <Text style={[styles.value, { color: colors.onSurface }]}>
+                  {gear?.serial_number ?? "-"}
+                </Text>
               </View>
 
               {/* MANUFACTURING DATE - NEW */}
