@@ -117,7 +117,8 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
     }
   };
 
-  const screenTitle = mode === 'create' ? 'Create Inspection' : 'Update Inspection';
+  // const screenTitle = mode === 'create' ? 'Create Inspection' : 'Update Inspection';
+  const screenTitle = 'Inspection Details';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>

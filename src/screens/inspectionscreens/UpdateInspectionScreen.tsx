@@ -553,7 +553,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header 
-          title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
+          // title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
+          title={'Inspection Details'}
           showBackButton={true}
         />
         <View style={styles.errorContainer}>
@@ -650,13 +651,13 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
 
 
-        <View style={styles.gearsHeader}>
+        {/* <View style={styles.gearsHeader}>
           <Divider style={styles.divider} />
           <Text style={[styles.gearsTitle, { color: colors.onSurfaceVariant, backgroundColor: colors.background }]}>
             Inspection Details
           </Text>
           <Divider style={styles.divider} />
-        </View>
+        </View> */}
 
         {/* Main form grid */}
         <View style={styles.row}>

@@ -17,7 +17,7 @@ type Firefighter = {
   name: string;
   email: string;
   total_gear_scan_count: number;
-  color_tag: string;
+  tag_color: string;
 };
 
 export default function FirefighterListScreen() {
@@ -61,10 +61,10 @@ export default function FirefighterListScreen() {
       } else {
         // Fallback dummy data if API returns empty
         setRosters([
-          { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'red' },
-          { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'green' },
-          { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'yellow' },
-          { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'black' },
+          { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'red' },
+          { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'green' },
+          { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'yellow' },
+          { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'black' },
         ]);
       }
     } catch (e: any) {
@@ -72,10 +72,10 @@ export default function FirefighterListScreen() {
       setError('Failed to load firefighters. Showing sample data.');
       // Fallback to dummy data on error
       setRosters([
-        { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'red' },
-        { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'green' },
-        { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'yellow' },
-        { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, color_tag: 'black' },
+        { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'red' },
+        { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'green' },
+        { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'yellow' },
+        { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'black' },
       ]);
     } finally {
       setLoading(false);
@@ -144,7 +144,7 @@ export default function FirefighterListScreen() {
   };
 
   const getTagColor = (roster: Firefighter) => {
-    const rawColor = roster.color_tag?.trim();
+    const rawColor = roster.tag_color?.trim();
     if (!rawColor) {
       return null;
     }
