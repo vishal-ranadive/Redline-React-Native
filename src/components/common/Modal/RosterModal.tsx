@@ -54,10 +54,10 @@ const RosterModal: React.FC<RosterModalProps> = ({
   // Filter rosters based on search query (client-side filtering as fallback)
   const filteredRosters = rosters.filter(roster =>
     searchQuery.trim() === '' ? true :
-    roster.roster_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    roster.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (roster.first_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (roster.last_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    (roster.roster_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (roster.email?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (roster.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+    (roster.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
   );
 
   // Fetch rosters with search and pagination
@@ -117,18 +117,24 @@ const RosterModal: React.FC<RosterModalProps> = ({
     >
       <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
         <Text style={[styles.avatarText, { color: colors.onPrimary }]}>
-          {getInitials(item.roster_name)}
+          {getInitials(
+            item.roster_name || 
+            (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}` : '') ||
+            ''
+          )}
         </Text>
       </View>
       <View style={styles.rosterInfo}>
         <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>
-          {item.roster_name}
+          {item.roster_name || 
+           (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}`.trim() : '') ||
+           'Unknown Firefighter'}
         </Text>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
           {item.firestation?.name || 'Unknown Station'}
         </Text>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-          {item.email} • {item.phone}
+          {item.email || 'No email'} • {item.phone || 'No phone'}
         </Text>
       </View>
       <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />

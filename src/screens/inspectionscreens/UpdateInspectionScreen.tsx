@@ -45,6 +45,9 @@ import { INSPECTION_CONSTANTS } from '../../constants/inspection';
 import { p } from "../../utils/responsive";
 import { inspectionApi } from '../../services/inspectionApi';
 import LoadPicker from '../../components/common/LoadPicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
 // Default images for inspection
 const DEFAULT_IMAGES = [
@@ -63,7 +66,7 @@ export default function UpdateInspectionScreen() {
   const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings, gearStatus, gearStatusLoading, fetchGearStatus } = useGearStore();
   const { currentLead } = useLeadStore();
 
-  const { gearId, inspectionId, mode, firefighter, tagColor, colorLocked } = route.params;
+  const { gearId, inspectionId, mode, firefighter, colorLocked } = route.params;
 
   const resolvedRosterId = useMemo(() => {
     if (!firefighter) {
@@ -77,7 +80,7 @@ export default function UpdateInspectionScreen() {
     );
   }, [firefighter]);
 
-  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, resolvedRosterId, tagColor, colorLocked });
+  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, resolvedRosterId, colorLocked });
   
   // State for gear data
   const [gear, setGear] = useState<any>(null);
@@ -99,9 +102,37 @@ export default function UpdateInspectionScreen() {
     cost: '0',
     remarks: '',
     selectedLoad: '1',
-    selectedColor: tagColor?.toLowerCase().trim() ,
+    selectedColor: '',
     specializedCleaningDetails: '',
   });
+
+  // Load tag color from AsyncStorage on mount (only if no inspectionId - for new inspections)
+  useEffect(() => {
+    const loadTagColor = async () => {
+      // Only load from AsyncStorage for new inspections (no inspectionId)
+      if (inspectionId) {
+        console.log("UpdateInspectionScreen: Existing inspection, will use tag_color from inspection data");
+        return;
+      }
+
+      try {
+        const storedColor = await AsyncStorage.getItem(TAG_COLOR_STORAGE_KEY);
+        if (storedColor) {
+          console.log("UpdateInspectionScreen: tagColor from AsyncStorage:", storedColor);
+          setFormData(prev => ({
+            ...prev,
+            selectedColor: storedColor.toLowerCase().trim()
+          }));
+        } else {
+          console.log("UpdateInspectionScreen: No tag color found in AsyncStorage");
+        }
+      } catch (error) {
+        console.error("Error loading tag color from AsyncStorage:", error);
+      }
+    };
+
+    loadTagColor();
+  }, [inspectionId]);
 
   // UI state
   const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(true);
@@ -188,6 +219,20 @@ export default function UpdateInspectionScreen() {
           const inspectionData = response.data;
           console.log("🔥 Fetched Inspection Data:", inspectionData);
 
+          // Get tag color from inspection or fallback to AsyncStorage
+          let tagColor = inspectionData.tag_color?.toLowerCase().trim();
+          if (!tagColor) {
+            try {
+              const storedColor = await AsyncStorage.getItem(TAG_COLOR_STORAGE_KEY);
+              if (storedColor) {
+                tagColor = storedColor.toLowerCase().trim();
+                console.log("UpdateInspectionScreen: Using tag color from AsyncStorage as fallback:", tagColor);
+              }
+            } catch (error) {
+              console.error("Error loading tag color from AsyncStorage:", error);
+            }
+          }
+
           // Populate form data with inspection data
           setFormData(prev => ({
             ...prev,
@@ -204,7 +249,7 @@ export default function UpdateInspectionScreen() {
             cost: inspectionData.inspection_cost?.toString() || '0',
             remarks: inspectionData.remarks || '',
             selectedLoad: inspectionData.load_number?.toString() || '1',
-            selectedColor: inspectionData.tag_color?.toLowerCase().trim() || tagColor?.toLowerCase().trim() ,
+            selectedColor: tagColor || prev.selectedColor,
             specializedCleaningDetails: inspectionData.specialisedcleaning_remarks || '',
           }));
 

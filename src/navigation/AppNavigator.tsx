@@ -46,7 +46,6 @@ export type RootStackParamList = {
       inspectionId?: number;
       mode: "create" | "update";
       firefighter?:any;
-      tagColor?:string;
       colorLocked?:boolean;
    };
 

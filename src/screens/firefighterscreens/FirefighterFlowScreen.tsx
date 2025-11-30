@@ -33,6 +33,9 @@ import { useInspectionStore } from '../../store/inspectionStore';
 import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
 // Gear categories with emojis and matching gear types
 const GEAR_CATEGORIES = [
@@ -161,6 +164,7 @@ const FirefighterFlowScreen = () => {
     fetchFirefighterGears, 
     clearFirefighterGears 
   } = useInspectionStore();
+  const { fetchGearById } = useGearStore();
 
   const [selectedFirefighter, setSelectedFirefighter] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -172,6 +176,8 @@ const FirefighterFlowScreen = () => {
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
+  // Store gear details for gears without current_inspection
+  const [gearDetailsCache, setGearDetailsCache] = useState<Record<number, any>>({});
 
 
 useFocusEffect(
@@ -223,15 +229,43 @@ useFocusEffect(
   useEffect(() => {
     if (!selectedFirefighter) {
       clearFirefighterGears();
+      setGearDetailsCache({});
     }
   }, [selectedFirefighter]);
 
-  // Clear gears when firefighter is deselected
+  // Fetch gear details for gears without current_inspection
   useEffect(() => {
-    if (!selectedFirefighter) {
-      clearFirefighterGears();
-    }
-  }, [selectedFirefighter]);
+    const fetchMissingGearDetails = async () => {
+      if (!firefighterGears || firefighterGears.length === 0) return;
+
+      const gearsToFetch = firefighterGears.filter(
+        gear => !gear.current_inspection && gear.gear_id && !gearDetailsCache[gear.gear_id]
+      );
+
+      if (gearsToFetch.length === 0) return;
+
+      const fetchedDetails: Record<number, any> = {};
+      
+      await Promise.all(
+        gearsToFetch.map(async (gear) => {
+          try {
+            const gearDetail = await fetchGearById(gear.gear_id);
+            if (gearDetail) {
+              fetchedDetails[gear.gear_id] = gearDetail;
+            }
+          } catch (error) {
+            console.error(`Error fetching gear details for gear_id ${gear.gear_id}:`, error);
+          }
+        })
+      );
+
+      if (Object.keys(fetchedDetails).length > 0) {
+        setGearDetailsCache(prev => ({ ...prev, ...fetchedDetails }));
+      }
+    };
+
+    fetchMissingGearDetails();
+  }, [firefighterGears, fetchGearById]);
 
 useEffect(() => {
   if (!firefighterGears) return;
@@ -243,17 +277,28 @@ useEffect(() => {
 
   if (found) {
     // Case 1: color exists → lock it
-    setRosterColor(found.current_inspection.tag_color.toLowerCase());
+    const color = found.current_inspection.tag_color.toLowerCase();
+    setRosterColor(color);
     setColorLocked(true);
-  } else {
-    // Case 2: no inspection → allow selecting color
-    // setRosterColor(""); 
-    // setColorLocked(false);
-  }
+    // Save to AsyncStorage
+    AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, color);
+  } 
+  // else {
+  //   // Case 2: no inspection → allow selecting color
+  //   // setRosterColor(""); 
+  //   // setColorLocked(false);
+  // }
 }, [firefighterGears]);
 
+// Save tag color to AsyncStorage whenever rosterColor changes
+useEffect(() => {
+  if (rosterColor) {
+    console.log("User_selected_roster_color_from_firefighter_flow_screen:", rosterColor);
+    AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, rosterColor);
+  }
+}, [rosterColor]);
 
-  console.log("foundsetRosterColor",rosterColor)
+
 
   // Filter gears by category
   const getGearsByCategory = (categoryId: string) => {
@@ -362,11 +407,6 @@ const getStatusColor = (status: string) => {
   };
 
 
-  useEffect(() => {
-    if (rosterColor) {
-      console.log("User_selected_roster_color_from_firefighter_flow_screen:", rosterColor);
-    }
-  }, [rosterColor]);
 
 // In FirefighterFlowScreen.tsx - update handleGearPress
 // const handleGearPress = (gear: any) => {
@@ -416,32 +456,29 @@ const handleGearPress = (gear: any) => {
     ? {
         roster_id: gear.current_inspection.roster.roster_id,
         id: gear.current_inspection.roster.roster_id,
-        first_name: gear.current_inspection.roster.first_name,
-        middle_name: gear.current_inspection.roster.middle_name,
-        last_name: gear.current_inspection.roster.last_name,
-        email: gear.current_inspection.roster.email,
-        phone: gear.current_inspection.roster.phone,
-        name: `${gear.current_inspection.roster.first_name} ${gear.current_inspection.roster.middle_name || ''} ${gear.current_inspection.roster.last_name}`.trim(),
+        first_name: gear.current_inspection.roster.first_name || '',
+        middle_name: gear.current_inspection.roster.middle_name || '',
+        last_name: gear.current_inspection.roster.last_name || '',
+        email: gear.current_inspection.roster.email || '',
+        phone: gear.current_inspection.roster.phone || '',
+        name: `${gear.current_inspection.roster.first_name || ''} ${gear.current_inspection.roster.middle_name || ''} ${gear.current_inspection.roster.last_name || ''}`.trim() || 'Unknown Firefighter',
       }
     : selectedFirefighter;
-  
-  // Use tag color from inspection if available, otherwise use selected roster color
-  const inspectionTagColor = gear?.current_inspection?.tag_color?.toLowerCase().trim() || rosterColor;
-
   
   // Determine if color should be locked
   const shouldLockColor = !!gear.current_inspection?.tag_color;
 
-  console.log("handleGearPress-passed-roster", roster);
-  console.log("handleGearPress-passed-tagColor", inspectionTagColor ?? "No tag color");
-  console.log("handleGearPress-colorLocked", shouldLockColor);
+  console.log("handleGearPress_passed_roster", roster);
+  console.log("handleGearPress_inspection_tag_color", gear?.current_inspection?.tag_color ?? "undefined");
+  console.log("handleGearPress_final_tagColor", "Using AsyncStorage (removed from params)");
+  console.log("handleGearPress_passed_colorLocked", shouldLockColor);
 
+  // Navigate WITHOUT tagColor - it will be loaded from AsyncStorage in UpdateInspectionScreen
   navigation.navigate("UpadateInspection", {
     gearId: gear.gear_id,
     inspectionId: gear.current_inspection?.inspection_id,
     mode: gear.current_inspection ? "update" : "create",
     firefighter: roster,
-    tagColor: inspectionTagColor, // This ensures rosterColor is used as fallback
     colorLocked: shouldLockColor
   });
 };
@@ -613,9 +650,12 @@ const handleGearPress = (gear: any) => {
       const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
       const tagColor = tagColorName ? getColorHex(tagColorName) : "";
       const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id)?.gear_type || gear.gear_name || 'Other';
-      const serialNumber = gear.current_inspection?.gear?.serial_number || 'N/A';
-      const manufacturerName = gear.current_inspection?.gear?.manufacturer?.manufacturer_name || 'N/A';
-      const gearSize = gear.current_inspection?.gear?.gear_size || 'N/A';
+      
+      // Get gear details from current_inspection or from fetched gear details cache
+      const gearDetail = gear.current_inspection?.gear || gearDetailsCache[gear.gear_id];
+      const serialNumber = gearDetail?.serial_number || 'N/A';
+      const manufacturerName = gearDetail?.manufacturer?.manufacturer_name || 'N/A';
+      const gearSize = gearDetail?.gear_size || 'N/A';
 
       return (
         <View style={styles.cardWrapper}>
@@ -715,7 +755,7 @@ const handleGearPress = (gear: any) => {
         </View>
       );
     },
-    [colors, navigation, renderInspectionDetails, gearTypes],
+    [colors, navigation, renderInspectionDetails, gearTypes, gearDetailsCache],
   );
 
   // Render category gears in 2-column grid
@@ -923,18 +963,18 @@ const handleGearPress = (gear: any) => {
                 <View style={styles.firefighterInfo}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
-                      {selectedFirefighter.first_name[0]}{selectedFirefighter.last_name[0]}
+                      {selectedFirefighter?.first_name?.[0] || ''}{selectedFirefighter?.last_name?.[0] || ''}
                     </Text>
                   </View>
                   <View style={styles.firefighterDetails}>
                     <Text style={[styles.firefighterName, { color: colors.onSurface }]}>
-                      {selectedFirefighter.first_name} {selectedFirefighter.middle_name} {selectedFirefighter.last_name}
+                      {[selectedFirefighter?.first_name, selectedFirefighter?.middle_name, selectedFirefighter?.last_name].filter(Boolean).join(' ') || 'Unknown Firefighter'}
                     </Text>
                     <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
-                      {selectedFirefighter.email}
+                      {selectedFirefighter?.email || 'No email'}
                     </Text>
                     <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
-                      {selectedFirefighter.phone} • {selectedFirefighter.firestation?.name || selectedFirefighter.station || 'Unknown Station'}
+                      {selectedFirefighter?.phone || 'No phone'} • {selectedFirefighter?.firestation?.name || selectedFirefighter?.station || 'Unknown Station'}
                     </Text>
                   </View>
                 </View>
@@ -1129,7 +1169,10 @@ const handleGearPress = (gear: any) => {
             selectedColor={rosterColor}
             onClose={() => setColorPickerVisible(false)}
             onColorSelect={(color) => {
-              setRosterColor(color?.toLowerCase().trim() || '');
+              const normalizedColor = color?.toLowerCase().trim() || '';
+              setRosterColor(normalizedColor);
+              // Save to AsyncStorage immediately
+              AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, normalizedColor);
               setColorPickerVisible(false);
             }}
           />
@@ -1371,7 +1414,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 1,
+    // elevation: 1,
   },
   gearCardNew: {
     marginHorizontal: 0,
