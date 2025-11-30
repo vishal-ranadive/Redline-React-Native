@@ -51,6 +51,28 @@ const getGearImage = (gearType: string | null) => {
   return GEAR_IMAGES.default;
 };
 
+// Function to get appropriate icon for gear type
+const getGearTypeIcon = (gearType: string | null) => {
+  if (!gearType) return 'package-variant';
+  
+  const type = gearType.toLowerCase();
+  // Check for pants first (before generic liner check)
+  if (type.includes('pant') || type.includes('pants')) return 'tshirt-v';
+  // Check for jacket (including jacket liner)
+  if (type.includes('jacket')) return 'tshirt-crew';
+  // Check for other liners (pant liner already handled above)
+  if (type.includes('liner')) return 'tshirt-crew';
+  if (type.includes('helmet')) return 'hard-hat';
+  if (type.includes('glove')) return 'hand-back-left';
+  if (type.includes('boot')) return 'shoe-formal';
+  if (type.includes('mask')) return 'gas-mask';
+  if (type.includes('harness')) return 'seatbelt';
+  if (type.includes('axe')) return 'axe';
+  if (type.includes('hose')) return 'pipe';
+  
+  return 'package-variant';
+};
+
 // Types based on API response
 type ApiGearInspection = {
   gear_id: number;
@@ -252,6 +274,132 @@ export default function FirefighterGearsScreen() {
   }, [loadGears]);
 
   /**
+   * Render inspection details section
+   */
+  const renderInspectionDetails = useCallback(
+    (inspection: any, isPrevious: boolean = false) => {
+      if (!inspection) return null;
+
+      const sectionTitle = isPrevious ? 'Previous Inspection' : 'Current Inspection';
+      const inspectionDate = inspection.inspection_date || 'N/A';
+      const hydroTestResult = inspection.hydro_test_result || 'N/A';
+      const hydroTestPerformed = inspection.hydro_test_performed !== null 
+        ? (inspection.hydro_test_performed ? 'Yes' : 'No')
+        : 'N/A';
+      const inspectionCost = inspection.inspection_cost !== null && inspection.inspection_cost !== undefined
+        ? `$${inspection.inspection_cost.toFixed(2)}`
+        : 'N/A';
+      const remarks = inspection.remarks || 'N/A';
+      const serviceType = inspection.service_type?.status || 'N/A';
+      const finding = inspection.finding?.findings || 'N/A';
+      const hydrotestRemarks = inspection.hydrotest_remarks || null;
+      const specialisedCleaningRemarks = inspection.specialisedcleaning_remarks || null;
+      const inspectionImages = inspection.inspection_images || [];
+
+      return (
+        <View style={styles.inspectionSection}>
+          <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
+            {sectionTitle}
+          </Text>
+          
+          <View style={styles.detailRow}>
+            <Icon source="calendar" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailValue}>{inspectionDate}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="water" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Hydro Test:</Text>
+            <Text style={styles.detailValue}>{hydroTestResult}</Text>
+          </View>
+
+          {hydroTestResult !== 'N/A' && (
+            <View style={styles.detailRow}>
+              <Icon source="check-circle" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Hydro Performed:</Text>
+              <Text style={styles.detailValue}>{hydroTestPerformed}</Text>
+            </View>
+          )}
+
+          <View style={styles.detailRow}>
+            <Icon source="currency-usd" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Cost:</Text>
+            <Text style={styles.detailValue}>{inspectionCost}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="note-text" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Remarks:</Text>
+            <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+              {remarks}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="wrench" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Service:</Text>
+            <Text style={styles.detailValue}>{serviceType}</Text>
+          </View>
+
+          {inspectionImages.length > 0 && (
+            <View style={styles.imagesRow}>
+              <Icon source="image-multiple" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Images:</Text>
+              <View style={styles.imagesContainer}>
+                {inspectionImages.slice(0, 3).map((img: string, idx: number) => {
+                  const gearType = inspection.gear?.gear_type?.gear_type || inspection.gear?.gear_name || null;
+                  return (
+                    <View key={idx} style={{ marginRight: p(4) }}>
+                      <Icon 
+                        source={getGearTypeIcon(gearType)} 
+                        size={16} 
+                        color={colors.primary} 
+                      />
+                    </View>
+                  );
+                })}
+                {inspectionImages.length > 3 && (
+                  <Text style={styles.imageCount}>+{inspectionImages.length - 3}</Text>
+                )}
+              </View>
+            </View>
+          )}
+
+          <View style={styles.detailRow}>
+            <Icon source="alert-circle" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Finding:</Text>
+            <Text style={[styles.detailValue, styles.findingText]} numberOfLines={1}>
+              {finding}
+            </Text>
+          </View>
+
+          {hydrotestRemarks && (
+            <View style={styles.detailRow}>
+              <Icon source="water" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Hydro Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+                {hydrotestRemarks}
+              </Text>
+            </View>
+          )}
+
+          {specialisedCleaningRemarks && (
+            <View style={styles.detailRow}>
+              <Icon source="brush" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Cleaning Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+                {specialisedCleaningRemarks}
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [colors],
+  );
+
+  /**
    * Render individual gear card
    */
   const renderGear = useCallback(
@@ -264,8 +412,9 @@ export default function FirefighterGearsScreen() {
       const serialNumber = detail?.serial_number ?? 'N/A';
       const manufacturerName =
         detail?.manufacturer?.manufacturer_name ?? 'Unknown manufacturer';
-      const gearTypeName =
-        detail?.gear_type?.gear_type ?? gear.gear_name ?? 'Gear';
+      const gearTypeName = detail?.gear_type?.gear_type ?? gear.gear_name ?? 'Other';
+      const isOtherType = gearTypeName.toLowerCase().trim() === 'other';
+      const displayTypeOrName = isOtherType ? gearName : gearTypeName;
       const statusColor = item.gearStatus
         ? statusColorMap[item.gearStatus] ?? tagColor
         : '#9E9E9E';
@@ -280,7 +429,7 @@ export default function FirefighterGearsScreen() {
             <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
             <Card style={{ backgroundColor: colors.surface }}>
               <Card.Content>
-                {/* Card Header with Gear ID and Type */}
+                {/* Card Header with Gear Status */}
                 <View style={styles.cardHeader}>
                   {item.gearStatus ? (
                     <Chip 
@@ -305,12 +454,9 @@ export default function FirefighterGearsScreen() {
                       No Status
                     </Chip>
                   )}
-                  {/* <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-                    #{gearId}
-                  </Text> */}
                 </View>
 
-                {/* Gear Image and Basic Info */}
+                {/* Gear Image */}
                 <View style={styles.gearImageContainer}>
                   <Image
                     source={{
@@ -323,41 +469,40 @@ export default function FirefighterGearsScreen() {
 
                 {/* Gear Details */}
                 <View style={styles.gearDetails}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Icon source="barcode" size={16} color="#555" />
-                    <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
-                      {serialNumber}
+                  <View style={styles.detailRow}>
+                    <Icon source="barcode" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Serial:</Text>
+                    <Text style={styles.detailValue}>{serialNumber}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="tag-outline" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Type:</Text>
+                    <Text style={[styles.detailValue]} numberOfLines={1}>
+                      {displayTypeOrName}
                     </Text>
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Icon source="hard-hat" size={16} color="#555" />
-                    <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                      {gearName}
-                    </Text>
-                  </View>
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Icon source="factory" size={16} color="#555" />
-                    <Text style={{ marginLeft: 6 }} numberOfLines={1}>
+                  <View style={styles.detailRow}>
+                    <Icon source="factory" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Manufacturer:</Text>
+                    <Text style={[styles.detailValue]} numberOfLines={1}>
                       {manufacturerName}
                     </Text>
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                    <Icon source="tag-outline" size={16} color="#555" />
-                    <Text style={{ marginLeft: 6 }}>
-                      {detail?.gear_type?.gear_type ?? gear.gear_name ?? 'N/A'}
-                    </Text>
+                  <View style={styles.detailRow}>
+                    <Icon source="ruler" size={14} color="#666" />
+                    <Text style={styles.detailLabel}>Size:</Text>
+                    <Text style={styles.detailValue}>{detail?.gear_size ?? 'N/A'}</Text>
                   </View>
+                </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Icon source="ruler" size={16} color="#555" />
-                  <Text style={{ marginLeft: 6 }}>
-                    {detail?.gear_size ?? 'N/A'}
-                  </Text>
-                </View>
-                </View>
+                {/* Current Inspection Details */}
+                {renderInspectionDetails(gear.current_inspection, false)}
+
+                {/* Previous Inspection Details */}
+                {gear.previous_inspection && renderInspectionDetails(gear.previous_inspection, true)}
 
                 {/* Update Button */}
                 <Button
@@ -376,7 +521,7 @@ export default function FirefighterGearsScreen() {
         </View>
       );
     },
-    [colors, navigation],
+    [colors, navigation, renderInspectionDetails],
   );
 
   if ((loading || inspectionLoading) && !refreshing) {
@@ -589,7 +734,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 0,
     borderRadius: p(10),
-    minHeight: p(280),
+    minHeight: p(400),
     overflow: 'hidden',
   },
   cardTypeText: {
@@ -645,10 +790,66 @@ const styles = StyleSheet.create({
     borderRadius: p(8),
   },
   gearDetails: {
-    marginBottom: p(12),
+    marginBottom: p(10),
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+    flexWrap: 'wrap',
+  },
+  detailLabel: {
+    fontSize: p(11),
+    color: '#666',
+    marginLeft: p(6),
+    marginRight: p(4),
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: p(11),
+    color: '#333',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  remarksText: {
+    fontSize: p(10),
+    fontStyle: 'italic',
+    color: '#555',
+  },
+  findingText: {
+    color: '#d32f2f',
+    fontWeight: '500',
+  },
+  inspectionSection: {
+    marginTop: p(10),
+    marginBottom: p(8),
+    paddingTop: p(8),
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  sectionTitle: {
+    fontSize: p(12),
+    fontWeight: 'bold',
+    marginBottom: p(6),
+  },
+  imagesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+  },
+  imagesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: p(4),
+  },
+  imageCount: {
+    fontSize: p(10),
+    color: '#666',
+    marginLeft: p(2),
   },
   updateButton: {
     borderRadius: p(8),
+    marginTop: p(8),
   },
   updateButtonContent: {
     paddingVertical: p(4),

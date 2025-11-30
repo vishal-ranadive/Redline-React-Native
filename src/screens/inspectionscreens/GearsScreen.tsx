@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inspectionApi } from '../../services/inspectionApi';
 import { useLeadStore } from '../../store/leadStore';
 
-type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required';
+type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
 
 type GearInspection = {
   gear: {
@@ -30,23 +30,23 @@ type GearInspection = {
   };
   roster: {
     name: string; // firstName + MiddleName + LastName
-    color_tag: string;
+    tag_color: string;
   };
   inspection_id: number;
   inspection_date: string;
-  hydro_test_result: 'PASS' | 'FAIL';
-  hydro_test_performed: 'YES' | 'NO';
-  gear_findings: string;
+  hydro_test_result: 'PASS' | 'FAIL' | null;
+  hydro_test_performed: 'YES' | 'NO' | null;
+  gear_findings: string | null;
   inspection_cost: number;
   remarks: string;
   gear_status: {
     id: number;
     status: GearStatus;
   };
-  service_type: {
-    id: number;
-    status: 'cleaned and inspected' | 'cleaned only' | 'inspected only' | 'specialized cleaning' | 'other';
-  };
+    service_type: {
+      id: number;
+      status: string; // e.g., 'Cleaned and Inspected', 'Inspected Only', 'Specialised Cleaning', etc.
+    };
 };
 
 type Load = {
@@ -61,69 +61,77 @@ type RouteProps = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-// Mock data matching new API structure
-const MOCK_GEAR_INSPECTIONS: GearInspection[] = [
-  {
-    gear: {
-      gear_id: 14,
-      gear_name: "Fire Helmet Pro",
-      manufacturer: { manufacturer_id: 12, manufacturer_name: "Fire Safety Equipment Inc." },
-      gear_type: { gear_type_id: 1, gear_type: "Helmet" },
-      manufacturing_date: "2022-10-15",
-      gear_size: "small",
-      serial_number: "SN-001-2024"
-    },
-    roster: {
-      name: "Jane M Doe",
-      color_tag: "red"
-    },
-    inspection_id: 1,
-    inspection_date: "2025-11-08",
-    hydro_test_result: "PASS",
-    hydro_test_performed: "YES",
-    gear_findings: "Gear is in good condition with minor wear",
-    inspection_cost: 250.75,
-    remarks: "Inspection scheduled for tomorrow morning.",
-    gear_status: {
-      id: 1,
-      status: "Pass"
-    },
-    service_type: {
-      id: 1,
-      status: "cleaned and inspected"
-    }
-  },
-  {
-    gear: {
-      gear_id: 15,
-      gear_name: "Fire Helmet Pro",
-      manufacturer: { manufacturer_id: 12, manufacturer_name: "Fire Safety Equipment Inc." },
-      gear_type: { gear_type_id: 1, gear_type: "Helmet" },
-      manufacturing_date: "2022-10-15",
-      gear_size: "medium",
-      serial_number: "SN-002-2024"
-    },
-    roster: {
-      name: "John A Smith",
-      color_tag: "blue"
-    },
-    inspection_id: 2,
-    inspection_date: "2025-11-08",
-    hydro_test_result: "FAIL",
-    hydro_test_performed: "YES",
-    gear_findings: "Cracked visor needs replacement",
-    inspection_cost: 300.50,
-    remarks: "Requires immediate attention.",
-    gear_status: {
-      id: 2,
-      status: "Expired"
-    },
-    service_type: {
-      id: 2,
-      status: "inspected only"
-    }
+// Different gear images for different gear types
+const GEAR_IMAGES = {
+  'Helmet': 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+  'Gloves': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+  'Boots': 'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
+  'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
+  'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
+  'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
+  'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
+  'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
+  'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
+};
+
+const statusColorMap: { [key: string]: string } = {
+  Pass: '#34A853',
+  Repair: '#F9A825',
+  Expired: '#ff0303ff',
+  'Recommended Out Of Service': '#f15719ff',
+  'Corrective Action Required': '#F9A825',
+  Fail: '#8B4513',
+};
+
+// Function to get appropriate image based on gear type
+const getGearImage = (gearType: string | null) => {
+  if (!gearType) return GEAR_IMAGES.default;
+  
+  const type = gearType.toLowerCase();
+  if (type.includes('helmet')) return GEAR_IMAGES.Helmet;
+  if (type.includes('glove')) return GEAR_IMAGES.Gloves;
+  if (type.includes('boot')) return GEAR_IMAGES.Boots;
+  if (type.includes('jacket')) return GEAR_IMAGES.Jacket;
+  if (type.includes('mask')) return GEAR_IMAGES.Mask;
+  if (type.includes('harness')) return GEAR_IMAGES.Harness;
+  if (type.includes('axe')) return GEAR_IMAGES.Axe;
+  if (type.includes('hose')) return GEAR_IMAGES.Hose;
+  
+  return GEAR_IMAGES.default;
+};
+
+// Function to get appropriate icon for gear type
+const getGearTypeIcon = (gearType: string | null) => {
+  if (!gearType) return 'package-variant';
+  
+  const type = gearType.toLowerCase();
+  if (type.includes('pant') || type.includes('pants')) return 'tshirt-v';
+  if (type.includes('jacket')) return 'tshirt-crew';
+  if (type.includes('liner')) return 'tshirt-crew';
+  if (type.includes('helmet')) return 'hard-hat';
+  if (type.includes('glove')) return 'hand-back-left';
+  if (type.includes('boot')) return 'shoe-formal';
+  if (type.includes('mask')) return 'gas-mask';
+  if (type.includes('harness')) return 'seatbelt';
+  if (type.includes('axe')) return 'axe';
+  if (type.includes('hose')) return 'pipe';
+  
+  return 'package-variant';
+};
+
+const normalizeTagColor = (color?: string | null) => {
+  if (!color) {
+    return null;
   }
-];
+  const trimmed = color.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed.toLowerCase();
+};
 
 export default function GearsScreen() {
   const { colors } = useTheme();
@@ -151,18 +159,16 @@ export default function GearsScreen() {
 
     try {
       setLoading(true);
-      const response = await inspectionApi.getGearInspections(load.loadNumber, currentLead.lead_id);
+      const response = await inspectionApi.getGearInspectionsLoadwise(load.loadNumber, currentLead.lead_id);
       
       if (response?.gear_inspections) {
         setGearInspections(response.gear_inspections);
       } else {
-        // Fallback to mock data for development
-        setGearInspections(MOCK_GEAR_INSPECTIONS);
+        setGearInspections([]);
       }
     } catch (error) {
       console.error('Error fetching gear inspections:', error);
-      // Fallback to mock data on error
-      setGearInspections(MOCK_GEAR_INSPECTIONS);
+      setGearInspections([]);
     } finally {
       setLoading(false);
     }
@@ -171,7 +177,7 @@ export default function GearsScreen() {
   const filteredGearInspections = gearInspections.filter(inspection => {
     const matchesSearch =
       inspection.gear.gear_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inspection.gear.serial_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (inspection.gear.serial_number?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
       inspection.roster.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'All' || inspection.gear_status.status === statusFilter;
@@ -179,24 +185,8 @@ export default function GearsScreen() {
     return matchesSearch && matchesStatus;
   });
 
-  const getGearStatusColor = (status: GearStatus) => {
-    switch (status) {
-      case 'Pass': return '#34A853';
-      case 'Expired': return '#E53935';
-      case 'Recommended OOS': return '#F9A825';
-      case 'Corrective Action Required': return '#9C27B0';
-      default: return '#9E9E9E';
-    }
-  };
-
-  const getStatusIcon = (status: GearStatus) => {
-    switch (status) {
-      case 'Pass': return 'check-circle';
-      case 'Expired': return 'clock-alert';
-      case 'Recommended OOS': return 'alert-circle';
-      case 'Corrective Action Required': return 'alert-triangle';
-      default: return 'help-circle';
-    }
+  const getGearStatusColor = (status: string) => {
+    return statusColorMap[status] || '#9E9E9E';
   };
 
   const handleUpdateGear = (inspection: GearInspection) => {
@@ -208,99 +198,210 @@ export default function GearsScreen() {
   };
 
   /**
+   * Render inspection details section
+   */
+  const renderInspectionDetails = useCallback(
+    (inspection: GearInspection) => {
+      if (!inspection) return null;
+
+      const inspectionDate = inspection.inspection_date || 'N/A';
+      const hydroTestResult = inspection.hydro_test_result;
+      const hydroTestPerformed = inspection.hydro_test_performed !== null 
+        ? (inspection.hydro_test_performed === 'YES' ? 'Yes' : 'No')
+        : 'N/A';
+      const inspectionCost = inspection.inspection_cost !== null && inspection.inspection_cost !== undefined
+        ? `$${inspection.inspection_cost.toFixed(2)}`
+        : 'N/A';
+      const remarks = inspection.remarks || 'N/A';
+      const serviceType = inspection.service_type?.status || 'N/A';
+      const finding = inspection.gear_findings || 'N/A';
+
+      return (
+        <View style={styles.inspectionSection}>
+          <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
+            Inspection Details
+          </Text>
+          
+          <View style={styles.detailRow}>
+            <Icon source="calendar" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailValue}>{inspectionDate}</Text>
+          </View>
+
+          {hydroTestResult && (
+            <>
+              <View style={styles.detailRow}>
+                <Icon source="water" size={14} color="#666" />
+                <Text style={styles.detailLabel}>Hydro Test:</Text>
+                <Text style={styles.detailValue}>{hydroTestResult}</Text>
+              </View>
+
+              <View style={styles.detailRow}>
+                <Icon source="check-circle" size={14} color="#666" />
+                <Text style={styles.detailLabel}>Hydro Performed:</Text>
+                <Text style={styles.detailValue}>{hydroTestPerformed}</Text>
+              </View>
+            </>
+          )}
+
+          <View style={styles.detailRow}>
+            <Icon source="currency-usd" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Cost:</Text>
+            <Text style={styles.detailValue}>{inspectionCost}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="note-text" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Remarks:</Text>
+            <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+              {remarks}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon source="wrench" size={14} color="#666" />
+            <Text style={styles.detailLabel}>Service:</Text>
+            <Text style={styles.detailValue}>{serviceType}</Text>
+          </View>
+
+          {finding !== 'N/A' && (
+            <View style={styles.detailRow}>
+              <Icon source="alert-circle" size={14} color="#666" />
+              <Text style={styles.detailLabel}>Finding:</Text>
+              <Text style={[styles.detailValue, styles.findingText]} numberOfLines={1}>
+                {finding}
+              </Text>
+            </View>
+          )}
+        </View>
+      );
+    },
+    [colors],
+  );
+
+  /**
    * Render individual gear inspection card
    */
-  const renderGear = useCallback(({ item }: { item: GearInspection }) => (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => handleUpdateGear(item)}
-      style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
-    > 
-      <Card style={{backgroundColor: colors.surface}}>
-        <Card.Content>
-          {/* Card Header with Gear ID and Status */}
-          <View style={styles.cardHeader}>
-            <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
-              #{item.gear.gear_id}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
-              {/* Status indicator dot */}
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: getGearStatusColor(item.gear_status.status) },
-                ]}
-              />
-              <Text variant="titleMedium" style={{ fontWeight: 'bold', fontSize: 12 }}>
-                {item.gear_status.status}
-              </Text>
-            </View>
-          </View>
+  const renderGear = useCallback(({ item }: { item: GearInspection }) => {
+    const tagColor = normalizeTagColor(item.roster.tag_color) || colors.primary;
+    const statusColor = getGearStatusColor(item.gear_status.status);
+    const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
 
-          {/* Gear Details */}
-          <View style={styles.gearDetails}>
-            {/* Serial Number - Show First */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="barcode" size={16} color="#555" />
-              <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600' }}>{item.gear.serial_number}</Text>
-            </View>
+    return (
+      <View style={styles.cardWrapper}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => handleUpdateGear(item)}
+          style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
+        >
+          <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
+          <Card style={{ backgroundColor: colors.surface }}>
+            <Card.Content>
+              {/* Card Header with Gear Status */}
+              <View style={styles.cardHeader}>
+                {item.gear_status.status ? (
+                  <Chip 
+                    mode="outlined" 
+                    textStyle={[styles.gearStatusText, { color: '#fff' }]}
+                    style={[
+                      styles.headerStatusChip,
+                      { backgroundColor: statusColor, borderColor: statusColor },
+                    ]}
+                  >
+                    {item.gear_status.status}
+                  </Chip>
+                ) : (
+                  <Chip
+                    mode="outlined"
+                    textStyle={[styles.gearStatusText, { color: '#fff' }]}
+                    style={[
+                      styles.headerStatusChip,
+                      { backgroundColor: statusColor, borderColor: statusColor },
+                    ]}
+                  >
+                    No Status
+                  </Chip>
+                )}
+              </View>
 
-            {/* Gear Name */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="hard-hat" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }} numberOfLines={1}>{item.gear.gear_name}</Text>
-            </View>
+              {/* Gear Image */}
+              <View style={styles.gearImageContainer}>
+                <Image
+                  source={{
+                    uri: getGearImage(gearTypeName),
+                  }}
+                  style={styles.gearImage}
+                  resizeMode="cover"
+                />
+              </View>
 
-            {/* Firefighter Name */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="account" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                {item.roster.name}
-              </Text>
-            </View>
+              {/* Gear Details */}
+              <View style={styles.gearDetails}>
+                <View style={styles.detailRow}>
+                  <Icon source="barcode" size={14} color="#666" />
+                  <Text style={styles.detailLabel}>Serial:</Text>
+                  <Text style={styles.detailValue}>{item.gear.serial_number || 'N/A'}</Text>
+                </View>
 
-            {/* Manufacturer */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="factory" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }} numberOfLines={1}>
-                {item.gear.manufacturer.manufacturer_name}
-              </Text>
-            </View>
+                <View style={styles.detailRow}>
+                  <Icon source="tag-outline" size={14} color="#666" />
+                  <Text style={styles.detailLabel}>Type:</Text>
+                  <Text style={[styles.detailValue]} numberOfLines={1}>
+                    {gearTypeName}
+                  </Text>
+                </View>
 
-            {/* Gear Type */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="tag-outline" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }}>{item.gear.gear_type.gear_type}</Text>
-            </View>
+                <View style={styles.detailRow}>
+                  <Icon source="factory" size={14} color="#666" />
+                  <Text style={styles.detailLabel}>Manufacturer:</Text>
+                  <Text style={[styles.detailValue]} numberOfLines={1}>
+                    {item.gear.manufacturer.manufacturer_name}
+                  </Text>
+                </View>
 
-            {/* Inspection Date */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Icon source="calendar" size={16} color="#555" />
-              <Text style={{ marginLeft: 6 }}>{item.inspection_date}</Text>
-            </View>
+                <View style={styles.detailRow}>
+                  <Icon source="ruler" size={14} color="#666" />
+                  <Text style={styles.detailLabel}>Size:</Text>
+                  <Text style={styles.detailValue}>{item.gear.gear_size || 'N/A'}</Text>
+                </View>
 
-            {/* Color Tag */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View style={[styles.colorTag, { backgroundColor: item.roster.color_tag }]} />
-              <Text style={{ marginLeft: 6 }}>Color: {item.roster.color_tag}</Text>
-            </View>
-          </View>
+                <View style={styles.detailRow}>
+                  <Icon source="account" size={14} color="#666" />
+                  <Text style={styles.detailLabel}>Firefighter:</Text>
+                  <Text style={[styles.detailValue]} numberOfLines={1}>
+                    {item.roster.name}
+                  </Text>
+                </View>
 
-          {/* Update Button */}
-          <Button
-            mode="contained"
-            onPress={() => handleUpdateGear(item)}
-            icon="clipboard-edit-outline"
-            style={styles.updateButton}
-            contentStyle={styles.updateButtonContent}
-            buttonColor={getGearStatusColor(item.gear_status.status)}
-          >
-            Update
-          </Button>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity> 
-  ), [colors, navigation]);
+                {item.roster.tag_color && (
+                  <View style={styles.detailRow}>
+                    <View style={[styles.colorTag, { backgroundColor: tagColor }]} />
+                    <Text style={styles.detailLabel}>Tag:</Text>
+                    <Text style={styles.detailValue}>{item.roster.tag_color}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Inspection Details */}
+              {renderInspectionDetails(item)}
+
+              {/* Update Button */}
+              <Button
+                mode="contained"
+                onPress={() => handleUpdateGear(item)}
+                icon="clipboard-edit-outline"
+                style={styles.updateButton}
+                contentStyle={styles.updateButtonContent}
+                buttonColor={tagColor}
+              >
+                Update
+              </Button>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [colors, navigation, renderInspectionDetails]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -338,7 +439,7 @@ export default function GearsScreen() {
         />
 
         <View style={styles.filterChips}>
-          {(['All', 'Pass', 'Expired', 'Recommended OOS', 'Corrective Action Required'] as (GearStatus | 'All')[]).map(status => (
+          {(['All', 'Pass', 'Expired', 'Repair', 'Recommended Out Of Service', 'Corrective Action Required'] as (GearStatus | 'All')[]).map(status => (
             <Chip
               key={status}
               selected={statusFilter === status}
@@ -460,39 +561,56 @@ const styles = StyleSheet.create({
   grid: {
     paddingBottom: p(100),
     paddingHorizontal: p(5),
-    gap: p(10),
   },
   columnWrapper: {
     justifyContent: 'space-between',
-    gap: p(10),
+    paddingHorizontal: p(9),
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: p(12),
   },
   shadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-
+    elevation: 1,
   },
   card: {
-    flex: 1,
-    margin: p(1),
+    marginHorizontal: 0,
     borderRadius: p(10),
-    minHeight: p(260),
+    minHeight: p(400),
+    overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // marginBottom: p(10),
+    marginBottom: p(8),
+    paddingRight: p(12),
   },
-  statusDot: {
-    width: p(8),
-    height: p(8),
-    borderRadius: 50,
+  headerStatusChip: {
+    height: p(26),
+    alignSelf: 'flex-start',
+    marginRight: p(6),
+  },
+  gearStatusText: {
+    fontSize: 11,
+  },
+  cardTagBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: p(30),
+    height: p(24),
+    borderTopRightRadius: p(10),
+    borderBottomLeftRadius: p(10),
+    zIndex: 1,
   },
   gearImageContainer: {
     alignItems: 'center',
-    // marginBottom: p(10),
+    marginBottom: p(8),
   },
   gearImage: {
     width: p(80),
@@ -500,7 +618,47 @@ const styles = StyleSheet.create({
     borderRadius: p(8),
   },
   gearDetails: {
-    marginBottom: p(12),
+    marginBottom: p(10),
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+    flexWrap: 'wrap',
+  },
+  detailLabel: {
+    fontSize: p(11),
+    color: '#666',
+    marginLeft: p(6),
+    marginRight: p(4),
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: p(11),
+    color: '#333',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  remarksText: {
+    fontSize: p(10),
+    fontStyle: 'italic',
+    color: '#555',
+  },
+  findingText: {
+    color: '#d32f2f',
+    fontWeight: '500',
+  },
+  inspectionSection: {
+    marginTop: p(10),
+    marginBottom: p(8),
+    paddingTop: p(8),
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  sectionTitle: {
+    fontSize: p(12),
+    fontWeight: 'bold',
+    marginBottom: p(6),
   },
   updateButton: {
     borderRadius: p(8),

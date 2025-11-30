@@ -53,6 +53,21 @@ export const inspectionApi = {
     return response.data;
   },
 
+  // Get gear inspections loadwise by loadId and leadId
+  getGearInspectionsLoadwise: async (loadId: number, leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-inspections/loadwise/?leadId=${leadId}&loadId=${loadId}`);
+
+    const response = await axiosInstance.get(`/gear-inspections/loadwise/`, {
+      params: {
+        leadId: leadId,
+        loadId: loadId,
+      },
+    });
+
+    console.log('✅ API Response GET /gear-inspections/loadwise/', response.data);
+    return response.data;
+  },
+
   // Get loads list for a lead (load-level inspection summary)
   getLeadLoads: async (leadId: number): Promise<any> => {
     console.log(`➡️ API CALL GET /gear-inspection/loads/${leadId}/`);
