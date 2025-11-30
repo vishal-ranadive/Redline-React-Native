@@ -99,7 +99,7 @@ export default function UpdateInspectionScreen() {
     cost: '0',
     remarks: '',
     selectedLoad: '1',
-    selectedColor: tagColor || 'red',
+    selectedColor: tagColor?.toLowerCase().trim() ,
     specializedCleaningDetails: '',
   });
 
@@ -204,7 +204,7 @@ export default function UpdateInspectionScreen() {
             cost: inspectionData.inspection_cost?.toString() || '0',
             remarks: inspectionData.remarks || '',
             selectedLoad: inspectionData.load_number?.toString() || '1',
-            selectedColor: inspectionData.tag_color || tagColor || 'red',
+            selectedColor: inspectionData.tag_color?.toLowerCase().trim() || tagColor?.toLowerCase().trim() ,
             specializedCleaningDetails: inspectionData.specialisedcleaning_remarks || '',
           }));
 
@@ -494,7 +494,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         
         gear_status_id: gearStatusId,
         service_type_id: mapServiceTypeToId(formData.serviceType),
-        tag_color: formData.selectedColor.toLowerCase(),
+        tag_color: formData.selectedColor.toLowerCase().trim(),
         harness_type: formData.harnessType,
         gear_size: formData.size,
       };
@@ -615,7 +615,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         isCollapsed={isGearInfoCollapsed}
         onToggleCollapse={() => setIsGearInfoCollapsed(!isGearInfoCollapsed)}
         scrollY={scrollY}
-        tagColor={tagColor}
+        tagColor={formData.selectedColor}
         isColorLocked={isColorLocked}
         onHistoryPress={() => {
           if (gear?.gear_id) {

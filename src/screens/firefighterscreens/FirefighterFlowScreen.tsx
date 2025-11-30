@@ -124,18 +124,25 @@ const getGearEmoji = (gearType: string | null) => {
   return '📦'; // Default for others
 };
 
-const normalizeTagColor = (color?: string | null) => {
-  if (!color) {
-    return null;
-  }
-  const trimmed = color.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
-    return trimmed;
-  }
-  return trimmed.toLowerCase();
+// Color mapping for display purposes (convert color name to hex)
+const COLOR_MAP: { [key: string]: string } = {
+  red: '#FF4444',
+  blue: '#4444FF',
+  green: '#44FF44',
+  yellow: '#FFFF44',
+  orange: '#FF8844',
+  purple: '#8844FF',
+  pink: '#FF44FF',
+  cyan: '#44FFFF',
+  lime: '#88FF44',
+  teal: '#44FF88',
+};
+
+// Helper to get hex color from color name for UI display
+const getColorHex = (colorName?: string | null): string => {
+  if (!colorName) return '#CCCCCC';
+  const normalized = colorName.toLowerCase().trim();
+  return COLOR_MAP[normalized] || '#CCCCCC';
 };
 
 const FirefighterFlowScreen = () => {
@@ -240,8 +247,8 @@ useEffect(() => {
     setColorLocked(true);
   } else {
     // Case 2: no inspection → allow selecting color
-    setRosterColor(""); 
-    setColorLocked(false);
+    // setRosterColor(""); 
+    // setColorLocked(false);
   }
 }, [firefighterGears]);
 
@@ -355,14 +362,57 @@ const getStatusColor = (status: string) => {
   };
 
 
-
+  useEffect(() => {
+    if (rosterColor) {
+      console.log("User_selected_roster_color_from_firefighter_flow_screen:", rosterColor);
+    }
+  }, [rosterColor]);
 
 // In FirefighterFlowScreen.tsx - update handleGearPress
-const handleGearPress = (gear: any) => {
-  console.log("handleGearPress", gear);
+// const handleGearPress = (gear: any) => {
+//   console.log("handleGearPress", gear);
+
   
-  // Use roster from gear's current_inspection if available, otherwise use selectedFirefighter
-  const roster = gear.current_inspection?.roster 
+//   // Use roster from gear's current_inspection if available, otherwise use selectedFirefighter
+//   const roster = gear.current_inspection?.roster 
+//     ? {
+//         roster_id: gear.current_inspection.roster.roster_id,
+//         id: gear.current_inspection.roster.roster_id,
+//         first_name: gear.current_inspection.roster.first_name,
+//         middle_name: gear.current_inspection.roster.middle_name,
+//         last_name: gear.current_inspection.roster.last_name,
+//         email: gear.current_inspection.roster.email,
+//         phone: gear.current_inspection.roster.phone,
+//         name: `${gear.current_inspection.roster.first_name} ${gear.current_inspection.roster.middle_name || ''} ${gear.current_inspection.roster.last_name}`.trim(),
+//       }
+//     : selectedFirefighter;
+//     console.log("handleGearPress-passed-roster", roster);
+//   // Use tag color from inspection if available, otherwise use selected color
+//   const inspectionTagColor = gear.current_inspection?.tag_color 
+//     ? gear.current_inspection.tag_color.toLowerCase().trim()
+//     : rosterColor;
+  
+//   navigation.navigate("UpadateInspection", {
+//     gearId: gear.gear_id,
+//     inspectionId: gear.current_inspection?.inspection_id,
+//     mode: gear.current_inspection ? "update" : "create",
+//     firefighter: roster,
+//     tagColor: inspectionTagColor || rosterColor,
+//     colorLocked: gear.current_inspection?.tag_color ? true : colorLocked
+//   });
+// };
+
+
+const handleGearPress = (gear: any) => {
+  console.log("handleGearPress",{ gear, selectedFirefighter});
+
+  // if (!selectedFirefighter) {
+  //   Alert.alert('Error', 'No firefighter selected');
+  //   return;
+  // }
+
+  // Use roster from gear's current_inspection if available AND valid, otherwise use selectedFirefighter
+  const roster = gear.current_inspection?.roster?.roster_id 
     ? {
         roster_id: gear.current_inspection.roster.roster_id,
         id: gear.current_inspection.roster.roster_id,
@@ -375,18 +425,24 @@ const handleGearPress = (gear: any) => {
       }
     : selectedFirefighter;
   
-  // Use tag color from inspection if available, otherwise use selected color
-  const inspectionTagColor = gear.current_inspection?.tag_color 
-    ? normalizeTagColor(gear.current_inspection.tag_color)
-    : rosterColor;
+  // Use tag color from inspection if available, otherwise use selected roster color
+  const inspectionTagColor = gear?.current_inspection?.tag_color?.toLowerCase().trim() || rosterColor;
+
   
+  // Determine if color should be locked
+  const shouldLockColor = !!gear.current_inspection?.tag_color;
+
+  console.log("handleGearPress-passed-roster", roster);
+  console.log("handleGearPress-passed-tagColor", inspectionTagColor ?? "No tag color");
+  console.log("handleGearPress-colorLocked", shouldLockColor);
+
   navigation.navigate("UpadateInspection", {
     gearId: gear.gear_id,
     inspectionId: gear.current_inspection?.inspection_id,
     mode: gear.current_inspection ? "update" : "create",
     firefighter: roster,
-    tagColor: inspectionTagColor || rosterColor,
-    colorLocked: gear.current_inspection?.tag_color ? true : colorLocked
+    tagColor: inspectionTagColor, // This ensures rosterColor is used as fallback
+    colorLocked: shouldLockColor
   });
 };
 
@@ -554,7 +610,8 @@ const handleGearPress = (gear: any) => {
     (gear: any) => {
       const gearStatus = getGearStatus(gear);
       const statusColor = statusColorMap[gearStatus] || '#9E9E9E';
-      const tagColor = normalizeTagColor(gear.current_inspection?.tag_color) || colors.primary;
+      const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
+      const tagColor = tagColorName ? getColorHex(tagColorName) : "";
       const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id)?.gear_type || gear.gear_name || 'Other';
       const serialNumber = gear.current_inspection?.gear?.serial_number || 'N/A';
       const manufacturerName = gear.current_inspection?.gear?.manufacturer?.manufacturer_name || 'N/A';
@@ -904,7 +961,7 @@ const handleGearPress = (gear: any) => {
       if (!colorLocked) setColorPickerVisible(true);
     }}
     disabled={colorLocked} // disable if locked
-    style={[styles.changeButton, { backgroundColor: rosterColor }]}
+    style={[styles.changeButton, { backgroundColor: getColorHex(rosterColor) }]}
     labelStyle={styles.changeButtonLabel}
     contentStyle={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}
   >
@@ -1072,7 +1129,7 @@ const handleGearPress = (gear: any) => {
             selectedColor={rosterColor}
             onClose={() => setColorPickerVisible(false)}
             onColorSelect={(color) => {
-              setRosterColor(color?.toLocaleLowerCase());
+              setRosterColor(color?.toLowerCase().trim() || '');
               setColorPickerVisible(false);
             }}
           />

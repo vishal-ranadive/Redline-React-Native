@@ -18,6 +18,27 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// Color mapping for display purposes (convert color name to hex)
+const COLOR_MAP: { [key: string]: string } = {
+  red: '#FF4444',
+  blue: '#4444FF',
+  green: '#44FF44',
+  yellow: '#FFFF44',
+  orange: '#FF8844',
+  purple: '#8844FF',
+  pink: '#FF44FF',
+  cyan: '#44FFFF',
+  lime: '#88FF44',
+  teal: '#44FF88',
+};
+
+// Helper to get hex color from color name for UI display
+const getColorHex = (colorName?: string | null): string => {
+  if (!colorName) return '#CCCCCC';
+  const normalized = colorName.toLowerCase().trim();
+  return COLOR_MAP[normalized] || '#CCCCCC';
+};
+
 interface InspectionHeaderProps {
   gear: any;
   roster: any;
@@ -187,7 +208,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
               icon="pencil"
               onPress={handleColorButtonPress}
               disabled={isColorLocked}
-              style={[styles.colorButton, { backgroundColor: tagColor }]}
+              style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
               labelStyle={styles.colorButtonLabel}
               contentStyle={styles.colorButtonContent}
             >

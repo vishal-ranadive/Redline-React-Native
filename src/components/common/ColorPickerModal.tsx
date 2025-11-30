@@ -11,7 +11,6 @@ import { Text, IconButton, useTheme } from 'react-native-paper';
 interface ColorOption {
   value: string;
   label: string;
-  color: string;
 }
 
 interface ColorPickerModalProps {
@@ -22,22 +21,36 @@ interface ColorPickerModalProps {
   colorOptions?: ColorOption[];
 }
 
+// Color mapping for display purposes
+const COLOR_MAP: { [key: string]: string } = {
+  red: '#FF4444',
+  blue: '#4444FF',
+  green: '#44FF44',
+  yellow: '#FFFF44',
+  orange: '#FF8844',
+  purple: '#8844FF',
+  pink: '#FF44FF',
+  cyan: '#44FFFF',
+  lime: '#88FF44',
+  teal: '#44FF88',
+};
+
 export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   visible,
   onClose,
   selectedColor,
   onColorSelect,
   colorOptions = [
-    { value: 'RED', label: 'Red', color: '#FF4444' },
-    { value: 'BLUE', label: 'Blue', color: '#4444FF' },
-    { value: 'GREEN', label: 'Green', color: '#44FF44' },
-    { value: 'YELLOW', label: 'Yellow', color: '#FFFF44' },
-    { value: 'ORANGE', label: 'Orange', color: '#FF8844' },
-    { value: 'PURPLE', label: 'Purple', color: '#8844FF' },
-    { value: 'PINK', label: 'Pink', color: '#FF44FF' },
-    { value: 'CYAN', label: 'Cyan', color: '#44FFFF' },
-    { value: 'LIME', label: 'Lime', color: '#88FF44' },
-    { value: 'TEAL', label: 'Teal', color: '#44FF88' },
+    { value: 'red', label: 'Red' },
+    { value: 'blue', label: 'Blue' },
+    { value: 'green', label: 'Green' },
+    { value: 'yellow', label: 'Yellow' },
+    { value: 'orange', label: 'Orange' },
+    { value: 'purple', label: 'Purple' },
+    { value: 'pink', label: 'Pink' },
+    { value: 'cyan', label: 'Cyan' },
+    { value: 'lime', label: 'Lime' },
+    { value: 'teal', label: 'Teal' },
   ],
 }) => {
   const { colors } = useTheme();
@@ -68,32 +81,38 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
           </View>
 
           <View style={styles.colorGrid}>
-            {colorOptions.map((colorOption) => (
-              <TouchableOpacity
-                key={colorOption.value}
-                style={[
-                  styles.colorCircle,
-                  {
-                    backgroundColor: colorOption.color,
-                    borderColor: selectedColor === colorOption.value ? colors.primary : 'transparent',
-                    borderWidth: 3,
-                  },
-                ]}
-                onPress={() => {
-                  onColorSelect(colorOption.value);
-                  onClose();
-                }}
-              >
-                {selectedColor === colorOption.value && (
-                  <IconButton
-                    icon="check"
-                    size={16}
-                    iconColor="#fff"
-                    style={styles.colorCheckIcon}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
+            {colorOptions.map((colorOption) => {
+              const colorValue = colorOption.value.toLowerCase();
+              const displayColor = COLOR_MAP[colorValue] || '#CCCCCC';
+              const isSelected = selectedColor?.toLowerCase() === colorValue;
+              
+              return (
+                <TouchableOpacity
+                  key={colorOption.value}
+                  style={[
+                    styles.colorCircle,
+                    {
+                      backgroundColor: displayColor,
+                      borderColor: isSelected ? colors.primary : 'transparent',
+                      borderWidth: 3,
+                    },
+                  ]}
+                  onPress={() => {
+                    onColorSelect(colorOption.value);
+                    onClose();
+                  }}
+                >
+                  {isSelected && (
+                    <IconButton
+                      icon="check"
+                      size={16}
+                      iconColor="#fff"
+                      style={styles.colorCheckIcon}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       </TouchableOpacity>
