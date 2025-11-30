@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -109,21 +110,18 @@ const statusColorMap: { [key: string]: string } = {
   Fail: '#8B4513',
 };
 
-// Function to get appropriate image based on gear type
-const getGearImage = (gearType: string | null) => {
-  if (!gearType) return GEAR_IMAGES.default;
+// Function to get appropriate emoji based on gear type
+const getGearEmoji = (gearType: string | null) => {
+  if (!gearType) return '📦';
   
-  const type = gearType.toLowerCase();
-  if (type.includes('helmet')) return GEAR_IMAGES.Helmet;
-  if (type.includes('glove')) return GEAR_IMAGES.Gloves;
-  if (type.includes('boot')) return GEAR_IMAGES.Boots;
-  if (type.includes('jacket')) return GEAR_IMAGES.Jacket;
-  if (type.includes('mask')) return GEAR_IMAGES.Mask;
-  if (type.includes('harness')) return GEAR_IMAGES.Harness;
-  if (type.includes('axe')) return GEAR_IMAGES.Axe;
-  if (type.includes('hose')) return GEAR_IMAGES.Hose;
+  const type = gearType.toUpperCase();
+  if (type.includes('JACKET')) return '🧥';
+  if (type.includes('PANT')) return '👖';
+  if (type.includes('HELMET')) return '⛑️';
+  if (type.includes('GLOVE')) return '🧤';
+  if (type.includes('BOOT')) return '👢';
   
-  return GEAR_IMAGES.default;
+  return '📦'; // Default for others
 };
 
 const normalizeTagColor = (color?: string | null) => {
@@ -164,6 +162,9 @@ const FirefighterFlowScreen = () => {
   const [rosterColor, setRosterColor] = useState<string >("");
   const [colorLocked, setColorLocked] = useState<boolean>(false);
   const [colorPickerVisible, setColorPickerVisible] = useState<boolean>(false);
+  const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
+    Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
+  );
 
 
 useFocusEffect(
@@ -179,6 +180,19 @@ useFocusEffect(
     };
   }, [firefighter])
 );
+
+  // Effect for handling screen orientation changes
+  useEffect(() => {
+    const updateLayout = () => {
+      const { width, height } = Dimensions.get('window');
+      setOrientation(width > height ? 'LANDSCAPE' : 'PORTRAIT');
+    };
+
+    const subscription = Dimensions.addEventListener('change', updateLayout);
+    return () => subscription.remove();
+  }, []);
+
+  const isPortrait = orientation === 'PORTRAIT';
 
 
 
@@ -583,15 +597,11 @@ const handleGearPress = (gear: any) => {
                   )}
                 </View>
 
-                {/* Gear Image */}
+                {/* Gear Emoji */}
                 <View style={styles.gearImageContainer}>
-                  <Image
-                    source={{
-                      uri: getGearImage(gearTypeName),
-                    }}
-                    style={styles.gearImage}
-                    resizeMode="cover"
-                  />
+                  <Text style={styles.gearEmoji}>
+                    {getGearEmoji(gearTypeName)}
+                  </Text>
                 </View>
 
                 {/* Gear Details */}
@@ -689,7 +699,7 @@ const handleGearPress = (gear: any) => {
         <View style={styles.gearsHeader}>
           <Divider style={styles.divider} />
           <Text style={[styles.gearsTitle, { color: colors.onSurfaceVariant, backgroundColor: colors.background }]}>
-            Gears
+            Gears Categories
           </Text>
           <Divider style={styles.divider} />
         </View>
@@ -734,19 +744,40 @@ const handleGearPress = (gear: any) => {
                     {inspectionSummary.some(i => i.current_status !== "No Current Inspection") ? (
                       inspectionSummary.map(gear => (
                         <View key={gear.gear_id} style={styles.inspectionRowItem}>
-                          <View style={styles.gearNameStatusContainer}>
-                            <Text style={styles.gearNameText}>
-                              {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
-                            </Text>
-                            <Text 
-                              style={[
-                                styles.gearStatusTextCategory,
-                                { color: getStatusColor(gear.current_status) }
-                              ]}
-                            >
-                              {gear.current_status}
-                            </Text>
-                          </View>
+                          {isPortrait ? (
+                            // Portrait: Status below gear name with arrow
+                            <View style={styles.gearNameStatusContainerPortrait}>
+                              <Text style={styles.gearNameText}>
+                                {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                              </Text>
+                              <View style={styles.statusRowPortrait}>
+                                <Icon source="arrow-right" size={14} color={getStatusColor(gear.current_status)} />
+                                <Text 
+                                  style={[
+                                    styles.gearStatusTextCategory,
+                                    { color: getStatusColor(gear.current_status), marginLeft: p(4) }
+                                  ]}
+                                >
+                                  {gear.current_status}
+                                </Text>
+                              </View>
+                            </View>
+                          ) : (
+                            // Landscape: Status next to gear name
+                            <View style={styles.gearNameStatusContainerLandscape}>
+                              <Text style={styles.gearNameText}>
+                                {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                              </Text>
+                              <Text 
+                                style={[
+                                  styles.gearStatusTextCategory,
+                                  { color: getStatusColor(gear.current_status), marginLeft: p(8) }
+                                ]}
+                              >
+                                {gear.current_status}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       ))
                     ) : (
@@ -766,19 +797,40 @@ const handleGearPress = (gear: any) => {
                     {inspectionSummary.some(i => i.previous_status !== "No Previous Inspection") ? (
                       inspectionSummary.map(gear => (
                         <View key={gear.gear_id} style={styles.inspectionRowItem}>
-                          <View style={styles.gearNameStatusContainer}>
-                            <Text style={styles.gearNameText}>
-                              {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.gearStatusTextCategory,
-                                { color: colors.onSurfaceVariant }
-                              ]}
-                            >
-                              {gear.previous_status}
-                            </Text>
-                          </View>
+                          {isPortrait ? (
+                            // Portrait: Status below gear name with arrow
+                            <View style={styles.gearNameStatusContainerPortrait}>
+                              <Text style={styles.gearNameText}>
+                                {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                              </Text>
+                              <View style={styles.statusRowPortrait}>
+                                <Icon source="arrow-right" size={14} color={colors.onSurfaceVariant} />
+                                <Text
+                                  style={[
+                                    styles.gearStatusTextCategory,
+                                    { color: colors.onSurfaceVariant, marginLeft: p(4) }
+                                  ]}
+                                >
+                                  {gear.previous_status}
+                                </Text>
+                              </View>
+                            </View>
+                          ) : (
+                            // Landscape: Status next to gear name
+                            <View style={styles.gearNameStatusContainerLandscape}>
+                              <Text style={styles.gearNameText}>
+                                {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.gearStatusTextCategory,
+                                  { color: colors.onSurfaceVariant, marginLeft: p(8) }
+                                ]}
+                              >
+                                {gear.previous_status}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       ))
                     ) : (
@@ -1148,13 +1200,14 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   categoriesSection: {
-    marginTop: p(8),
+    // marginTop: p(8),
     flex: 1,
   },
   gearsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: p(16),
+    // marginVertical: p(16),
+    marginBottom: p(4),
   },
   gearsHeaderWithBack: {
     marginTop: p(8),
@@ -1215,6 +1268,20 @@ const styles = StyleSheet.create({
   },
   gearNameStatusContainer: {
     flexDirection: 'column',
+  },
+  gearNameStatusContainerPortrait: {
+    flexDirection: 'column',
+  },
+  gearNameStatusContainerLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  statusRowPortrait: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: p(2),
+    marginLeft: p(8),
   },
   gearNameText: {
     fontSize: p(12),
@@ -1288,6 +1355,10 @@ const styles = StyleSheet.create({
     width: p(80),
     height: p(80),
     borderRadius: p(8),
+  },
+  gearEmoji: {
+    fontSize: p(64),
+    textAlign: 'center',
   },
   gearDetails: {
     marginBottom: p(10),

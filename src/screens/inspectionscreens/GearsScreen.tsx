@@ -61,19 +61,6 @@ type RouteProps = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-// Different gear images for different gear types
-const GEAR_IMAGES = {
-  'Helmet': 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-  'Gloves': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
-  'Boots': 'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
-  'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
-  'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
-  'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
-  'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
-  'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
-  'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
-};
-
 const statusColorMap: { [key: string]: string } = {
   Pass: '#34A853',
   Repair: '#F9A825',
@@ -83,21 +70,18 @@ const statusColorMap: { [key: string]: string } = {
   Fail: '#8B4513',
 };
 
-// Function to get appropriate image based on gear type
-const getGearImage = (gearType: string | null) => {
-  if (!gearType) return GEAR_IMAGES.default;
+// Function to get appropriate emoji based on gear type
+const getGearEmoji = (gearType: string | null) => {
+  if (!gearType) return '📦';
   
-  const type = gearType.toLowerCase();
-  if (type.includes('helmet')) return GEAR_IMAGES.Helmet;
-  if (type.includes('glove')) return GEAR_IMAGES.Gloves;
-  if (type.includes('boot')) return GEAR_IMAGES.Boots;
-  if (type.includes('jacket')) return GEAR_IMAGES.Jacket;
-  if (type.includes('mask')) return GEAR_IMAGES.Mask;
-  if (type.includes('harness')) return GEAR_IMAGES.Harness;
-  if (type.includes('axe')) return GEAR_IMAGES.Axe;
-  if (type.includes('hose')) return GEAR_IMAGES.Hose;
+  const type = gearType.toUpperCase();
+  if (type.includes('JACKET')) return '🧥';
+  if (type.includes('PANT')) return '👖';
+  if (type.includes('HELMET')) return '⛑️';
+  if (type.includes('GLOVE')) return '🧤';
+  if (type.includes('BOOT')) return '👢';
   
-  return GEAR_IMAGES.default;
+  return '📦'; // Default for others
 };
 
 // Function to get appropriate icon for gear type
@@ -189,11 +173,46 @@ export default function GearsScreen() {
     return statusColorMap[status] || '#9E9E9E';
   };
 
-  const handleUpdateGear = (inspection: GearInspection) => {
+  const handleUpdateGear = async (inspection: GearInspection) => {
+    // Parse roster name to extract first, middle, and last name
+    const nameParts = inspection.roster.name.trim().split(/\s+/).filter(part => part.length > 0);
+    const firstName = nameParts[0] || '';
+    const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : (nameParts.length === 2 ? '' : nameParts[1] || '');
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+    
+    // Try to fetch inspection data to get full roster information including roster_id
+    let rosterId: number | undefined;
+    try {
+      const inspectionResponse = await inspectionApi.getGearInspectionByInspectionId(inspection.inspection_id);
+      if (inspectionResponse?.status && inspectionResponse?.data?.roster) {
+        rosterId = inspectionResponse.data.roster.roster_id;
+      }
+    } catch (error) {
+      console.log('Could not fetch inspection data for roster_id, using name only');
+    }
+    
+    // Construct roster object from inspection data
+    const roster = {
+      name: inspection.roster.name,
+      first_name: firstName,
+      middle_name: middleName,
+      last_name: lastName,
+      roster_id: rosterId,
+      id: rosterId,
+      email: '',
+      phone: '',
+    };
+    
+    // Get tag color from inspection
+    const tagColor = normalizeTagColor(inspection.roster.tag_color);
+    
     navigation.navigate('UpadateInspection', {
       gearId: inspection.gear.gear_id,
       inspectionId: inspection.inspection_id,
-      mode: 'update'
+      mode: 'update',
+      firefighter: roster,
+      tagColor: tagColor || undefined,
+      colorLocked: !!inspection.roster.tag_color
     });
   };
 
@@ -324,15 +343,11 @@ export default function GearsScreen() {
                 )}
               </View>
 
-              {/* Gear Image */}
+              {/* Gear Emoji */}
               <View style={styles.gearImageContainer}>
-                <Image
-                  source={{
-                    uri: getGearImage(gearTypeName),
-                  }}
-                  style={styles.gearImage}
-                  resizeMode="cover"
-                />
+                <Text style={styles.gearEmoji}>
+                  {getGearEmoji(gearTypeName)}
+                </Text>
               </View>
 
               {/* Gear Details */}
@@ -616,6 +631,10 @@ const styles = StyleSheet.create({
     width: p(80),
     height: p(80),
     borderRadius: p(8),
+  },
+  gearEmoji: {
+    fontSize: p(64),
+    textAlign: 'center',
   },
   gearDetails: {
     marginBottom: p(10),
