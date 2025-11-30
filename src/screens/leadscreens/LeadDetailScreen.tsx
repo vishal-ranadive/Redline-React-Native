@@ -1,6 +1,7 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform } from 'react-native';
+import Pdf from 'react-native-pdf';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -131,6 +132,11 @@ const LeadDetailScreen = () => {
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [remarksValue, setRemarksValue] = useState(initialLead?.remarks || '');
 
+  // PDF preview state
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+
   /**
    * Get available statuses based on lead type
    * Uses the constants system for dynamic status management
@@ -203,12 +209,69 @@ const LeadDetailScreen = () => {
         lead_status: newStatus
       }));
       
-      Alert.alert('Success', 'Job status updated successfully');
+      // Check if status is completed and call additional APIs
+      const isCompleted = newStatus === 'Completed' || newStatus === 'RepairComplete';
+      if (isCompleted) {
+        await handleCompletedStatusApis();
+      } else {
+        Alert.alert('Success', 'Job status updated successfully');
+      }
     } catch (error) {
       console.error('Error updating lead status:', error);
       Alert.alert('Error', 'Failed to update lead status');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Handle API calls when status is changed to completed
+   */
+  const handleCompletedStatusApis = async () => {
+    try {
+      setIsLoadingPdf(true);
+      
+      // Call first API: PPE Inspection
+      console.log('Calling PPE Inspection API...');
+      await leadApi.getPpeInspection(lead.lead_id);
+      
+      // Call second API: Inspection Analytics
+      console.log('Calling Inspection Analytics API...');
+      await leadApi.getInspectionAnalytics(lead.lead_id);
+      
+      // Simulate third API call to get PDF URL
+      console.log('Fetching PDF URL...');
+      const pdfUrlResult = await leadApi.getInspectionPdf(lead.lead_id);
+      
+      // Set PDF URL and show preview
+      setPdfUrl(pdfUrlResult);
+      setPdfModalVisible(true);
+      
+      Alert.alert('Success', 'Job status updated successfully. PDF report is ready.');
+    } catch (error) {
+      console.error('Error calling completion APIs:', error);
+      Alert.alert('Warning', 'Status updated but failed to generate PDF report. Please try again later.');
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  };
+
+  /**
+   * Open PDF in external browser
+   */
+  const handleOpenPdfExternal = async () => {
+    if (pdfUrl) {
+      try {
+        const supported = await Linking.canOpenURL(pdfUrl);
+        if (supported) {
+          await Linking.openURL(pdfUrl);
+        } else {
+          Alert.alert('Error', 'Cannot open PDF URL');
+        }
+      } catch (error) {
+        console.error('Error opening PDF:', error);
+        Alert.alert('Error', 'Failed to open PDF');
+      }
     }
   };
 
@@ -852,6 +915,101 @@ const LeadDetailScreen = () => {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* PDF Preview Modal */}
+      <Modal
+        visible={pdfModalVisible}
+        animationType="slide"
+        onRequestClose={() => setPdfModalVisible(false)}
+        transparent={false}
+      >
+        <SafeAreaView style={[styles.pdfModalContainer, { backgroundColor: colors.background }]}>
+          {/* PDF Modal Header */}
+          <View style={[styles.pdfModalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
+            <Button
+              mode="text"
+              compact
+              onPress={() => setPdfModalVisible(false)}
+              contentStyle={{ flexDirection: 'row' }}
+            >
+              <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
+            </Button>
+            <Text style={[styles.pdfModalTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+              Inspection Report
+            </Text>
+            <Button
+              mode="text"
+              compact
+              onPress={handleOpenPdfExternal}
+              contentStyle={{ flexDirection: 'row' }}
+            >
+              <Icon source="open-in-new" size={p(22)} color={colors.primary} />
+            </Button>
+          </View>
+
+          {/* PDF Content */}
+          {isLoadingPdf ? (
+            <View style={styles.pdfLoadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
+            </View>
+          ) : pdfUrl ? (
+            <View style={styles.pdfContainer}>
+              <Pdf
+                source={{
+                  uri: pdfUrl,
+                  cache: true,
+                  method: 'GET',
+                  // iOS-specific: Add headers if needed for authentication
+                  ...(Platform.OS === 'ios' && {
+                    headers: {},
+                  }),
+                }}
+                style={styles.pdf}
+                onLoadComplete={(numberOfPages) => {
+                  console.log(`PDF loaded with ${numberOfPages} pages`);
+                }}
+                onPageChanged={(page, numberOfPages) => {
+                  console.log(`Current page: ${page} of ${numberOfPages}`);
+                }}
+                onError={(error) => {
+                  console.error('PDF error: ', error);
+                  // Platform-specific error handling
+                  if (Platform.OS === 'ios') {
+                    console.log('iOS PDF error details:', JSON.stringify(error, null, 2));
+                  }
+                  // Try opening in external browser as fallback
+                  Alert.alert(
+                    'Error Loading PDF',
+                    'Failed to load PDF in viewer. Would you like to open it in your browser?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Open in Browser', onPress: handleOpenPdfExternal },
+                    ]
+                  );
+                }}
+                onLoadProgress={(percent) => {
+                  console.log(`PDF loading progress: ${percent}%`);
+                }}
+                enablePaging={true}
+                horizontal={false}
+                spacing={10}
+                enableAnnotationRendering={true}
+                fitPolicy={0}
+                // iOS-specific: Enable single page mode for better performance
+                {...(Platform.OS === 'ios' && {
+                  singlePage: false,
+                  page: 1,
+                })}
+              />
+            </View>
+          ) : (
+            <View style={styles.pdfLoadingContainer}>
+              <Text style={{ color: colors.onSurface }}>No PDF available</Text>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1037,6 +1195,52 @@ const styles = StyleSheet.create({
   },
   guideText: {
     fontSize: p(12),
+  },
+  pdfModalContainer: {
+    flex: 1,
+  },
+  pdfModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(16),
+    paddingVertical: p(12),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  pdfModalTitle: {
+    fontSize: p(18),
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  pdfContainer: {
+    flex: 1,
+  },
+  pdf: {
+    flex: 1,
+    width: '100%',
+  },
+  pdfLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pdfFallbackContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: p(24),
+  },
+  pdfFallbackText: {
+    fontSize: p(18),
+    fontWeight: '600',
+    marginTop: p(16),
+    textAlign: 'center',
+  },
+  pdfFallbackSubtext: {
+    fontSize: p(14),
+    marginTop: p(8),
+    textAlign: 'center',
   },
 });
 

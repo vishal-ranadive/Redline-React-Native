@@ -33,4 +33,32 @@ export const leadApi = {
       data: { technician_id: technicianId }
     });
   },
+
+  // Get PPE inspection data
+  getPpeInspection: async (leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL /ppe-inspection/${leadId}/`);
+    const response = await axiosInstance.get(`/ppe-inspection/${leadId}/`);
+    console.log(`✅ API Response /ppe-inspection/${leadId}/`, response.data);
+    return response.data;
+  },
+
+  // Get inspection analytics data
+  getInspectionAnalytics: async (leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL /inspection-analytics/${leadId}/`);
+    const response = await axiosInstance.get(`/inspection-analytics/${leadId}/`);
+    console.log(`✅ API Response /inspection-analytics/${leadId}/`, response.data);
+    return response.data;
+  },
+
+  // Simulate API call to get PDF URL (replace with actual endpoint when available)
+  getInspectionPdf: async (leadId: number): Promise<string> => {
+    console.log(`➡️ API CALL /inspection-pdf/${leadId}/ (simulated)`);
+    // Simulate API delay
+    await new Promise((resolve:any) => setTimeout(resolve, 1000));
+    // For now, return the sample PDF URL
+    // TODO: Replace with actual API call: const response = await axiosInstance.get(`/inspection-pdf/${leadId}/`);
+    const pdfUrl = 'https://www.eks-intec.com/wp-content/uploads/2025/01/Sample-pdf.pdf';
+    console.log(`✅ API Response /inspection-pdf/${leadId}/`, pdfUrl);
+    return pdfUrl;
+  },
 };

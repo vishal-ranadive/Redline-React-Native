@@ -1,5 +1,5 @@
 // src/screens/leadscreens/LeadScreen.tsx
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList } from 'react-native';
 import {
   Text,
@@ -13,7 +13,7 @@ import {
 } from 'react-native-paper';
 import { MultiSelect } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // Store and custom hooks
@@ -70,6 +70,9 @@ const LeadScreen = () => {
   const [page, setPage] = useState<number>(1); // Current page
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(20); // Items per page
   const numberOfItemsPerPageList = [10, 20, 30, 50]; // Page size options
+  
+  // Ref to track initial mount and prevent double fetch
+  const isInitialMount = useRef(true);
 
   const groupedStatusSections = useMemo(() => {
     const sections = getAllStatusesGrouped();
@@ -149,41 +152,59 @@ const LeadScreen = () => {
   }, []);
 
   /**
+   * Fetch leads function - reusable for both useEffect and useFocusEffect
+   */
+  const fetchData = useCallback(async () => {
+    try {
+      // Build query parameters for API call
+      const params: any = {
+        page,
+        page_size: numberOfItemsPerPage
+      };
+
+      // Add type filter if selected
+      if (orderTypeFilter) {
+        params.type = orderTypeFilter;
+      }
+
+      // Add status filters if any selected
+      if (statusFilters.length > 0) {
+        params.lead_status = statusFilters.join(',');
+      }
+
+      // Add search query if provided
+      if (search) {
+        params.search = search;
+      }
+      
+      console.log("Fetching leads with params:", params);
+      await fetchLeads(params);
+    } catch (err) {
+      console.error('Error fetching leads:', err);
+    }
+  }, [page, numberOfItemsPerPage, orderTypeFilter, statusFilters, search, fetchLeads]);
+
+  /**
    * Fetch leads when filters or pagination change
    */
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Build query parameters for API call
-        const params: any = {
-          page,
-          page_size: numberOfItemsPerPage
-        };
-
-        // Add type filter if selected
-        if (orderTypeFilter) {
-          params.type = orderTypeFilter;
-        }
-
-        // Add status filters if any selected
-        if (statusFilters.length > 0) {
-          params.lead_status = statusFilters.join(',');
-        }
-
-        // Add search query if provided
-        if (search) {
-          params.search = search;
-        }
-        
-        console.log("Fetching leads with params:", params);
-        await fetchLeads(params);
-      } catch (err) {
-        console.error('Error fetching leads:', err);
-      }
-    };
-
     fetchData();
-  }, [page, numberOfItemsPerPage, orderTypeFilter, statusFilters, search, fetchLeads]);
+  }, [fetchData]);
+
+  /**
+   * Refresh leads when screen comes into focus (e.g., when navigating back)
+   * Skip on initial mount to avoid double fetch (useEffect handles initial load)
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+      }
+      console.log("LeadScreen focused - refreshing leads");
+      fetchData();
+    }, [fetchData])
+  );
 
   // Show error alert if there's an error from the store
   useEffect(() => {
@@ -192,8 +213,8 @@ const LeadScreen = () => {
     }
   }, [error]);
 
-  // Calculate number of columns based on screen orientation
-  const numColumns = useMemo(() => (orientation === 'LANDSCAPE' ? 3 : 2), [orientation]);
+  // Calculate number of columns - always 2 columns for 50% width cards
+  const numColumns = 2;
 
   /**
    * Convert API lead data to frontend format
@@ -244,8 +265,7 @@ const LeadScreen = () => {
         styles.shadow,
         { 
           borderColor: colors.outline,
-          flexBasis: orientation === 'LANDSCAPE' ? '32%' : '48%',
-          flexGrow: 0,
+          width: '50%',
         }
       ]}
     > 
@@ -606,6 +626,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: p(10),
     paddingHorizontal: p(12),
+    paddingLeft: p(16),
     minHeight: p(44),
     justifyContent: 'center',
   },
@@ -646,10 +667,11 @@ const styles = StyleSheet.create({
   grid: {
     paddingBottom: p(100),
     paddingHorizontal: p(5),
-    gap: p(10),
+    gap: p(6),
   },
   columnWrapper: {
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: p(6),
   },
   shadow: {
     shadowColor: '#000',
@@ -659,7 +681,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   card: {
-    margin: p(5),
+    margin: 0,
     borderRadius: p(10),
   },
   cardHeader: {
