@@ -79,29 +79,34 @@ export default function LoadsScreen() {
       setLoading(true);
       const response = await inspectionApi.getLeadLoads(currentLead.lead_id);
 
-      const apiLoads: ApiLoad[] = response?.loads || [];
+      // Handle API response structure: { status, message, lead_id, loads }
+      if (response?.status && response?.loads) {
+        const apiLoads: ApiLoad[] = response.loads;
 
-      const mapped: Load[] = apiLoads.map((l) => ({
-        id: `L${l.load_number}`,
-        name: `Load ${l.load_number}`,
-        loadNumber: l.load_number,
-        totalGears: l.total_gears,
-        totalRosters: l.total_rosters,
-      }));
+        const mapped: Load[] = apiLoads.map((l) => ({
+          id: `L${l.load_number}`,
+          name: `Load ${l.load_number}`,
+          loadNumber: l.load_number,
+          totalGears: l.total_gears || 0,
+          totalRosters: l.total_rosters || 0,
+        }));
 
-      setLoads(mapped);
+        setLoads(mapped);
+      } else {
+        // If response structure is different, try direct access
+        const apiLoads: ApiLoad[] = response?.loads || [];
+        const mapped: Load[] = apiLoads.map((l) => ({
+          id: `L${l.load_number}`,
+          name: `Load ${l.load_number}`,
+          loadNumber: l.load_number,
+          totalGears: l.total_gears || 0,
+          totalRosters: l.total_rosters || 0,
+        }));
+        setLoads(mapped);
+      }
     } catch (error) {
       console.error('Error fetching loads:', error);
-      // Fallback single dummy load if API fails
-      setLoads([
-        {
-          id: 'L1',
-          name: 'Load 1',
-          loadNumber: 1,
-          totalGears: 0,
-          totalRosters: 0,
-        },
-      ]);
+      setLoads([]);
     } finally {
       setLoading(false);
     }
@@ -129,20 +134,58 @@ export default function LoadsScreen() {
     navigation.navigate('GearScreen', { load });
   };
 
-  const renderLoadCard = (load: Load) => (
-    <TouchableOpacity onPress={() => handleCardPress(load)}>
-      <Card key={load.id} style={[styles.loadCard, { backgroundColor: colors.surface }]}>
+  const renderLoadCard = ({ item: load }: { item: Load }) => (
+    <TouchableOpacity 
+      onPress={() => handleCardPress(load)}
+      style={styles.cardWrapper}
+      activeOpacity={0.7}
+    >
+      <Card style={[styles.loadCard, { backgroundColor: colors.surface }]}>
         <Card.Content style={styles.cardContent}>
-          <View style={styles.loadMainRow}>
-            <View style={styles.loadInfo}>
-              <View style={styles.loadIconContainer}>
-                <Icon source="truck" size={p(22)} color={colors.primary} />
-              </View>
-              <Text variant="titleMedium" style={styles.loadName}>
-                {load.name}
-              </Text>
+          {/* Load Number - Top */}
+          <View style={styles.loadNumberContainer}>
+            <View style={[styles.loadIconBadge, { backgroundColor: colors.primaryContainer }]}>
+              <Icon source="truck" size={p(20)} color={colors.primary} />
             </View>
-            <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />
+            <Text variant="headlineSmall" style={[styles.loadNumber, { color: colors.primary }]}>
+              {load.name}
+            </Text>
+          </View>
+          
+          {/* Stats Row - Bottom */}
+          <View style={styles.statsRow}>
+            {/* Gear Section */}
+            <View style={styles.statCard}>
+              <View style={[styles.statIconContainer, { backgroundColor: colors.primaryContainer + '40' }]}>
+                <Icon source="tools" size={p(18)} color={colors.primary} />
+              </View>
+              <View style={styles.statInfo}>
+                <Text variant="bodySmall" style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>
+                  Gear
+                </Text>
+                <Text variant="titleLarge" style={[styles.statValue, { color: colors.onSurface }]}>
+                  {load.totalGears}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: colors.outline }]} />
+            
+            {/* Firefighter Section */}
+            <View style={styles.statCard}>
+              <View style={[styles.statIconContainer, { backgroundColor: colors.primaryContainer + '40' }]}>
+                <Icon source="account-group" size={p(18)} color={colors.primary} />
+              </View>
+              <View style={styles.statInfo}>
+                <Text variant="bodySmall" style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>
+                  Firefighter
+                </Text>
+                <Text variant="titleLarge" style={[styles.statValue, { color: colors.onSurface }]}>
+                  {load.totalRosters}
+                </Text>
+              </View>
+            </View>
           </View>
         </Card.Content>
       </Card>
@@ -157,7 +200,7 @@ export default function LoadsScreen() {
       <View style={[styles.searchFilterContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by name or ID"
+          placeholder="Search by load number"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
@@ -175,10 +218,12 @@ export default function LoadsScreen() {
       ) : (
         <FlatList
           data={currentLoads}
-          renderItem={({ item }) => renderLoadCard(item)}
+          renderItem={renderLoadCard}
           keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
+          numColumns={2}
           contentContainerStyle={styles.listContainer}
+          columnWrapperStyle={styles.columnWrapper}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
@@ -227,7 +272,16 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: p(12),
-    paddingBottom: p(80),
+    paddingBottom: p(100),
+    gap: p(10),
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: p(10),
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: p(8),
   },
   searchFilterContainer: {
     paddingHorizontal: p(12),
@@ -247,31 +301,78 @@ const styles = StyleSheet.create({
     borderTopColor: '#e0e0e0',
   },
   loadCard: {
-    marginBottom: p(8),
-    borderRadius: p(8),
-    elevation: 1,
+    borderRadius: p(16),
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    minHeight: p(140),
+    overflow: 'hidden',
   },
   cardContent: {
-    paddingVertical: p(12),
-    paddingHorizontal: p(16),
+    padding: p(16),
   },
-  loadMainRow: {
+  loadNumberContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: p(16),
+    gap: p(10),
+  },
+  loadIconBadge: {
+    width: p(40),
+    height: p(40),
+    borderRadius: p(20),
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  loadInfo: {
+  loadNumber: {
+    fontWeight: '700',
+    fontSize: p(20),
+    letterSpacing: 0.5,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: p(12),
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  statCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: p(10),
+    paddingHorizontal: p(8),
   },
-  loadName: {
-    fontWeight: '600',
-    fontSize: p(16),
-    lineHeight: p(20),
+  statIconContainer: {
+    width: p(36),
+    height: p(36),
+    borderRadius: p(18),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  loadIconContainer: {
-    marginRight: p(12),
+  statInfo: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: p(11),
+    fontWeight: '500',
+    marginBottom: p(2),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontWeight: '700',
+    fontSize: p(20),
+    lineHeight: p(24),
+  },
+  divider: {
+    width: 1,
+    height: p(40),
+    opacity: 0.3,
   },
   input: {
     marginBottom: p(12),

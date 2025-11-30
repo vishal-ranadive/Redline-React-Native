@@ -551,9 +551,9 @@ export default function FirefighterGearsScreen() {
             {/* Right: Total Gears Count */}
             <View style={styles.rightSection}>
               <View style={styles.gearCountContainer}>
-                <Icon source="tools" size={p(20)} color={colors.primary} />
+                {/* <Icon source="tools" size={p(20)} color={colors.primary} /> */}
                 <Text style={styles.gearCountText}>{gearCards.length}</Text>
-                <Text style={styles.gearLabel}>Total Gears</Text>
+                <Text style={styles.gearLabel}>Total Scanned Gears</Text>
               </View>
             </View>
           </View>
@@ -646,6 +646,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: p(6),
   },
   leftSection: {
     flexDirection: 'row',
