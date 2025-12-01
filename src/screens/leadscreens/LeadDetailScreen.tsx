@@ -1,7 +1,7 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl } from 'react-native';
-import Pdf from 'react-native-pdf';
+import { WebView } from 'react-native-webview';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -145,6 +145,7 @@ const LeadDetailScreen = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfModalVisible, setPdfModalVisible] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   /**
    * Get available statuses based on lead type
@@ -998,64 +999,75 @@ const LeadDetailScreen = () => {
           </View>
 
           {/* PDF Content */}
-          {isLoadingPdf ? (
+          {pdfError ? (
             <View style={styles.pdfLoadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
+              <Icon source="alert-circle" size={p(48)} color={colors.error} />
+              <Text style={{ marginTop: 16, color: colors.error, fontSize: p(16) }}>
+                {pdfError}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+                <Button
+                  mode="outlined"
+                  onPress={() => {
+                    setPdfError(null);
+                    setIsLoadingPdf(true);
+                  }}
+                >
+                  Retry
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleOpenPdfExternal}
+                >
+                  Open in Browser
+                </Button>
+              </View>
             </View>
           ) : pdfUrl ? (
             <View style={styles.pdfContainer}>
-              <Pdf
+              {/* Use Google Docs viewer for PDF */}
+              <WebView
                 source={{
-                  uri: pdfUrl,
-                  cache: true,
-                  method: 'GET',
-                  // iOS-specific: Add headers if needed for authentication
-                  ...(Platform.OS === 'ios' && {
-                    headers: {},
-                  }),
+                  uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(pdfUrl)}`,
                 }}
                 style={styles.pdf}
-                onLoadComplete={(numberOfPages) => {
-                  console.log(`PDF loaded with ${numberOfPages} pages`);
+                onLoadStart={() => {
+                  setIsLoadingPdf(true);
+                  setPdfError(null);
                 }}
-                onPageChanged={(page, numberOfPages) => {
-                  console.log(`Current page: ${page} of ${numberOfPages}`);
+                onLoadEnd={() => {
+                  setIsLoadingPdf(false);
                 }}
-                onError={(error) => {
-                  console.error('PDF error: ', error);
-                  // Platform-specific error handling
-                  if (Platform.OS === 'ios') {
-                    console.log('iOS PDF error details:', JSON.stringify(error, null, 2));
-                  }
-                  // Try opening in external browser as fallback
-                  Alert.alert(
-                    'Error Loading PDF',
-                    'Failed to load PDF in viewer. Would you like to open it in your browser?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Open in Browser', onPress: handleOpenPdfExternal },
-                    ]
-                  );
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('WebView error:', nativeEvent);
+                  setIsLoadingPdf(false);
+                  setPdfError('Failed to load PDF. Please try opening in browser.');
                 }}
-                onLoadProgress={(percent) => {
-                  console.log(`PDF loading progress: ${percent}%`);
-                }}
-                enablePaging={true}
-                horizontal={false}
-                spacing={10}
-                enableAnnotationRendering={true}
-                fitPolicy={0}
-                // iOS-specific: Enable single page mode for better performance
-                {...(Platform.OS === 'ios' && {
-                  singlePage: false,
-                  page: 1,
-                })}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={styles.pdfLoadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
+                  </View>
+                )}
               />
+              {/* Loading overlay */}
+              {isLoadingPdf && (
+                <View style={styles.pdfLoadingOverlay}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.pdfLoadingContainer}>
-              <Text style={{ color: colors.onSurface }}>No PDF available</Text>
+              <Icon source="file-document-outline" size={p(48)} color={colors.onSurfaceVariant} />
+              <Text style={{ marginTop: 16, color: colors.onSurfaceVariant, fontSize: p(16) }}>
+                No PDF available
+              </Text>
             </View>
           )}
         </SafeAreaView>
@@ -1265,6 +1277,7 @@ const styles = StyleSheet.create({
   },
   pdfContainer: {
     flex: 1,
+    position: 'relative',
   },
   pdf: {
     flex: 1,
@@ -1274,6 +1287,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: p(24),
+  },
+  pdfLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
   pdfFallbackContainer: {
     flex: 1,

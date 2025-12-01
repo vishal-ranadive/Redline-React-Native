@@ -730,7 +730,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         gear_status_id: gearStatusId,
         service_type_id: mapServiceTypeToId(formData.serviceType),
         tag_color: formData.selectedColor.toLowerCase().trim(),
-        // is_harness: formData.harnessType ? "YES" : "NO",
+        is_harness: formData.harnessType ? "YES" : "NO",
         gear_size: formData.size,
       };
 
