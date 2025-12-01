@@ -49,12 +49,138 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
-// Default images for inspection
+// Default images for inspection (fallback)
 const DEFAULT_IMAGES = [
-  "https://5.imimg.com/data5/UU/UU/GLADMIN-/firefighter-jacket-250x250.jpg",
   "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg",
+  "https://5.imimg.com/data5/UU/UU/GLADMIN-/firefighter-jacket-250x250.jpg",
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s"
 ];
+
+// Gear type to default images mapping (3 images per type)
+const GEAR_TYPE_IMAGES: { [key: string]: string[] } = {
+  'helmet': [
+    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+    'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+  ],
+  'gloves': [
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+
+  ],
+  'boots': [
+    'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
+    'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
+    'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png'
+  ],
+  'jacket': [
+    "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg",
+    "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg",
+    "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg"
+  ],
+  'jacket liner': [
+    'https://img.firehouse.com/files/base/cygnus/fhc/image/2018/05/Heat_Releas_Liner_300.5aeb2301a163d.png?auto=format,compress&fit=fill&fill=blur&w=1200&h=630',
+    'https://img.firehouse.com/files/base/cygnus/fhc/image/2018/05/Heat_Releas_Liner_300.5aeb2301a163d.png?auto=format,compress&fit=fill&fill=blur&w=1200&h=630',
+    'https://img.firehouse.com/files/base/cygnus/fhc/image/2018/05/Heat_Releas_Liner_300.5aeb2301a163d.png?auto=format,compress&fit=fill&fill=blur&w=1200&h=630'
+  ],
+  'pants': [
+    'https://s7d9.scene7.com/is/image/minesafetyappliances/GlobeATHLETIXPants_athletixPants?$Home%20Market%20Card$',
+    'https://s7d9.scene7.com/is/image/minesafetyappliances/GlobeATHLETIXPants_athletixPants?$Home%20Market%20Card$',
+    'https://s7d9.scene7.com/is/image/minesafetyappliances/GlobeATHLETIXPants_athletixPants?$Home%20Market%20Card$'
+  ],
+  'pants liner': [
+    'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
+    'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
+    'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
+
+  ],
+  'mask': [
+    'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
+    'https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
+  ],
+  'harness': [
+    'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
+    'https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
+  ],
+  'axe': [
+    'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
+    'https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
+  ],
+  'hose': [
+    'https://tirupatiplasto.in/wp-content/uploads/2023/06/fh1.jpg',
+    'https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
+  ],
+  'default': [
+    'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU=',
+    'https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
+  ]
+};
+
+/**
+ * Normalize gear type name for matching
+ * Handles variations like "JACKET LINER", "jacket linder", "Fire Jacket", etc.
+ */
+const normalizeGearType = (gearType: string): string => {
+  if (!gearType) return 'default';
+  
+  // Convert to lowercase and trim
+  const normalized = gearType.toLowerCase().trim();
+  
+  // Handle common variations
+  const variations: { [key: string]: string } = {
+    'fire jacket': 'jacket',
+    'jacket liner': 'jacket liner',
+    'jacket linder': 'jacket liner', // typo fix
+    'jacketliner': 'jacket liner', // no space
+    'fire gloves': 'gloves',
+    'fire boots': 'boots',
+    'fire axe': 'axe',
+    'fire hose': 'hose',
+    'protective pants': 'pants',
+    'pants liner': 'pants liner',
+    'pantsliner': 'pants liner', // no space
+    'respirator': 'mask',
+    'thermal imaging camera': 'default',
+  };
+  
+  // Check for exact match in variations
+  if (variations[normalized]) {
+    return variations[normalized];
+  }
+  
+  // Check if gear type contains key words
+  if (normalized.includes('helmet')) return 'helmet';
+  if (normalized.includes('glove')) return 'gloves';
+  if (normalized.includes('boot')) return 'boots';
+  if (normalized.includes('jacket') && normalized.includes('liner')) return 'jacket liner';
+  if (normalized.includes('jacket')) return 'jacket';
+  if (normalized.includes('pant') && normalized.includes('liner')) return 'pants liner';
+  if (normalized.includes('pant')) return 'pants';
+  if (normalized.includes('mask') || normalized.includes('respirator')) return 'mask';
+  if (normalized.includes('harness')) return 'harness';
+  if (normalized.includes('axe')) return 'axe';
+  if (normalized.includes('hose')) return 'hose';
+  
+  return 'default';
+};
+
+/**
+ * Get default images for a gear type
+ */
+const getDefaultImagesForGearType = (gearType: string | null | undefined): string[] => {
+  if (!gearType) {
+    return GEAR_TYPE_IMAGES['default'];
+  }
+  
+  const normalized = normalizeGearType(gearType);
+  return GEAR_TYPE_IMAGES[normalized] || GEAR_TYPE_IMAGES['default'];
+};
 
 // Removed hardcoded HYDRO_TEST_GEAR_TYPES - now using API data
 
@@ -201,14 +327,24 @@ export default function UpdateInspectionScreen() {
 
       await fetchGearFindings(gear.gear_type.gear_type_id);
 
-      // Use gear image if available, otherwise use default images
-      if (gear.gear_image_url && !inspectionId) {
-        setImages([gear.gear_image_url, ...DEFAULT_IMAGES]);
+      // For new inspections (no inspectionId), set gear-type-specific default images
+      if (!inspectionId) {
+        const gearTypeName = gear.gear_type?.gear_type || gear.gear_name || '';
+        const defaultImages = getDefaultImagesForGearType(gearTypeName);
+        
+        // If gear has a custom image URL, use it as the first image, otherwise use all defaults
+        if (gear.gear_image_url) {
+          setImages([gear.gear_image_url, ...defaultImages.slice(0, 2)]);
+        } else {
+          setImages(defaultImages);
+        }
+        
+        console.log(`Initialized images for gear type: "${gearTypeName}"`, defaultImages);
       }
     };
 
     loadFindingsAndImage();
-  }, [gear]);
+  }, [gear, inspectionId]);
 
   // Fetch inspection data when inspectionId is available
   useEffect(() => {
@@ -536,6 +672,36 @@ const handleFieldChange = useCallback((field: string, value: any) => {
       const isRepairStatus = formData.status === 'REPAIR' || formData.status === 'CORRECTIVE_ACTION_REQUIRED';
       const inspectionCost = isRepairStatus ? parseFloat(formData.cost) || 0 : 0;
 
+      // Determine which images to use
+      // If images array is empty or only has default placeholders, use gear-type-specific defaults
+      let imagesToSave = images;
+      
+      // Check if we need to populate default images
+      // If images array is empty, or if all images are from DEFAULT_IMAGES (old placeholders)
+      const isEmpty = images.length === 0;
+      
+      // Check if all images are from the old DEFAULT_IMAGES array (placeholders)
+      // Valid images would be: local file:// URIs (from camera/gallery) or custom URLs
+      const onlyHasDefaults = images.length > 0 && images.every(img => {
+        if (!img || img.trim() === '') return true;
+        // If it's a local file, it's valid (user added it)
+        if (img.startsWith('file://') || img.startsWith('content://')) return false;
+        // If it's in DEFAULT_IMAGES, it's a placeholder
+        if (DEFAULT_IMAGES.includes(img)) return true;
+        // Otherwise, assume it's a valid custom image
+        return false;
+      });
+
+      // If no valid images, populate with gear-type-specific defaults
+      if (isEmpty || onlyHasDefaults) {
+        const gearTypeName = gear?.gear_type?.gear_type || gear?.gear_name || '';
+        const defaultImages = getDefaultImagesForGearType(gearTypeName);
+        imagesToSave = defaultImages;
+        console.log(`Using default images for gear type: "${gearTypeName}"`, defaultImages);
+      } else {
+        console.log('Using provided images:', images);
+      }
+
       const inspectionData = {
         lead_id: currentLead?.lead_id,
         mu_id: 1,
@@ -555,7 +721,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         
         inspection_cost: inspectionCost,
         
-        inspection_image_url: images,
+        inspection_image_url: imagesToSave,
         remarks: formData.remarks,
         
         load_number: parseInt(formData.selectedLoad),
@@ -564,7 +730,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         gear_status_id: gearStatusId,
         service_type_id: mapServiceTypeToId(formData.serviceType),
         tag_color: formData.selectedColor.toLowerCase().trim(),
-        is_harness: formData.harnessType ? "YES" : "NO",
+        // is_harness: formData.harnessType ? "YES" : "NO",
         gear_size: formData.size,
       };
 
@@ -950,7 +1116,11 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                     style={styles.imageBox}
                     onPress={() => handleImagePress(imageUri)}
                   >
-                    <Image source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTACASlnws35oyGgv7IRV66hIVZyC9_aeZL-A&s" }} style={styles.previewImage} />
+                    <Image 
+                      source={{ uri: imageUri }} 
+                      style={styles.previewImage}
+                      resizeMode="cover"
+                    />
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity 
@@ -1246,6 +1416,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   previewImage: {
     width: '100%',
