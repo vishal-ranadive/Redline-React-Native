@@ -4,6 +4,7 @@ import {
   View,
   StyleSheet,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import {
   Text,
@@ -29,6 +30,8 @@ const PPEReportPreviewScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const isPortrait = width < 600; // Consider portrait if width < 600
   
   const { leadId, leadData } = route.params as any;
   
@@ -238,159 +241,286 @@ const PPEReportPreviewScreen: React.FC = () => {
             </Text>
             <Divider style={{ marginVertical: p(10) }} />
             
-            <View style={styles.summaryGrid}>
-              {/* Primary Stats */}
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+            {/* First Row Container - Primary Stats */}
+            <View style={[styles.summaryRowContainer, { backgroundColor: '#fff5f5', borderColor: '#ed2c2a' }]}>
+              <Text style={[styles.rowTitle, { color: '#ed2c2a', fontSize: p(14), borderBottomColor: 'rgba(237, 44, 42, 0.3)' }]}>
+                Overview & Status
+              </Text>
+              <View style={[styles.summaryRow, isPortrait && styles.summaryRowPortrait]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.primaryCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#fff5f5',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👥</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
-                  Total Firefighters Serviced
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
+                  Total Firefighters
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.primaryCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#fff5f5',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧰</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total Number of Gears'] || analytics.total_gears || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
-                  Total Number of Gears
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
+                  Total Gears
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✨</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
-                  {analytics['Total Specialized Cleaned Gear'] || analytics.total_specialized_cleaned || 0}
-                </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
-                  Specialized Cleaned Gear
-                </Text>
-              </View>
-
-              {/* Status Stats */}
-              <View style={[styles.summaryCard, { backgroundColor: '#d1fae5', borderColor: '#10b981' }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.statusCard, 
+                { 
+                  borderColor: '#10b981', 
+                  backgroundColor: '#d1fae5',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✓</Text>
-                <Text style={[styles.summaryValue, { color: '#059669', fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#059669', fontSize: p(22) }]}>
                   {analytics['Total Gear Passed'] || analytics.total_passed || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#6b7280', fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#065f46', fontSize: p(11) }]}>
                   Passed
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: '#fee2e2', borderColor: '#ef4444' }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.statusCard, 
+                { 
+                  borderColor: '#ef4444', 
+                  backgroundColor: '#fee2e2',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✗</Text>
-                <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(22) }]}>
                   {analytics['Total Gear Fail'] || analytics.total_failed || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#6b7280', fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Failed
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: '#f3f4f6', borderColor: '#6b7280' }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.statusCard, 
+                { 
+                  borderColor: '#6b7280', 
+                  backgroundColor: '#f3f4f6',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⊗</Text>
-                <Text style={[styles.summaryValue, { color: '#4b5563', fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#4b5563', fontSize: p(22) }]}>
                   {analytics['Total Gear OOS'] || analytics.total_oos || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#6b7280', fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#374151', fontSize: p(11) }]}>
                   Out of Service
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: '#fed7aa', borderColor: '#f97316' }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.statusCard, 
+                { 
+                  borderColor: '#f97316', 
+                  backgroundColor: '#fed7aa',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⏰</Text>
-                <Text style={[styles.summaryValue, { color: '#ea580c', fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ea580c', fontSize: p(22) }]}>
                   {analytics['Total Gear Expired'] || analytics.total_expired || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#6b7280', fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#c2410c', fontSize: p(11) }]}>
                   Expired
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: '#fef3c7', borderColor: '#eab308' }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.statusCard, 
+                { 
+                  borderColor: '#eab308', 
+                  backgroundColor: '#fef3c7',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⚠</Text>
-                <Text style={[styles.summaryValue, { color: '#ca8a04', fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ca8a04', fontSize: p(22) }]}>
                   {analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#6b7280', fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#854d0e', fontSize: p(11) }]}>
                   Action Required
                 </Text>
               </View>
+            </View>
+            </View>
 
-              {/* Gear Type Breakdown */}
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+            {/* Second Row Container - Gear Types */}
+            <View style={[styles.summaryRowContainer, { backgroundColor: '#ffffff', borderColor: '#ed2c2a', marginTop: p(16) }]}>
+              <Text style={[styles.rowTitle, { color: '#ed2c2a', fontSize: p(14), borderBottomColor: 'rgba(237, 44, 42, 0.3)' }]}>
+                Gear Type Breakdown
+              </Text>
+              <View style={[styles.summaryRow, isPortrait && styles.summaryRowPortrait]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧥</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total jackets'] || analytics.total_jackets || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Jackets
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👖</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total pants'] || analytics.total_pants || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Pants
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⛑️</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total helmet'] || analytics.total_helmet || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Helmets
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧢</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total hoods'] || analytics.total_hoods || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Hoods
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧤</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total gloves'] || analytics.total_gloves || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Gloves
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👢</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total boots'] || analytics.total_boots || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Boots
                 </Text>
               </View>
 
-              <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+              <View style={[
+                styles.summaryCard, 
+                styles.gearCard, 
+                { 
+                  borderColor: '#ed2c2a', 
+                  backgroundColor: '#ffffff',
+                  width: isPortrait ? '30%' : '13.5%',
+                  maxWidth: isPortrait ? '48%' : p(120),
+                }
+              ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>📦</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary, fontSize: p(20) }]}>
+                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total other'] || analytics.total_other || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Other Gear
                 </Text>
               </View>
+            </View>
             </View>
           </Card.Content>
         </Card>
@@ -477,34 +607,74 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
-  summaryGrid: {
+  summaryRowContainer: {
+    padding: p(16),
+    borderRadius: p(12),
+    borderWidth: 2.5,
+    marginBottom: p(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  rowTitle: {
+    fontSize: p(15),
+    fontWeight: '700',
+    marginBottom: p(14),
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    paddingBottom: p(8),
+    borderBottomWidth: 1.5,
+    borderBottomColor: 'rgba(237, 44, 42, 0.3)',
+  },
+  summaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: p(10),
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+  },
+  summaryRowPortrait: {
+    justifyContent: 'center',
   },
   summaryCard: {
-    width: '30%',
-    minWidth: p(100),
-    padding: p(12),
-    borderRadius: p(8),
+    minWidth: p(95),
+    padding: p(14),
+    borderRadius: p(10),
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: p(8),
+  },
+  primaryCard: {
+    minHeight: p(110),
+  },
+  statusCard: {
+    minHeight: p(110),
+  },
+  gearCard: {
+    minHeight: p(110),
   },
   summaryIcon: {
     marginBottom: p(4),
   },
   summaryValue: {
-    fontSize: p(20),
+    fontSize: p(22),
     fontWeight: '700',
+    marginTop: p(6),
     marginBottom: p(4),
   },
   summaryLabel: {
-    fontSize: p(10),
+    fontSize: p(11),
     textAlign: 'center',
     fontWeight: '600',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 

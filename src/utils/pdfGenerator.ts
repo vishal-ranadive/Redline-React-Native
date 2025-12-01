@@ -1,6 +1,5 @@
 // src/utils/pdfGenerator.ts
-import { Platform } from 'react-native';
-import { fs } from 'react-native-blob-util';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 /**
  * Generate HTML content from template and data
@@ -332,104 +331,157 @@ export const generateReportHTML = (
             text-transform: uppercase;
         }
 
-        /* Summary Cards Grid */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 25px;
+        /* Summary Row Containers */
+        .summary-row-container {
+            padding: 16px;
+            border-radius: 12px;
+            border: 2.5px solid;
+            margin-bottom: 16px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+
+        .row-title {
+            font-size: 14pt;
+            font-weight: 700;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid;
+        }
+
+        /* Summary Cards Rows */
+        .summary-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-start;
         }
 
         .summary-card {
+            width: 13.5%;
+            min-width: 95px;
+            max-width: 120px;
             background: white;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
-            padding: 15px;
+            padding: 14px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+            min-height: 110px;
+            margin-bottom: 8px;
         }
 
         .summary-card .card-icon {
-            font-size: 28pt;
+            font-size: 32pt;
             line-height: 1;
-            flex-shrink: 0;
+            margin-bottom: 8px;
         }
 
         .summary-card .card-content {
-            flex: 1;
+            width: 100%;
         }
 
         .summary-card .card-value {
-            font-size: 20pt;
+            font-size: 22pt;
             font-weight: 700;
-            color: #1a202c;
             line-height: 1.2;
+            margin: 6px 0 4px 0;
         }
 
         .summary-card .card-label {
-            font-size: 8pt;
-            color: #718096;
+            font-size: 9pt;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
             font-weight: 600;
-            margin-top: 2px;
+            margin-top: 4px;
         }
 
-        .summary-card.primary {
+        /* Primary Cards (Red Theme) */
+        .summary-card.primary-card {
             border-color: #ed2c2a;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+            background: #fff5f5;
         }
 
-        .summary-card.primary .card-value {
+        .summary-card.primary-card .card-value {
             color: #ed2c2a;
         }
 
+        .summary-card.primary-card .card-label {
+            color: #991b1b;
+        }
+
+        /* Status Cards */
         .summary-card.status-pass {
             border-color: #10b981;
-            background: linear-gradient(135deg, #d1fae5 0%, #ffffff 100%);
+            background: #d1fae5;
         }
 
         .summary-card.status-pass .card-value {
             color: #059669;
         }
 
+        .summary-card.status-pass .card-label {
+            color: #065f46;
+        }
+
         .summary-card.status-fail {
             border-color: #ef4444;
-            background: linear-gradient(135deg, #fee2e2 0%, #ffffff 100%);
+            background: #fee2e2;
         }
 
         .summary-card.status-fail .card-value {
             color: #dc2626;
         }
 
+        .summary-card.status-fail .card-label {
+            color: #991b1b;
+        }
+
         .summary-card.status-oos {
             border-color: #6b7280;
-            background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
+            background: #f3f4f6;
         }
 
         .summary-card.status-oos .card-value {
             color: #4b5563;
         }
 
+        .summary-card.status-oos .card-label {
+            color: #374151;
+        }
+
         .summary-card.status-expired {
             border-color: #f97316;
-            background: linear-gradient(135deg, #fed7aa 0%, #ffffff 100%);
+            background: #fed7aa;
         }
 
         .summary-card.status-expired .card-value {
             color: #ea580c;
         }
 
+        .summary-card.status-expired .card-label {
+            color: #c2410c;
+        }
+
         .summary-card.status-action {
             border-color: #eab308;
-            background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+            background: #fef3c7;
         }
 
         .summary-card.status-action .card-value {
             color: #ca8a04;
         }
 
+        .summary-card.status-action .card-label {
+            color: #854d0e;
+        }
+
+        /* Gear Type Cards (Red Theme) */
         .summary-card.gear-type {
             border-color: #ed2c2a;
             background: #ffffff;
@@ -437,6 +489,10 @@ export const generateReportHTML = (
 
         .summary-card.gear-type .card-value {
             color: #ed2c2a;
+        }
+
+        .summary-card.gear-type .card-label {
+            color: #991b1b;
         }
 
         @media print {
@@ -458,10 +514,13 @@ export const generateReportHTML = (
                 page-break-inside: avoid;
             }
 
-            .summary-grid {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
+            .summary-row {
                 page-break-inside: avoid;
+            }
+            
+            .summary-card {
+                min-width: 13%;
+                max-width: 14%;
             }
         }
     </style>
@@ -525,28 +584,26 @@ export const generateReportHTML = (
 
         <!-- Summary Statistics Cards -->
         <h2 class="section-title">Inspection Summary</h2>
-        <div class="summary-grid">
-            <div class="summary-card primary">
+        
+        <!-- First Row Container - Primary Stats -->
+        <div class="summary-row-container" style="background-color: #fff5f5; border-color: #ed2c2a;">
+            <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
+                Overview & Status
+            </div>
+            <div class="summary-row">
+            <div class="summary-card primary-card">
                 <div class="card-icon">👥</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0)}</div>
-                    <div class="card-label">Total Firefighters Serviced</div>
+                    <div class="card-label">Total Firefighters</div>
                 </div>
             </div>
 
-            <div class="summary-card primary">
+            <div class="summary-card primary-card">
                 <div class="card-icon">🧰</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics['Total Number of Gears'] || analytics.total_gears || 0)}</div>
-                    <div class="card-label">Total Number of Gears</div>
-                </div>
-            </div>
-
-            <div class="summary-card primary">
-                <div class="card-icon">✨</div>
-                <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Specialized Cleaned Gear'] || analytics.total_specialized_cleaned || 0)}</div>
-                    <div class="card-label">Specialized Cleaned Gear</div>
+                    <div class="card-label">Total Gears</div>
                 </div>
             </div>
 
@@ -589,7 +646,15 @@ export const generateReportHTML = (
                     <div class="card-label">Action Required</div>
                 </div>
             </div>
+        </div>
+        </div>
 
+        <!-- Second Row Container - Gear Types -->
+        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 16px;">
+            <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
+                Gear Type Breakdown
+            </div>
+            <div class="summary-row">
             <div class="summary-card gear-type">
                 <div class="card-icon">🧥</div>
                 <div class="card-content">
@@ -645,6 +710,7 @@ export const generateReportHTML = (
                     <div class="card-label">Other Gear</div>
                 </div>
             </div>
+        </div>
         </div>
 
         <!-- Roster and Gears Section -->
@@ -780,22 +846,85 @@ export const downloadPDF = async (
   fileName: string = 'PPE_Inspection_Report.pdf'
 ): Promise<string> => {
   try {
-    const { dirs } = fs;
+    console.log('Starting PDF download...');
+    console.log('Source file path:', filePath);
+    console.log('Target file name:', fileName);
+    
+    // Request storage permission on Android
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          {
+            title: 'Storage Permission',
+            message: 'App needs access to storage to download PDF files',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          throw new Error('Storage permission denied');
+        }
+        console.log('Storage permission granted');
+      } catch (permissionError: any) {
+        console.error('Permission error:', permissionError);
+        // Continue anyway for Android 10+ which uses scoped storage
+      }
+    }
+    
+    // Dynamically require react-native-blob-util
+    const ReactNativeBlobUtil = require('react-native-blob-util');
+    
+    // Try different ways to access the module
+    let RNFetchBlob: any = ReactNativeBlobUtil.default || ReactNativeBlobUtil;
+    
+    console.log('RNFetchBlob type:', typeof RNFetchBlob);
+    console.log('RNFetchBlob keys:', RNFetchBlob ? Object.keys(RNFetchBlob).slice(0, 10) : 'null');
+    
+    if (!RNFetchBlob) {
+      throw new Error('react-native-blob-util module not found');
+    }
+    
+    // Access fs property
+    if (!RNFetchBlob.fs) {
+      console.error('RNFetchBlob structure:', JSON.stringify(Object.keys(RNFetchBlob), null, 2));
+      throw new Error('react-native-blob-util.fs is not available. The library may not be properly linked.');
+    }
+    
+    const { dirs } = RNFetchBlob.fs;
+    
+    if (!dirs) {
+      throw new Error('react-native-blob-util.fs.dirs is not available.');
+    }
 
     // Get download directory based on platform
     const downloadDir = Platform.OS === 'android' 
       ? dirs.DownloadDir 
       : dirs.DocumentDir;
 
+    console.log('Download directory:', downloadDir);
+
+    if (!downloadDir) {
+      throw new Error(`Download directory not available for platform: ${Platform.OS}`);
+    }
+
     const destPath = `${downloadDir}/${fileName}`;
+    console.log('Destination path:', destPath);
 
     // Copy file to downloads
-    await fs.cp(filePath, destPath);
+    console.log('Copying file...');
+    await RNFetchBlob.fs.cp(filePath, destPath);
+    
+    console.log('PDF copied successfully to:', destPath);
 
     return destPath;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error downloading PDF:', error);
-    throw error;
+    console.error('Error stack:', error?.stack);
+    const errorMessage = error?.message || 'Unknown error occurred';
+    throw new Error(`Failed to download PDF: ${errorMessage}`);
   }
 };
 
