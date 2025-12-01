@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
+import { initializeStoragePermission } from '../../utils/permissions';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 const SPLASH_DURATION = 3000;
@@ -93,6 +94,30 @@ const SplashScreen: React.FC<Props> = ({ navigation }) => {
     };
   }, [logoOpacity, logoScale, progressWidth]);
 
+  // Initialize storage permission on app start (non-blocking)
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    // Request storage permission when app starts (only once)
+    // This runs in the background and doesn't block navigation
+    const initPermissions = async () => {
+      try {
+        console.log('Initializing storage permissions...');
+        await initializeStoragePermission();
+        console.log('Storage permissions initialized');
+      } catch (error) {
+        console.error('Error initializing permissions:', error);
+        // Continue even if permission request fails
+      }
+    };
+
+    // Start permission initialization (don't await - let it run in background)
+    initPermissions();
+  }, [isHydrated]);
+
+  // Navigate after splash duration
   useEffect(() => {
     if (!isHydrated) {
       return;

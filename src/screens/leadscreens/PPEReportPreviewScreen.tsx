@@ -21,9 +21,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import { leadApi } from '../../services/leadApi';
-import { generateReportHTML, generatePDF, downloadPDF } from '../../utils/pdfGenerator';
-import { requestStoragePermission } from '../../utils/permissions';
-import { Alert } from 'react-native';
+import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
+import { checkStoragePermission, requestStoragePermission } from '../../utils/permissions';
+import { Alert, Platform } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PPEReportPreview'>;
 
@@ -76,11 +76,31 @@ const PPEReportPreviewScreen: React.FC = () => {
     }
 
     try {
-      // Request storage permission before downloading
-      const granted = await requestStoragePermission();
-      if (!granted) {
-        Alert.alert('Permission required', 'Storage permission is needed to save the PDF.');
-        return;
+      // iOS doesn't require storage permission - skip all checks
+      if (Platform.OS === 'ios') {
+        // iOS: No permission check needed, proceed directly
+      } else {
+        // Android: Check and request permission if needed
+        try {
+          const isGranted = await checkStoragePermission();
+          
+          // If permission is not granted, request it silently
+          if (!isGranted) {
+            const granted = await requestStoragePermission(false);
+            if (!granted) {
+              // Permission was denied - only show alert on Android
+              Alert.alert(
+                'Permission Required',
+                'Storage permission is needed to save PDF reports. Please grant storage permission in app settings.',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
+          }
+        } catch (permissionError) {
+          console.error('Error checking storage permission:', permissionError);
+          // Don't block download if permission check fails - let it try anyway
+        }
       }
 
       setIsGeneratingPDF(true);
@@ -94,19 +114,39 @@ const PPEReportPreviewScreen: React.FC = () => {
       const fileName = `PPE_Inspection_Report_${leadId}_${Date.now()}`;
       const pdfPath = await generatePDF(htmlContent, fileName);
       
-      // Download PDF
+      // Download PDF (saves to appropriate location based on platform)
       console.log('Downloading PDF...');
       const downloadFileName = `PPE_Inspection_Report_${leadId}_${Date.now()}.pdf`;
       const downloadedPath = await downloadPDF(pdfPath, downloadFileName);
       
-      Alert.alert(
-        'Success',
-        'PDF downloaded successfully!',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
+      // On iOS, open share sheet so user can save to Files app or iCloud Drive
+      if (Platform.OS === 'ios') {
+        try {
+          console.log('Opening iOS share sheet...');
+          await sharePDFOnIOS(downloadedPath, downloadFileName);
+          // Don't show alert immediately on iOS, let the share sheet handle it
+        } catch (shareError) {
+          console.error('Error opening share sheet:', shareError);
+          Alert.alert(
+            'PDF Saved',
+            `PDF has been saved to your Documents folder. You can access it via the Files app.\n\nPath: ${downloadedPath}`,
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        // Android: Show success message
+        Alert.alert(
+          'Success',
+          `PDF downloaded successfully!\n\nSaved to: Downloads/${downloadFileName}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
       console.error('Error generating/downloading PDF:', error);
-      Alert.alert('Error', 'Failed to generate PDF. Please try again.');
+      Alert.alert(
+        'Error',
+        `Failed to generate PDF. ${error?.message || 'Please try again.'}`
+      );
     } finally {
       setIsGeneratingPDF(false);
     }

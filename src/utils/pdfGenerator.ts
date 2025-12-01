@@ -1,5 +1,5 @@
 // src/utils/pdfGenerator.ts
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, Share } from 'react-native';
 import { requestStoragePermission } from './permissions';
 
 /**
@@ -840,23 +840,68 @@ export const generatePDF = async (
 };
 
 /**
+ * Share PDF file on iOS using Share Sheet
+ * This allows users to save to Files app, iCloud Drive, etc.
+ */
+export const sharePDFOnIOS = async (filePath: string, fileName: string): Promise<void> => {
+  try {
+    console.log('Sharing PDF on iOS...');
+    console.log('File path:', filePath);
+    console.log('File name:', fileName);
+    
+    const ReactNativeBlobUtil = require('react-native-blob-util');
+    let RNFetchBlob: any = ReactNativeBlobUtil.default || ReactNativeBlobUtil;
+    
+    // Remove any file:// scheme prefix if present (openDocument requires path without scheme)
+    let cleanPath = filePath.replace(/^file:\/\//, '');
+    
+    // Check if the file exists
+    const exists = await RNFetchBlob.fs.exists(cleanPath);
+    if (!exists) {
+      throw new Error(`PDF file not found at path: ${cleanPath}`);
+    }
+    
+    // For iOS, use the openDocument method from react-native-blob-util
+    // This opens the iOS share sheet with the file
+    // The path should NOT contain any scheme prefix (like "file://")
+    if (RNFetchBlob.ios && typeof RNFetchBlob.ios.openDocument === 'function') {
+      console.log('Opening iOS share sheet with path:', cleanPath);
+      await RNFetchBlob.ios.openDocument(cleanPath);
+      console.log('iOS share sheet opened successfully');
+    } else {
+      throw new Error('iOS openDocument method is not available in react-native-blob-util');
+    }
+  } catch (error: any) {
+    console.error('Error sharing PDF on iOS:', error);
+    throw new Error(`Failed to share PDF: ${error?.message || 'Unknown error'}`);
+  }
+};
+
+/**
  * Download PDF file
+ * On Android: Saves to Downloads folder
+ * On iOS: Saves to Documents folder and returns path for sharing
  */
 export const downloadPDF = async (
   filePath: string,
-  fileName: string = 'PPE_Inspection_Report.pdf'
+  fileName: string = 'PPE_Inspection_Report.pdf',
+  openShareSheet: boolean = false
 ): Promise<string> => {
   try {
     console.log('Starting PDF download...');
     console.log('Source file path:', filePath);
     console.log('Target file name:', fileName);
     
-    // Request storage permission
-    const granted = await requestStoragePermission();
-    if (!granted) {
-      throw new Error('Storage permission denied');
+    // Note: Permission should be checked before calling this function
+    // For Android, verify permission is granted before proceeding
+    if (Platform.OS === 'android') {
+      const { checkStoragePermission } = require('./permissions');
+      const isGranted = await checkStoragePermission();
+      if (!isGranted) {
+        throw new Error('Storage permission is required to download PDF. Please grant storage permission first.');
+      }
     }
-    console.log('Storage permission granted');
+    console.log('Storage permission verified');
     
     // Dynamically require react-native-blob-util
     const ReactNativeBlobUtil = require('react-native-blob-util');
@@ -883,25 +928,37 @@ export const downloadPDF = async (
       throw new Error('react-native-blob-util.fs.dirs is not available.');
     }
 
-    // Get download directory based on platform
-    const downloadDir = Platform.OS === 'android' 
-      ? dirs.DownloadDir 
-      : dirs.DocumentDir;
-
-    console.log('Download directory:', downloadDir);
-
-    if (!downloadDir) {
-      throw new Error(`Download directory not available for platform: ${Platform.OS}`);
+    let destPath: string;
+    
+    if (Platform.OS === 'android') {
+      // Android: Save to Downloads folder
+      const downloadDir = dirs.DownloadDir;
+      console.log('Download directory:', downloadDir);
+      
+      if (!downloadDir) {
+        throw new Error('Download directory not available for Android');
+      }
+      
+      destPath = `${downloadDir}/${fileName}`;
+    } else {
+      // iOS: Save to Documents folder
+      const documentDir = dirs.DocumentDir;
+      console.log('Document directory:', documentDir);
+      
+      if (!documentDir) {
+        throw new Error('Document directory not available for iOS');
+      }
+      
+      destPath = `${documentDir}/${fileName}`;
     }
 
-    const destPath = `${downloadDir}/${fileName}`;
     console.log('Destination path:', destPath);
 
-    // Copy file to downloads
+    // Copy file to destination
     console.log('Copying file...');
     await RNFetchBlob.fs.cp(filePath, destPath);
     
-    console.log('PDF copied successfully to:', destPath);
+    console.log('PDF saved successfully to:', destPath);
 
     return destPath;
   } catch (error: any) {

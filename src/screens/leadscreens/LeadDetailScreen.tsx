@@ -24,7 +24,7 @@ import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
-import { generateReportHTML, generatePDF, downloadPDF } from '../../utils/pdfGenerator';
+import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
 
 // Status management
 import { 
@@ -307,14 +307,34 @@ const LeadDetailScreen = () => {
       const fileName = `PPE_Inspection_Report_${lead.lead_id}_${Date.now()}.pdf`;
       const downloadedPath = await downloadPDF(pdfFilePath, fileName);
       
-      Alert.alert(
-        'Success',
-        `PDF downloaded successfully!\n\nLocation: ${downloadedPath}`,
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
+      // On iOS, open share sheet so user can save to Files app or iCloud Drive
+      if (Platform.OS === 'ios') {
+        try {
+          console.log('Opening iOS share sheet...');
+          await sharePDFOnIOS(downloadedPath, fileName);
+          // Don't show alert immediately on iOS, let the share sheet handle it
+        } catch (shareError) {
+          console.error('Error opening share sheet:', shareError);
+          Alert.alert(
+            'PDF Saved',
+            `PDF has been saved to your Documents folder. You can access it via the Files app.\n\nPath: ${downloadedPath}`,
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        // Android: Show success message
+        Alert.alert(
+          'Success',
+          `PDF downloaded successfully!\n\nSaved to: Downloads/${fileName}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
       console.error('Error downloading PDF:', error);
-      Alert.alert('Error', 'Failed to download PDF. Please try again.');
+      Alert.alert(
+        'Error',
+        `Failed to download PDF. ${error?.message || 'Please try again.'}`
+      );
     } finally {
       setIsLoadingPdf(false);
     }
