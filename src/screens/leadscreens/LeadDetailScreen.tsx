@@ -1,7 +1,7 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl } from 'react-native';
-import { WebView } from 'react-native-webview';
+import Pdf from 'react-native-pdf';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -24,6 +24,8 @@ import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
+import { generateReportHTML, generatePDF, downloadPDF } from '../../utils/pdfGenerator';
+import PPEReportPreviewModal from '../../components/common/Modal/PPEReportPreviewModal';
 
 // Status management
 import { 
@@ -142,10 +144,15 @@ const LeadDetailScreen = () => {
   const [remarksValue, setRemarksValue] = useState(initialLead?.remarks || '');
 
   // PDF preview state
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFilePath, setPdfFilePath] = useState<string | null>(null);
   const [pdfModalVisible, setPdfModalVisible] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [ppeData, setPpeData] = useState<any>(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  
+  // Preview modal state
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
   /**
    * Get available statuses based on lead type
@@ -267,52 +274,96 @@ const LeadDetailScreen = () => {
 
   /**
    * Handle API calls when status is changed to completed
+   * Shows preview screen first, then user can generate PDF
    */
   const handleCompletedStatusApis = async () => {
     try {
-      setIsLoadingPdf(true);
+      setLoading(true);
+      setPdfError(null);
       
       // Call first API: PPE Inspection
       console.log('Calling PPE Inspection API...');
-      await leadApi.getPpeInspection(lead.lead_id);
+      const ppeInspectionData = await leadApi.getPpeInspection(lead.lead_id);
+      setPpeData(ppeInspectionData);
       
       // Call second API: Inspection Analytics
       console.log('Calling Inspection Analytics API...');
-      await leadApi.getInspectionAnalytics(lead.lead_id);
+      const analyticsResult = await leadApi.getInspectionAnalytics(lead.lead_id);
+      setAnalyticsData(analyticsResult);
       
-      // Simulate third API call to get PDF URL
-      console.log('Fetching PDF URL...');
-      const pdfUrlResult = await leadApi.getInspectionPdf(lead.lead_id);
+      // Show preview modal instead of generating PDF directly
+      setPreviewModalVisible(true);
       
-      // Set PDF URL and show preview
-      setPdfUrl(pdfUrlResult);
-      setPdfModalVisible(true);
-      
-      Alert.alert('Success', 'Job status updated successfully. PDF report is ready.');
+      Alert.alert('Success', 'Job status updated successfully. Please review the report and generate PDF.');
     } catch (error) {
       console.error('Error calling completion APIs:', error);
-      Alert.alert('Warning', 'Status updated but failed to generate PDF report. Please try again later.');
+      Alert.alert('Warning', 'Status updated but failed to fetch report data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Generate PDF from preview screen
+   */
+  const handleGeneratePDFFromPreview = async () => {
+    if (!ppeData || !analyticsData) {
+      Alert.alert('Error', 'Report data is not available. Please try again.');
+      return;
+    }
+
+    try {
+      setIsLoadingPdf(true);
+      setPdfError(null);
+      
+      // Generate HTML from template and data
+      console.log('Generating HTML report...');
+      const htmlContent = generateReportHTML(ppeData, analyticsData, lead);
+      
+      // Generate PDF from HTML
+      console.log('Generating PDF...');
+      const fileName = `PPE_Inspection_Report_${lead.lead_id}_${Date.now()}`;
+      const pdfPath = await generatePDF(htmlContent, fileName);
+      
+      // Set PDF file path and show PDF viewer
+      setPdfFilePath(pdfPath);
+      setPreviewModalVisible(false);
+      setPdfModalVisible(true);
+      
+      Alert.alert('Success', 'PDF report generated successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setPdfError('Failed to generate PDF report. Please try again later.');
+      Alert.alert('Error', 'Failed to generate PDF report. Please try again.');
     } finally {
       setIsLoadingPdf(false);
     }
   };
 
   /**
-   * Open PDF in external browser
+   * Download PDF file
    */
-  const handleOpenPdfExternal = async () => {
-    if (pdfUrl) {
-      try {
-        const supported = await Linking.canOpenURL(pdfUrl);
-        if (supported) {
-          await Linking.openURL(pdfUrl);
-        } else {
-          Alert.alert('Error', 'Cannot open PDF URL');
-        }
-      } catch (error) {
-        console.error('Error opening PDF:', error);
-        Alert.alert('Error', 'Failed to open PDF');
-      }
+  const handleDownloadPdf = async () => {
+    if (!pdfFilePath) {
+      Alert.alert('Error', 'No PDF file available to download');
+      return;
+    }
+
+    try {
+      setIsLoadingPdf(true);
+      const fileName = `PPE_Inspection_Report_${lead.lead_id}_${Date.now()}.pdf`;
+      const downloadedPath = await downloadPDF(pdfFilePath, fileName);
+      
+      Alert.alert(
+        'Success',
+        `PDF downloaded successfully!\n\nLocation: ${downloadedPath}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      Alert.alert('Error', 'Failed to download PDF. Please try again.');
+    } finally {
+      setIsLoadingPdf(false);
     }
   };
 
@@ -967,6 +1018,17 @@ const LeadDetailScreen = () => {
         </Dialog>
       </Portal>
 
+      {/* Report Preview Modal */}
+      <PPEReportPreviewModal
+        visible={previewModalVisible}
+        onClose={() => setPreviewModalVisible(false)}
+        onGeneratePDF={handleGeneratePDFFromPreview}
+        ppeData={ppeData}
+        analyticsData={analyticsData}
+        leadData={lead}
+        isLoadingPDF={isLoadingPdf}
+      />
+
       {/* PDF Preview Modal */}
       <Modal
         visible={pdfModalVisible}
@@ -991,10 +1053,11 @@ const LeadDetailScreen = () => {
             <Button
               mode="text"
               compact
-              onPress={handleOpenPdfExternal}
+              onPress={handleDownloadPdf}
               contentStyle={{ flexDirection: 'row' }}
+              disabled={isLoadingPdf || !pdfFilePath}
             >
-              <Icon source="open-in-new" size={p(22)} color={colors.primary} />
+              <Icon source="download" size={p(22)} color={colors.primary} />
             </Button>
           </View>
 
@@ -1010,56 +1073,40 @@ const LeadDetailScreen = () => {
                   mode="outlined"
                   onPress={() => {
                     setPdfError(null);
-                    setIsLoadingPdf(true);
+                    handleCompletedStatusApis();
                   }}
                 >
                   Retry
                 </Button>
-                <Button
-                  mode="contained"
-                  onPress={handleOpenPdfExternal}
-                >
-                  Open in Browser
-                </Button>
               </View>
             </View>
-          ) : pdfUrl ? (
+          ) : pdfFilePath ? (
             <View style={styles.pdfContainer}>
-              {/* Use Google Docs viewer for PDF */}
-              <WebView
-                source={{
-                  uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(pdfUrl)}`,
-                }}
-                style={styles.pdf}
-                onLoadStart={() => {
-                  setIsLoadingPdf(true);
-                  setPdfError(null);
-                }}
-                onLoadEnd={() => {
-                  setIsLoadingPdf(false);
-                }}
-                onError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                  console.error('WebView error:', nativeEvent);
-                  setIsLoadingPdf(false);
-                  setPdfError('Failed to load PDF. Please try opening in browser.');
-                }}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                renderLoading={() => (
-                  <View style={styles.pdfLoadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
-                  </View>
-                )}
-              />
-              {/* Loading overlay */}
-              {isLoadingPdf && (
-                <View style={styles.pdfLoadingOverlay}>
+              {isLoadingPdf ? (
+                <View style={styles.pdfLoadingContainer}>
                   <ActivityIndicator size="large" color={colors.primary} />
                   <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading PDF...</Text>
                 </View>
+              ) : (
+                <Pdf
+                  source={{ uri: pdfFilePath, cache: true }}
+                  onLoadComplete={(numberOfPages) => {
+                    console.log(`PDF loaded with ${numberOfPages} pages`);
+                    setIsLoadingPdf(false);
+                  }}
+                  onPageChanged={(page, numberOfPages) => {
+                    console.log(`Current page: ${page}/${numberOfPages}`);
+                  }}
+                  onError={(error) => {
+                    console.error('PDF error:', error);
+                    setPdfError('Failed to load PDF. Please try again.');
+                    setIsLoadingPdf(false);
+                  }}
+                  style={styles.pdf}
+                  enablePaging={true}
+                  horizontal={false}
+                  spacing={10}
+                />
               )}
             </View>
           ) : (
