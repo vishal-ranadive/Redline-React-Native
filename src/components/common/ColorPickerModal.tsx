@@ -61,13 +61,19 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      supportedOrientations={['portrait', 'landscape', 'portrait-upside-down', 'landscape-left', 'landscape-right']}
+      statusBarTranslucent={true}
     >
       <TouchableOpacity
         style={styles.colorPickerOverlay}
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}>
+        <View 
+          style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+        >
           <View style={styles.colorPickerHeader}>
             <Text style={[styles.colorPickerTitle, { color: colors.onSurface }]}>
               Select Color

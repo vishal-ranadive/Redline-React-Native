@@ -98,6 +98,7 @@ export default function FirefighterGearsScreen() {
 
   const [gearCards, setGearCards] = useState<GearCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [buildingCards, setBuildingCards] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -151,8 +152,13 @@ export default function FirefighterGearsScreen() {
       if (!firefighterGears.length) {
         if (isMounted) {
           setGearCards([]);
+          setBuildingCards(false);
         }
         return;
+      }
+
+      if (isMounted) {
+        setBuildingCards(true);
       }
 
       try {
@@ -181,9 +187,13 @@ export default function FirefighterGearsScreen() {
 
         if (isMounted) {
           setGearCards(cards);
+          setBuildingCards(false);
         }
       } catch (err) {
         console.error('Error building gear cards:', err);
+        if (isMounted) {
+          setBuildingCards(false);
+        }
       }
     };
 
@@ -198,12 +208,18 @@ export default function FirefighterGearsScreen() {
     setPage(0);
   }, [numberOfItemsPerPage, searchQuery, roster?.id]);
 
+  // Filter gears with current inspection
+  const gearsWithInspection = useMemo(() => {
+    return gearCards.filter(({ gear }) => gear.current_inspection !== null);
+  }, [gearCards]);
+
   const filteredGears = useMemo(() => {
+    // Apply search query if provided
     if (!searchQuery.trim()) {
-      return gearCards;
+      return gearsWithInspection;
     }
     const query = searchQuery.toLowerCase();
-    return gearCards.filter(({ detail, gear }) => {
+    return gearsWithInspection.filter(({ detail, gear }) => {
       const name = (detail?.gear_name ?? gear.gear_name ?? '').toLowerCase();
       const serial = (detail?.serial_number ?? '').toLowerCase();
       const type = (
@@ -213,7 +229,7 @@ export default function FirefighterGearsScreen() {
       ).toLowerCase();
       return name.includes(query) || serial.includes(query) || type.includes(query);
     });
-  }, [gearCards, searchQuery]);
+  }, [gearsWithInspection, searchQuery]);
 
   const totalItems = filteredGears.length;
   const from = page * numberOfItemsPerPage;
@@ -504,7 +520,9 @@ export default function FirefighterGearsScreen() {
     [colors, navigation, renderInspectionDetails],
   );
 
-  if ((loading || inspectionLoading) && !refreshing) {
+  const isLoading = (loading || inspectionLoading || buildingCards) && !refreshing;
+
+  if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Header 
@@ -512,8 +530,23 @@ export default function FirefighterGearsScreen() {
           showBackButton={true}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text variant="bodyMedium" style={{ marginTop: p(16) }}>Loading gears...</Text>
+          <ActivityIndicator 
+            size="large" 
+            color={colors.primary} 
+            animating={true}
+          />
+          <Text 
+            variant="bodyLarge" 
+            style={[styles.loadingText, { color: colors.onSurface, marginTop: p(16) }]}
+          >
+            {buildingCards ? 'Loading gear details...' : 'Loading gears...'}
+          </Text>
+          <Text 
+            variant="bodySmall" 
+            style={[styles.loadingSubtext, { color: colors.onSurfaceVariant, marginTop: p(8) }]}
+          >
+            Please wait
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -552,7 +585,7 @@ export default function FirefighterGearsScreen() {
             <View style={styles.rightSection}>
               <View style={styles.gearCountContainer}>
                 {/* <Icon source="tools" size={p(20)} color={colors.primary} /> */}
-                <Text style={styles.gearCountText}>{gearCards.length}</Text>
+                <Text style={styles.gearCountText}>{gearsWithInspection.length}</Text>
                 <Text style={styles.gearLabel}>Total Scanned Gears</Text>
               </View>
             </View>
@@ -634,6 +667,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: p(20),
+  },
+  loadingText: {
+    fontSize: p(16),
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: p(12),
+    textAlign: 'center',
+    opacity: 0.7,
   },
   firefighterInfoCard: {
     margin: p(14),
