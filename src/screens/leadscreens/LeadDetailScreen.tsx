@@ -25,7 +25,6 @@ import { leadApi } from '../../services/leadApi';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
 import { generateReportHTML, generatePDF, downloadPDF } from '../../utils/pdfGenerator';
-import PPEReportPreviewModal from '../../components/common/Modal/PPEReportPreviewModal';
 
 // Status management
 import { 
@@ -37,7 +36,7 @@ import {
 } from '../../constants/leadStatuses';
 import { useLeadStore } from '../../store/leadStore';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan', 'NestedInspectionFlow' >;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview'>;
 
 interface Technician {
   id: number;
@@ -143,16 +142,11 @@ const LeadDetailScreen = () => {
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [remarksValue, setRemarksValue] = useState(initialLead?.remarks || '');
 
-  // PDF preview state
+  // PDF preview state (kept for backward compatibility if needed)
   const [pdfFilePath, setPdfFilePath] = useState<string | null>(null);
   const [pdfModalVisible, setPdfModalVisible] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [ppeData, setPpeData] = useState<any>(null);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  
-  // Preview modal state
-  const [previewModalVisible, setPreviewModalVisible] = useState(false);
 
   /**
    * Get available statuses based on lead type
@@ -257,13 +251,7 @@ const LeadDetailScreen = () => {
         lead_status: newStatus
       }));
       
-      // Check if status is completed and call additional APIs
-      const isCompleted = newStatus === 'Completed' || newStatus === 'RepairComplete';
-      if (isCompleted) {
-        await handleCompletedStatusApis();
-      } else {
-        Alert.alert('Success', 'Job status updated successfully');
-      }
+      Alert.alert('Success', 'Job status updated successfully');
     } catch (error) {
       console.error('Error updating lead status:', error);
       Alert.alert('Error', 'Failed to update lead status');
@@ -273,70 +261,35 @@ const LeadDetailScreen = () => {
   };
 
   /**
-   * Handle API calls when status is changed to completed
-   * Shows preview screen first, then user can generate PDF
+   * Handle Complete Inspection button click
+   * Updates status to Completed and navigates to preview screen
    */
-  const handleCompletedStatusApis = async () => {
+  const handleCompleteInspection = async () => {
     try {
       setLoading(true);
-      setPdfError(null);
       
-      // Call first API: PPE Inspection
-      console.log('Calling PPE Inspection API...');
-      const ppeInspectionData = await leadApi.getPpeInspection(lead.lead_id);
-      setPpeData(ppeInspectionData);
+      // Update lead status to Completed
+      const completedStatus = lead.type === 'REPAIR' ? 'RepairComplete' : 'Completed';
+      await leadApi.updateLead(lead.lead_id, { status: completedStatus });
       
-      // Call second API: Inspection Analytics
-      console.log('Calling Inspection Analytics API...');
-      const analyticsResult = await leadApi.getInspectionAnalytics(lead.lead_id);
-      setAnalyticsData(analyticsResult);
+      // Update local state
+      setCurrentStatus(completedStatus as LeadStatus);
+      setLead(prev => ({
+        ...prev,
+        lead_status: completedStatus as LeadStatus
+      }));
       
-      // Show preview modal instead of generating PDF directly
-      setPreviewModalVisible(true);
+      // Navigate to PPE Report Preview screen
+      navigation.navigate('PPEReportPreview', {
+        leadId: lead.lead_id,
+        leadData: lead
+      });
       
-      Alert.alert('Success', 'Job status updated successfully. Please review the report and generate PDF.');
     } catch (error) {
-      console.error('Error calling completion APIs:', error);
-      Alert.alert('Warning', 'Status updated but failed to fetch report data. Please try again later.');
+      console.error('Error completing inspection:', error);
+      Alert.alert('Error', 'Failed to complete inspection. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  /**
-   * Generate PDF from preview screen
-   */
-  const handleGeneratePDFFromPreview = async () => {
-    if (!ppeData || !analyticsData) {
-      Alert.alert('Error', 'Report data is not available. Please try again.');
-      return;
-    }
-
-    try {
-      setIsLoadingPdf(true);
-      setPdfError(null);
-      
-      // Generate HTML from template and data
-      console.log('Generating HTML report...');
-      const htmlContent = generateReportHTML(ppeData, analyticsData, lead);
-      
-      // Generate PDF from HTML
-      console.log('Generating PDF...');
-      const fileName = `PPE_Inspection_Report_${lead.lead_id}_${Date.now()}`;
-      const pdfPath = await generatePDF(htmlContent, fileName);
-      
-      // Set PDF file path and show PDF viewer
-      setPdfFilePath(pdfPath);
-      setPreviewModalVisible(false);
-      setPdfModalVisible(true);
-      
-      Alert.alert('Success', 'PDF report generated successfully!');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      setPdfError('Failed to generate PDF report. Please try again later.');
-      Alert.alert('Error', 'Failed to generate PDF report. Please try again.');
-    } finally {
-      setIsLoadingPdf(false);
     }
   };
 
@@ -586,23 +539,44 @@ const LeadDetailScreen = () => {
           />
           <View style={styles.bannerOverlayFull} />
           <View style={styles.bannerOverlay}>
-            <Text style={[styles.stationName, { color: '#fff', fontSize: p(40) }]}>
-              {lead?.firestation?.name}
-            </Text>
-            <Button
-              mode="contained"
-              buttonColor={colors.primary}
-              style={styles.leadTypeBtn}
-              contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(2) }}
-              labelStyle={{
-                fontSize: p(16),
-                fontWeight: '600',
-                color: '#fff',
-              }}
-              icon={lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline'}
-            >
-              {lead.type === 'REPAIR' ? 'Repair' : 'Inspection'}
-            </Button>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.stationName, { color: '#fff', fontSize: p(40) }]}>
+                {lead?.firestation?.name}
+              </Text>
+              <Button
+                mode="contained"
+                buttonColor={colors.primary}
+                style={styles.leadTypeBtn}
+                contentStyle={{ paddingHorizontal: p(20), paddingVertical: p(2) }}
+                labelStyle={{
+                  fontSize: p(16),
+                  fontWeight: '600',
+                  color: '#fff',
+                }}
+                icon={lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline'}
+              >
+                {lead.type === 'REPAIR' ? 'Repair' : 'Inspection'}
+              </Button>
+            </View>
+            {lead.type === ('INSPECTION'.toLowerCase()) && (
+              <Button
+                mode="contained"
+                buttonColor="#10b981"
+                onPress={handleCompleteInspection}
+                loading={loading}
+                disabled={loading}
+                style={styles.completeButton}
+                contentStyle={{ paddingHorizontal: p(16), paddingVertical: p(4) }}
+                labelStyle={{
+                  fontSize: p(14),
+                  fontWeight: '600',
+                  color: '#fff',
+                }}
+                icon="check-circle"
+              >
+                Complete Inspection
+              </Button>
+            )}
           </View>
         </View>
 
@@ -1018,17 +992,6 @@ const LeadDetailScreen = () => {
         </Dialog>
       </Portal>
 
-      {/* Report Preview Modal */}
-      <PPEReportPreviewModal
-        visible={previewModalVisible}
-        onClose={() => setPreviewModalVisible(false)}
-        onGeneratePDF={handleGeneratePDFFromPreview}
-        ppeData={ppeData}
-        analyticsData={analyticsData}
-        leadData={lead}
-        isLoadingPDF={isLoadingPdf}
-      />
-
       {/* PDF Preview Modal */}
       <Modal
         visible={pdfModalVisible}
@@ -1073,10 +1036,10 @@ const LeadDetailScreen = () => {
                   mode="outlined"
                   onPress={() => {
                     setPdfError(null);
-                    handleCompletedStatusApis();
+                    setPdfModalVisible(false);
                   }}
                 >
-                  Retry
+                  Close
                 </Button>
               </View>
             </View>
@@ -1166,6 +1129,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: p(12),
     left: p(16),
+    right: p(16),
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: p(12),
   },
   stationName: {
     fontSize: p(22),
@@ -1175,6 +1143,10 @@ const styles = StyleSheet.create({
     marginTop: p(6),
     borderRadius: p(8),
     alignSelf: 'flex-start',
+  },
+  completeButton: {
+    borderRadius: p(8),
+    alignSelf: 'flex-end',
   },
   card: {
     marginHorizontal: p(14),

@@ -22,6 +22,7 @@ import FirefighterListScreen from '../screens/inspectionscreens/FirefighterListS
 import ViewInspectionScreen from '../screens/inspectionscreens/ViewInspectionScreen';
 import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGearsScreen';
 import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlowScreen';
+import PPEReportPreviewScreen from '../screens/leadscreens/PPEReportPreviewScreen';
 import { FirefighterRoster } from '../store/inspectionStore';
 
 export type RootStackParamList = {
@@ -62,6 +63,9 @@ export type RootStackParamList = {
   FirefighterGearsScreen:{roster: FirefighterRoster, leadId:any};
   FirefighterListScreen:any;
   ViewInspectionScreen:undefined;
+
+  //PPE Report Preview
+  PPEReportPreview: { leadId: number; leadData: any };
 
 
 };
@@ -105,6 +109,9 @@ export default function AppNavigator() {
       <Stack.Screen name="FirefighterGearsScreen" component={withMainLayout(FirefighterGearsScreen)} />
       <Stack.Screen name="FirefighterListScreen" component={withMainLayout(FirefighterListScreen)} />
       <Stack.Screen name="ViewInspectionScreen" component={withMainLayout(ViewInspectionScreen)} />
+      
+      {/* PPE Report Preview Screen */}
+      <Stack.Screen name="PPEReportPreview" component={withMainLayout(PPEReportPreviewScreen)} />
 
     </Stack.Navigator>
   );
