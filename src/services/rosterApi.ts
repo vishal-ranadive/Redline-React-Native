@@ -11,8 +11,7 @@ export const rosterApi = {
 
   getRostersByFirestation: async (firestationId: number, params?: any): Promise<any> => {
     console.log('➡️ API CALL /roster/firestation/', firestationId, 'with', params);
-    console.log('Endpoint', `/roster/firestation/${firestationId}/${params.firestation_id}`)
-    const response = await axiosInstance.get(`/roster/firestation/${firestationId}/`);
+    const response = await axiosInstance.get(`/roster/firestation/${firestationId}/`, { params });
     console.log('✅ API Response /roster/firestation/', response.data);
     return response.data;
   },

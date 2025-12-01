@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -38,57 +38,63 @@ const RosterModal: React.FC<RosterModalProps> = ({
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(1000);
   const debouncedSearch = useDebounce(searchQuery, 500);
   
   // Stores
   const { rosters, loading, fetchRosters, pagination, fetchRostersByFirestation } = useRosterStore();
   const { currentLead } = useLeadStore();
 
-  const numberOfItemsPerPageList = [10, 20, 50];
+  const numberOfItemsPerPageList = [200, 300, 400, 500];
 
-  // Calculate pagination range
-  const from = (page - 1) * numberOfItemsPerPage;
-  const to = Math.min(page * numberOfItemsPerPage, pagination?.total || 0);
-
-  // Filter rosters based on search query (client-side filtering as fallback)
-  const filteredRosters = rosters.filter(roster =>
-    searchQuery.trim() === '' ? true :
-    (roster.roster_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-    (roster.email?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-    (roster.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-    (roster.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
-  );
-
-  // Fetch rosters with search and pagination
-  useEffect(() => {
-    if (visible) {
-      const searchParams: any = {
-        page,
-        page_size: numberOfItemsPerPage,
-      };
-      
-      if (debouncedSearch.trim()) {
-        searchParams.first_name = debouncedSearch;
-        searchParams.email = debouncedSearch;
-      }
-
-      // Filter by current lead's firestation
-      if (currentLead?.firestation?.id) {
-        searchParams.firestation_id = currentLead.firestation.id;
-      }
-
-      fetchRostersByFirestation(currentLead?.firestation?.id);
+  // Filter rosters based on search query (client-side filtering)
+  const filteredRosters = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return rosters;
     }
-  }, [visible, debouncedSearch, page, numberOfItemsPerPage]);
+    
+    const query = searchQuery.toLowerCase();
+    return rosters.filter(roster =>
+      (roster.roster_name?.toLowerCase().includes(query) || false) ||
+      (roster.email?.toLowerCase().includes(query) || false) ||
+      (roster.first_name?.toLowerCase().includes(query) || false) ||
+      (roster.last_name?.toLowerCase().includes(query) || false) ||
+      (roster.phone?.toLowerCase().includes(query) || false)
+    );
+  }, [rosters, searchQuery]);
+
+  // Calculate pagination range based on filtered results
+  const totalFiltered = filteredRosters.length;
+  const from = (page - 1) * numberOfItemsPerPage;
+  const to = Math.min(page * numberOfItemsPerPage, totalFiltered);
+  const paginatedRosters = filteredRosters.slice(from, to);
+
+  // Fetch all rosters when modal opens (client-side search and pagination)
+  useEffect(() => {
+    if (visible && currentLead?.firestation?.id) {
+      // Fetch all rosters - we'll do client-side filtering and pagination
+      const searchParams: any = {
+        page: 1,
+        page_size: 10000, // Fetch a large number to get all rosters
+      };
+
+      fetchRostersByFirestation(currentLead.firestation.id, searchParams);
+    }
+  }, [visible, currentLead?.firestation?.id]);
 
   // Reset when modal opens
   useEffect(() => {
     if (visible) {
       setSearchQuery('');
       setPage(1);
+      setNumberOfItemsPerPage(1000);
     }
   }, [visible]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   const handleRosterSelect = (roster: any) => {
     onRosterSelect(roster);
@@ -183,7 +189,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
           ) : filteredRosters.length > 0 ? (
             <>
               <FlatList
-                data={filteredRosters}
+                data={paginatedRosters}
                 keyExtractor={(item) => item.roster_id.toString()}
                 renderItem={renderRosterItem}
                 ItemSeparatorComponent={() => <Divider />}
@@ -191,17 +197,20 @@ const RosterModal: React.FC<RosterModalProps> = ({
               />
               
               {/* Pagination Controls */}
-              {pagination && pagination.total > 0 && (
+              {totalFiltered > 0 && (
                 <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
                   <DataTable.Pagination
                     page={page - 1}
-                    numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
+                    numberOfPages={Math.ceil(totalFiltered / numberOfItemsPerPage)}
                     onPageChange={(newPage) => setPage(newPage + 1)}
-                    label={`${from + 1}-${to} of ${pagination.total}`}
+                    label={`${from + 1}-${to} of ${totalFiltered}`}
                     showFastPaginationControls
                     numberOfItemsPerPageList={numberOfItemsPerPageList}
                     numberOfItemsPerPage={numberOfItemsPerPage}
-                    onItemsPerPageChange={setNumberOfItemsPerPage}
+                    onItemsPerPageChange={(newItemsPerPage) => {
+                      setNumberOfItemsPerPage(newItemsPerPage);
+                      setPage(1); // Reset to first page when page size changes
+                    }}
                     selectPageDropdownLabel={'Rows per page'}
                     theme={{
                       colors: {

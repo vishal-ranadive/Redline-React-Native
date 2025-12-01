@@ -1165,7 +1165,7 @@ const handleGearPress = (gear: any) => {
         )}
 
         {/* Bottom Action Buttons */}
-        {selectedFirefighter && (
+        {/* {selectedFirefighter && (
           <View style={styles.bottomActions}>
             <Button
               mode="outlined"
@@ -1184,7 +1184,7 @@ const handleGearPress = (gear: any) => {
               Complete Inspection
             </Button>
           </View>
-        )}
+        )} */}
 
         <RosterModal
           visible={rosterModalVisible}
