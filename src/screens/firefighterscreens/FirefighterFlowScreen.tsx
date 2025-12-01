@@ -53,7 +53,7 @@ const GEAR_CATEGORIES = [
     title: 'Pants',
     emoji: '👖',
     color: '#4ECDC4',
-    gearTypes: ['PANT LINER', 'PANT SHELL'],
+    gearTypes: ['PANT LINER', 'PANT SHELL', 'PANTS LINER', 'PANTS SHELL'],
     fields: ['Primary Shell', 'Primary Liner', 'Moisture Barrier']
   },
   {
@@ -319,17 +319,63 @@ useEffect(() => {
 
 
 
+  // Check if gear matches category (handles plural/singular and case variations)
+  const gearMatchesCategory = (gearTypeName: string, categoryGearTypes: string[]): boolean => {
+    if (!gearTypeName) return false;
+    const normalized = gearTypeName.toUpperCase().trim();
+    
+    return categoryGearTypes.some(catType => {
+      const normalizedCatType = catType.toUpperCase().trim();
+      
+      // Exact match
+      if (normalized === normalizedCatType) return true;
+      
+      // Handle plural/singular variations for pants
+      if ((normalized.includes('PANT') || normalized.includes('PANTS')) && 
+          (normalizedCatType.includes('PANT') || normalizedCatType.includes('PANTS'))) {
+        const hasShell = normalized.includes('SHELL') && normalizedCatType.includes('SHELL');
+        const hasLiner = normalized.includes('LINER') && normalizedCatType.includes('LINER');
+        if (hasShell || hasLiner) return true;
+      }
+      
+      // Handle jacket variations
+      if (normalized.includes('JACKET') && normalizedCatType.includes('JACKET')) {
+        const hasShell = normalized.includes('SHELL') && normalizedCatType.includes('SHELL');
+        const hasLiner = normalized.includes('LINER') && normalizedCatType.includes('LINER');
+        if (hasShell || hasLiner) return true;
+      }
+      
+      // For simple types (HELMET, GLOVES, BOOTS, HOOD, SCBA), check if contains
+      if (normalized.includes(normalizedCatType) || normalizedCatType.includes(normalized)) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
+
   // Filter gears by category
   const getGearsByCategory = (categoryId: string) => {
     const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
     if (!category) return [];
     
+    // Direct gear_type_id to category mapping (fallback for known types)
+    const gearTypeIdToCategory: { [key: number]: string[] } = {
+      8: ['others'], // Hood -> Others
+    };
+    
     return firefighterGears.filter(gear => {
+      // Check direct gear_type_id mapping first
+      const mappedCategories = gearTypeIdToCategory[gear.gear_type_id];
+      if (mappedCategories && mappedCategories.includes(categoryId)) {
+        return true;
+      }
+      
       // Find the gear type name from gearTypes store using gear_type_id
       const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id);
       const gearTypeName = gearType?.gear_type || gear.gear_name;
       
-      return category.gearTypes.includes(gearTypeName.toUpperCase());
+      return gearMatchesCategory(gearTypeName, category.gearTypes);
     });
   };
 

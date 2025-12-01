@@ -528,7 +528,7 @@ const LeadDetailScreen = () => {
         <View style={styles.banner}>
           <Image
             source={{
-              uri: 'https://media.gettyimages.com/id/182819377/photo/fire-truck.jpg?s=612x612&w=gi&k=20&c=K9QvVmf9qrRmfjjBmxC5yTO1ka4ilSv9ri5Imbs_o3A=',
+              uri: 'http://34.228.36.8/layout/images/meu.png',
             }}
             style={styles.bannerImage}
           />
@@ -1101,7 +1101,7 @@ const styles = StyleSheet.create({
   },
   bannerOverlayFull: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    backgroundColor: 'rgba(0, 0, 0, 0.58)',
   },
   bannerOverlay: {
     position: 'absolute',

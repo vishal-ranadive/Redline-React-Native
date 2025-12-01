@@ -22,6 +22,27 @@ import { useRosterStore } from '../../../store/rosterStore';
 import { useLeadStore } from '../../../store/leadStore';
 import useDebounce from '../../../hooks/useDebounce';
 
+// Color mapping for display purposes (convert color name to hex)
+const COLOR_MAP: { [key: string]: string } = {
+  red: '#FF4444',
+  blue: '#4444FF',
+  green: '#44FF44',
+  yellow: '#FFFF44',
+  orange: '#FF8844',
+  purple: '#8844FF',
+  pink: '#FF44FF',
+  cyan: '#44FFFF',
+  lime: '#88FF44',
+  teal: '#44FF88',
+};
+
+// Helper to get hex color from color name for UI display
+const getColorHex = (colorName?: string | null): string => {
+  if (!colorName) return '#CCCCCC';
+  const normalized = colorName.toLowerCase().trim();
+  return COLOR_MAP[normalized] || '#CCCCCC';
+};
+
 interface RosterModalProps {
   visible: boolean;
   onClose: () => void;
@@ -71,16 +92,17 @@ const RosterModal: React.FC<RosterModalProps> = ({
 
   // Fetch all rosters when modal opens (client-side search and pagination)
   useEffect(() => {
-    if (visible && currentLead?.firestation?.id) {
+    if (visible && currentLead?.firestation?.id && currentLead?.lead_id) {
       // Fetch all rosters - we'll do client-side filtering and pagination
       const searchParams: any = {
         page: 1,
-        page_size: 10000, // Fetch a large number to get all rosters
+        page_size: 1000, // Fetch a large number to get all rosters
+        leadId: currentLead.lead_id, // Pass leadId to get tag_color in response
       };
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
     }
-  }, [visible, currentLead?.firestation?.id]);
+  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id]);
 
   // Reset when modal opens
   useEffect(() => {
@@ -131,11 +153,22 @@ const RosterModal: React.FC<RosterModalProps> = ({
         </Text>
       </View>
       <View style={styles.rosterInfo}>
-        <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>
-          {item.roster_name || 
-           (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}`.trim() : '') ||
-           'Unknown Firefighter'}
-        </Text>
+        <View style={styles.rosterNameContainer}>
+          {/* Tag Color Dot */}
+          {item.tag_color && (
+            <View 
+              style={[
+                styles.tagColorDot, 
+                { backgroundColor: getColorHex(item.tag_color) }
+              ]} 
+            />
+          )}
+          <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>
+            {item.roster_name || 
+             (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}`.trim() : '') ||
+             'Unknown Firefighter'}
+          </Text>
+        </View>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
           {item.firestation?.name || 'Unknown Station'}
         </Text>
@@ -310,9 +343,19 @@ const styles = StyleSheet.create({
   rosterInfo: {
     flex: 1,
   },
+  rosterNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+  },
+  tagColorDot: {
+    width: p(12),
+    height: p(12),
+    borderRadius: p(6),
+    marginRight: p(8),
+  },
   rosterName: {
     fontWeight: '600',
-    marginBottom: p(4),
   },
   rosterDetail: {
     marginBottom: p(2),
