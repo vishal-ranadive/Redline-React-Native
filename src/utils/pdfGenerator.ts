@@ -1,5 +1,6 @@
 // src/utils/pdfGenerator.ts
 import { Platform, PermissionsAndroid } from 'react-native';
+import { requestStoragePermission } from './permissions';
 
 /**
  * Generate HTML content from template and data
@@ -850,29 +851,12 @@ export const downloadPDF = async (
     console.log('Source file path:', filePath);
     console.log('Target file name:', fileName);
     
-    // Request storage permission on Android
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          {
-            title: 'Storage Permission',
-            message: 'App needs access to storage to download PDF files',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          }
-        );
-        
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          throw new Error('Storage permission denied');
-        }
-        console.log('Storage permission granted');
-      } catch (permissionError: any) {
-        console.error('Permission error:', permissionError);
-        // Continue anyway for Android 10+ which uses scoped storage
-      }
+    // Request storage permission
+    const granted = await requestStoragePermission();
+    if (!granted) {
+      throw new Error('Storage permission denied');
     }
+    console.log('Storage permission granted');
     
     // Dynamically require react-native-blob-util
     const ReactNativeBlobUtil = require('react-native-blob-util');

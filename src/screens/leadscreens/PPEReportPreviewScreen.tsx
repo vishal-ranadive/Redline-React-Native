@@ -22,6 +22,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import { leadApi } from '../../services/leadApi';
 import { generateReportHTML, generatePDF, downloadPDF } from '../../utils/pdfGenerator';
+import { requestStoragePermission } from '../../utils/permissions';
 import { Alert } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PPEReportPreview'>;
@@ -75,6 +76,13 @@ const PPEReportPreviewScreen: React.FC = () => {
     }
 
     try {
+      // Request storage permission before downloading
+      const granted = await requestStoragePermission();
+      if (!granted) {
+        Alert.alert('Permission required', 'Storage permission is needed to save the PDF.');
+        return;
+      }
+
       setIsGeneratingPDF(true);
       
       // Generate HTML from template and data

@@ -59,7 +59,13 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need access to save photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>For saving photos</string>
+	<string>This app needs access to your photo library to save PDF files.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to your documents folder to save and open downloaded PDFs.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>We need access to your microphone to convert your voice to text</string>
 	<key>RCTNewArchEnabled</key>
