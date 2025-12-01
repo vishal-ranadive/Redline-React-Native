@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import {
   Text,
@@ -250,9 +251,26 @@ const PPEReportPreviewScreen: React.FC = () => {
             <Divider style={{ marginVertical: p(10) }} />
             
             <View style={styles.detailsContainer}>
+              {/* Franchise Name with Image */}
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { color: colors.onSurface, fontSize: p(14) }]}>
+                  Franchise Name:
+                </Text>
+                <View style={styles.franchiseContainer}>
+                  {(ppeData?.franchise?.logo || ppeData?.franchise?.image) && (
+                    <Image
+                      source={{ uri: ppeData?.franchise?.logo || ppeData?.franchise?.image }}
+                      style={styles.franchiseImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <Text style={[styles.detailValue, { color: colors.onSurface, fontSize: p(14) }]}>
+                    {ppeData?.franchise?.name || ppeData?.franchise_name || leadData?.franchies?.name || 'N/A'}
+                  </Text>
+                </View>
+              </View>
               {[
-                { label: 'Franchise Name', value: ppeData?.franchise_name || leadData?.franchies?.name || 'N/A' },
-                { label: 'MEU', value: leadData?.lead?.meu || 'N/A' },
+                { label: 'MEU', value: leadData?.lead?.meu || (ppeData?.meu?.name || 'N/A') },
                 { label: 'Department Name', value: firestation?.name || 'N/A' },
                 { label: 'Street', value: addressParts[0] || 'N/A' },
                 { label: 'City', value: addressParts[1] || 'N/A' },
@@ -307,7 +325,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👥</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0}
+                  {analytics['Total_fireFighters_Serviced'] || analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Total Firefighters
@@ -326,7 +344,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧰</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total Number of Gears'] || analytics.total_gears || 0}
+                  {analytics['Total_Number_of_Gears'] || analytics['Total Number of Gears'] || analytics.total_gears || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Total Gears
@@ -345,7 +363,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✓</Text>
                 <Text style={[styles.summaryValue, { color: '#059669', fontSize: p(22) }]}>
-                  {analytics['Total Gear Passed'] || analytics.total_passed || 0}
+                  {analytics['Total_Gear_Passed'] || analytics['Total Gear Passed'] || analytics.total_passed || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#065f46', fontSize: p(11) }]}>
                   Passed
@@ -364,7 +382,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✗</Text>
                 <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(22) }]}>
-                  {analytics['Total Gear Fail'] || analytics.total_failed || 0}
+                  {analytics['Total_Gear_Fail'] || analytics['Total Gear Fail'] || analytics.total_failed || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Failed
@@ -383,7 +401,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⊗</Text>
                 <Text style={[styles.summaryValue, { color: '#4b5563', fontSize: p(22) }]}>
-                  {analytics['Total Gear OOS'] || analytics.total_oos || 0}
+                  {analytics['Total_Gear_OOS'] || analytics['Total Gear OOS'] || analytics.total_oos || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#374151', fontSize: p(11) }]}>
                   Out of Service
@@ -402,7 +420,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⏰</Text>
                 <Text style={[styles.summaryValue, { color: '#ea580c', fontSize: p(22) }]}>
-                  {analytics['Total Gear Expired'] || analytics.total_expired || 0}
+                  {analytics['Total_Gear_Expired'] || analytics['Total Gear Expired'] || analytics.total_expired || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#c2410c', fontSize: p(11) }]}>
                   Expired
@@ -421,7 +439,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⚠</Text>
                 <Text style={[styles.summaryValue, { color: '#ca8a04', fontSize: p(22) }]}>
-                  {analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0}
+                  {analytics['Total_Gear_ActionRequired'] || analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#854d0e', fontSize: p(11) }]}>
                   Action Required
@@ -448,7 +466,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧥</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total jackets'] || analytics.total_jackets || 0}
+                  {(analytics.jacket_shell || 0) + (analytics.jacket_liner || 0) || analytics['Total jackets'] || analytics.total_jackets || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Jackets
@@ -467,7 +485,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👖</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total pants'] || analytics.total_pants || 0}
+                  {(analytics.pant_shell || 0) + (analytics.pant_liner || 0) || analytics['Total pants'] || analytics.total_pants || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Pants
@@ -486,7 +504,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⛑️</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total helmet'] || analytics.total_helmet || 0}
+                  {analytics.total_helmet || analytics['Total helmet'] || analytics.total_helmet || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Helmets
@@ -505,7 +523,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧢</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total hoods'] || analytics.total_hoods || 0}
+                  {analytics.total_hoods || analytics['Total hoods'] || analytics.total_hoods || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Hoods
@@ -524,7 +542,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧤</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total gloves'] || analytics.total_gloves || 0}
+                  {analytics.total_gloves || analytics['Total gloves'] || analytics.total_gloves || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Gloves
@@ -543,7 +561,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👢</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total boots'] || analytics.total_boots || 0}
+                  {analytics.total_boots || analytics['Total boots'] || analytics.total_boots || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Boots
@@ -562,7 +580,7 @@ const PPEReportPreviewScreen: React.FC = () => {
               ]}>
                 <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>📦</Text>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total other'] || analytics.total_other || 0}
+                  {analytics.total_other || analytics['Total other'] || analytics.total_other || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Other Gear
@@ -654,6 +672,18 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     flex: 1,
     textAlign: 'right',
+  },
+  franchiseContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(8),
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  franchiseImage: {
+    width: p(40),
+    height: p(40),
+    borderRadius: p(4),
   },
   summaryRowContainer: {
     padding: p(16),

@@ -12,8 +12,10 @@ export const generateReportHTML = (
 ): string => {
   // Extract data with fallbacks
   const firestation = ppeData?.firestation || {};
+  const franchise = ppeData?.franchise || {};
   const rosters = ppeData?.roster || [];
   const assignedTechnicians = ppeData?.assigned_technicians || [];
+  const meu = ppeData?.meu || {};
 
   // Parse address if available
   const address = firestation?.location || '';
@@ -539,11 +541,11 @@ export const generateReportHTML = (
         <table class="details-table">
             <tr>
                 <td>Franchise Name</td>
-                <td>${escapeHtml(ppeData?.franchise_name || leadData?.franchies?.name || 'N/A')}</td>
+                <td>${franchise?.logo || franchise?.image ? `<img src="${escapeHtml(franchise.logo || franchise.image)}" style="max-width: 40px; max-height: 40px; vertical-align: middle; margin-right: 8px;" />` : ''}${escapeHtml(franchise?.name || ppeData?.franchise_name || leadData?.franchies?.name || 'N/A')}</td>
             </tr>
             <tr>
                 <td>MEU</td>
-                <td>${escapeHtml(leadData?.lead?.meu || 'N/A')}</td>
+                <td>${escapeHtml(meu?.name || leadData?.lead?.meu || 'N/A')}</td>
             </tr>
             <tr>
                 <td>Department Name</td>
@@ -595,7 +597,7 @@ export const generateReportHTML = (
             <div class="summary-card primary-card">
                 <div class="card-icon">👥</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_fireFighters_Serviced'] || analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0)}</div>
                     <div class="card-label">Total Firefighters</div>
                 </div>
             </div>
@@ -603,7 +605,7 @@ export const generateReportHTML = (
             <div class="summary-card primary-card">
                 <div class="card-icon">🧰</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Number of Gears'] || analytics.total_gears || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Number_of_Gears'] || analytics['Total Number of Gears'] || analytics.total_gears || 0)}</div>
                     <div class="card-label">Total Gears</div>
                 </div>
             </div>
@@ -611,7 +613,7 @@ export const generateReportHTML = (
             <div class="summary-card status-pass">
                 <div class="card-icon">✓</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Gear Passed'] || analytics.total_passed || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Gear_Passed'] || analytics['Total Gear Passed'] || analytics.total_passed || 0)}</div>
                     <div class="card-label">Passed</div>
                 </div>
             </div>
@@ -619,7 +621,7 @@ export const generateReportHTML = (
             <div class="summary-card status-fail">
                 <div class="card-icon">✗</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Gear Fail'] || analytics.total_failed || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Gear_Fail'] || analytics['Total Gear Fail'] || analytics.total_failed || 0)}</div>
                     <div class="card-label">Failed</div>
                 </div>
             </div>
@@ -627,7 +629,7 @@ export const generateReportHTML = (
             <div class="summary-card status-oos">
                 <div class="card-icon">⊗</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Gear OOS'] || analytics.total_oos || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Gear_OOS'] || analytics['Total Gear OOS'] || analytics.total_oos || 0)}</div>
                     <div class="card-label">Out of Service</div>
                 </div>
             </div>
@@ -635,7 +637,7 @@ export const generateReportHTML = (
             <div class="summary-card status-expired">
                 <div class="card-icon">⏰</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Gear Expired'] || analytics.total_expired || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Gear_Expired'] || analytics['Total Gear Expired'] || analytics.total_expired || 0)}</div>
                     <div class="card-label">Expired</div>
                 </div>
             </div>
@@ -643,7 +645,7 @@ export const generateReportHTML = (
             <div class="summary-card status-action">
                 <div class="card-icon">⚠</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics['Total_Gear_ActionRequired'] || analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0)}</div>
                     <div class="card-label">Action Required</div>
                 </div>
             </div>
@@ -659,7 +661,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">🧥</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total jackets'] || analytics.total_jackets || 0)}</div>
+                    <div class="card-value">${escapeHtml((analytics.jacket_shell || 0) + (analytics.jacket_liner || 0) || analytics['Total jackets'] || analytics.total_jackets || 0)}</div>
                     <div class="card-label">Jackets</div>
                 </div>
             </div>
@@ -667,7 +669,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">👖</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total pants'] || analytics.total_pants || 0)}</div>
+                    <div class="card-value">${escapeHtml((analytics.pant_shell || 0) + (analytics.pant_liner || 0) || analytics['Total pants'] || analytics.total_pants || 0)}</div>
                     <div class="card-label">Pants</div>
                 </div>
             </div>
@@ -675,7 +677,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">⛑️</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total helmet'] || analytics.total_helmet || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics.total_helmet || analytics['Total helmet'] || analytics.total_helmet || 0)}</div>
                     <div class="card-label">Helmets</div>
                 </div>
             </div>
@@ -683,7 +685,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">🧢</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total hoods'] || analytics.total_hoods || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics.total_hoods || analytics['Total hoods'] || analytics.total_hoods || 0)}</div>
                     <div class="card-label">Hoods</div>
                 </div>
             </div>
@@ -691,7 +693,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">🧤</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total gloves'] || analytics.total_gloves || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics.total_gloves || analytics['Total gloves'] || analytics.total_gloves || 0)}</div>
                     <div class="card-label">Gloves</div>
                 </div>
             </div>
@@ -699,7 +701,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">👢</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total boots'] || analytics.total_boots || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics.total_boots || analytics['Total boots'] || analytics.total_boots || 0)}</div>
                     <div class="card-label">Boots</div>
                 </div>
             </div>
@@ -707,7 +709,7 @@ export const generateReportHTML = (
             <div class="summary-card gear-type">
                 <div class="card-icon">📦</div>
                 <div class="card-content">
-                    <div class="card-value">${escapeHtml(analytics['Total other'] || analytics.total_other || 0)}</div>
+                    <div class="card-value">${escapeHtml(analytics.total_other || analytics['Total other'] || analytics.total_other || 0)}</div>
                     <div class="card-label">Other Gear</div>
                 </div>
             </div>
