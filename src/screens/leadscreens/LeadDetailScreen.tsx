@@ -262,35 +262,14 @@ const LeadDetailScreen = () => {
 
   /**
    * Handle Complete Inspection button click
-   * Updates status to Completed and navigates to preview screen
+   * Navigates to preview screen
    */
-  const handleCompleteInspection = async () => {
-    try {
-      setLoading(true);
-      
-      // Update lead status to Completed
-      const completedStatus = lead.type === 'REPAIR' ? 'RepairComplete' : 'Completed';
-      await leadApi.updateLead(lead.lead_id, { status: completedStatus });
-      
-      // Update local state
-      setCurrentStatus(completedStatus as LeadStatus);
-      setLead(prev => ({
-        ...prev,
-        lead_status: completedStatus as LeadStatus
-      }));
-      
-      // Navigate to PPE Report Preview screen
-      navigation.navigate('PPEReportPreview', {
-        leadId: lead.lead_id,
-        leadData: lead
-      });
-      
-    } catch (error) {
-      console.error('Error completing inspection:', error);
-      Alert.alert('Error', 'Failed to complete inspection. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleCompleteInspection = () => {
+    // Navigate to PPE Report Preview screen
+    navigation.navigate('PPEReportPreview', {
+      leadId: lead.lead_id,
+      leadData: lead
+    });
   };
 
   /**
@@ -583,8 +562,6 @@ const LeadDetailScreen = () => {
                 mode="contained"
                 buttonColor="#10b981"
                 onPress={handleCompleteInspection}
-                loading={loading}
-                disabled={loading}
                 style={styles.completeButton}
                 contentStyle={{ paddingHorizontal: p(16), paddingVertical: p(4) }}
                 labelStyle={{
@@ -594,7 +571,7 @@ const LeadDetailScreen = () => {
                 }}
                 icon="check-circle"
               >
-                Complete Inspection
+                View Report
               </Button>
             )}
           </View>
