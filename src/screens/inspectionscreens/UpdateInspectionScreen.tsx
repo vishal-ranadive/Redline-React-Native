@@ -51,9 +51,9 @@ const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
 // Default images for inspection
 const DEFAULT_IMAGES = [
-  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+  "https://5.imimg.com/data5/UU/UU/GLADMIN-/firefighter-jacket-250x250.jpg",
+  "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg",
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s"
 ];
 
 // Removed hardcoded HYDRO_TEST_GEAR_TYPES - now using API data
@@ -246,6 +246,16 @@ export default function UpdateInspectionScreen() {
             ? [inspectionData.finding.id.toString()]
             : [];
 
+          // Convert hydro_test_performed from "YES"/"NO" string to boolean
+          const hydroPerformed = inspectionData.hydro_test_performed === "YES" || inspectionData.hydro_test_performed === "yes";
+          
+          // Convert hydro_test_result to proper case (capitalize first letter)
+          let hydroResult = undefined;
+          if (inspectionData.hydro_test_result) {
+            const result = inspectionData.hydro_test_result.toLowerCase();
+            hydroResult = result.charAt(0).toUpperCase() + result.slice(1); // "pass" -> "Pass", "fail" -> "Fail"
+          }
+
           setFormData(prev => ({
             ...prev,
             status: getStatusValue(inspectionData.gear_status?.status) || '',
@@ -254,8 +264,8 @@ export default function UpdateInspectionScreen() {
             size: inspectionData.gear?.gear_size || '',
             selectedGearFindings: gearFindings,
             serialNumber: inspectionData.gear?.serial_number || '',
-            hydroPerformed: inspectionData.hydro_test_performed || false,
-            hydroResult: inspectionData.hydro_test_result?.toLowerCase() || undefined,
+            hydroPerformed: hydroPerformed,
+            hydroResult: hydroResult,
             hydroFailureReason: inspectionData.hydrotest_remarks || '',
             repairNeeded: inspectionData.inspection_cost > 0,
             cost: inspectionData.inspection_cost?.toString() || '0',
@@ -940,7 +950,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                     style={styles.imageBox}
                     onPress={() => handleImagePress(imageUri)}
                   >
-                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                    <Image source={{ uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTACASlnws35oyGgv7IRV66hIVZyC9_aeZL-A&s" }} style={styles.previewImage} />
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity 
