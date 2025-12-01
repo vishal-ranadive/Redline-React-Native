@@ -262,7 +262,7 @@ const LeadScreen = () => {
       onPress={() => navigation.navigate('LeadDetail', { lead: item })}
       style={[
         styles.card,
-        styles.shadow,
+        // styles.shadow,
         { 
           borderColor: colors.outline,
           width: '50%',
@@ -538,7 +538,7 @@ const LeadScreen = () => {
             <LeadCardSkeleton />
           </View>
         ) : (
-          <>
+          <View style={{paddingRight: p(10)}}>
             {/* Grid of Leads */}
             <FlatList
               key={numColumns.toString()}
@@ -564,7 +564,7 @@ const LeadScreen = () => {
                 </View>
               }
             />
-          </>
+          </View>
         )}
       </View>
 

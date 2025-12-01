@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 0,
     borderRadius: p(10),
-    minHeight: p(400),
+    // minHeight: p(400),
     overflow: 'hidden',
   },
   cardTypeText: {

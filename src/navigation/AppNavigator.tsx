@@ -47,6 +47,7 @@ export type RootStackParamList = {
       mode: "create" | "update";
       firefighter?:any;
       colorLocked?:boolean;
+      tagColor?: string;
    };
 
   //Profile

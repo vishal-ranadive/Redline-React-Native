@@ -7,6 +7,8 @@ import { gearFindingsApi } from '../services/gearFindingsApi';
 export interface GearType {
   gear_type_id: number;
   gear_type: string;
+  is_harness: boolean;
+  is_hydrotest: boolean;
 }
 
 export interface Gear {

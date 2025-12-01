@@ -56,14 +56,13 @@ const DEFAULT_IMAGES = [
   "https://example.com/images/inspection_1032.jpg"
 ];
 
-// Gear types that require hydro test
-const HYDRO_TEST_GEAR_TYPES = ['JACKET LINER', 'PANTS LINER',  'jacket liner', 'pant liner'];
+// Removed hardcoded HYDRO_TEST_GEAR_TYPES - now using API data
 
 export default function UpdateInspectionScreen() {
   const { colors } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings, gearStatus, gearStatusLoading, fetchGearStatus } = useGearStore();
+  const { fetchGearById, fetchGearFindings, gearFindingsLoading, gearFindings, gearStatus, gearStatusLoading, fetchGearStatus, gearTypes, fetchGearTypes } = useGearStore();
   const { currentLead } = useLeadStore();
 
   const { gearId, inspectionId, mode, firefighter, colorLocked } = route.params;
@@ -150,6 +149,11 @@ export default function UpdateInspectionScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  // Fetch gear types on mount
+  useEffect(() => {
+    fetchGearTypes();
+  }, []);
+
   // Fetch gear data and status
   useEffect(() => {
     const fetchGearAndStatus = async () => {
@@ -159,10 +163,11 @@ export default function UpdateInspectionScreen() {
       setError(null);
       
       try {
-        // Fetch gear data and gear status in parallel
+        // Fetch gear data, gear status, and gear types in parallel
         const [gearResponse] = await Promise.all([
           fetchGearById(gearId),
-          fetchGearStatus() // Fetch gear status from API
+          fetchGearStatus(), // Fetch gear status from API
+          fetchGearTypes() // Fetch gear types from API
         ]);
 
         if (gearResponse) {
@@ -382,20 +387,24 @@ const getServiceTypeValue = (serviceType: string) => {
   console.log("Formatted status options:", formattedStatusOptions);
   console.log("Current gearStatus from API:", gearStatus);
   
-  // Check if gear requires hydro test
-  // const requiresHydroTest = useMemo(() => {
-  //   return HYDRO_TEST_GEAR_TYPES.includes(gear?.gear_type?.gear_type?.toUpperCase());
-  // }, [gear]);
+  // Get current gear type from gearTypes array
+  const currentGearType = useMemo(() => {
+    if (!gear?.gear_type?.gear_type_id || !gearTypes.length) return null;
+    return gearTypes.find(gt => gt.gear_type_id === gear.gear_type.gear_type_id);
+  }, [gear, gearTypes]);
+
+  // Check if gear requires hydro test based on API data
   const requiresHydroTest = useMemo(() => {
-  if (!gear?.gear_type?.gear_type) return false;
+    return currentGearType?.is_hydrotest || false;
+  }, [currentGearType]);
+
+  // Check if gear has harness field based on API data
+  const requiresHarness = useMemo(() => {
+    return currentGearType?.is_harness || false;
+  }, [currentGearType]);
   
-  const gearType = gear.gear_type.gear_type.toUpperCase().trim();
-  
-  // More flexible matching
-  return gearType.includes('LINER') && (gearType.includes('JACKET') || gearType.includes('PANT'));
-}, [gear]);
-  
-  console.log("requiresHydroTest", requiresHydroTest, gear?.gear_type?.gear_type?.toUpperCase());
+  console.log("Current gear type:", currentGearType);
+  console.log("requiresHydroTest:", requiresHydroTest, "requiresHarness:", requiresHarness);
   // Track keyboard visibility
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -526,8 +535,6 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         hydro_failure_reason: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
         
         gear_findings: JSON.stringify(formData.selectedGearFindings),
-        // finding_id: 1,
-        // finding_id: formData.selectedGearFindings.map(findingId => parseInt(findingId)),
         
         inspection_cost:inspectionCost,
         
@@ -724,16 +731,18 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                 />
               )}
 
-              {/* Harness Type as Toggle */}
-              <View style={styles.rowSpace}>
-                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness </Text>
-                <View style={styles.toggleContainer}>
-                  <Switch 
-                    value={formData.harnessType} 
-                    onValueChange={(value) => handleFieldChange('harnessType', value)} 
-                  />
+              {/* Harness Type as Toggle - Conditionally Rendered based on gear type */}
+              {requiresHarness && (
+                <View style={styles.rowSpace}>
+                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness </Text>
+                  <View style={styles.toggleContainer}>
+                    <Switch 
+                      value={formData.harnessType} 
+                      onValueChange={(value) => handleFieldChange('harnessType', value)} 
+                    />
+                  </View>
                 </View>
-              </View>
+              )}
 
 
               {/* Load Selection */}
