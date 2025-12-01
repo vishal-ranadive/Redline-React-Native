@@ -51,9 +51,9 @@ const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
 // Default images for inspection
 const DEFAULT_IMAGES = [
-  "https://example.com/images/inspection_1030.jpg",
-  "https://example.com/images/inspection_1031.jpg",
-  "https://example.com/images/inspection_1032.jpg"
+  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  "https://images.unsplash.com/photo-1706913767102-094929e48333?q=80&w=1192&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 ];
 
 // Removed hardcoded HYDRO_TEST_GEAR_TYPES - now using API data
@@ -239,13 +239,20 @@ export default function UpdateInspectionScreen() {
           }
 
           // Populate form data with inspection data
+          // Handle finding as array or single object
+          const gearFindings = Array.isArray(inspectionData.finding)
+            ? inspectionData.finding.map((f: any) => f.id?.toString()).filter(Boolean)
+            : inspectionData.finding?.id
+            ? [inspectionData.finding.id.toString()]
+            : [];
+
           setFormData(prev => ({
             ...prev,
             status: getStatusValue(inspectionData.gear_status?.status) || '',
             serviceType: getServiceTypeValue(inspectionData.service_type?.status) || '',
             harnessType: inspectionData.harness_type || false,
             size: inspectionData.gear?.gear_size || '',
-            selectedGearFindings: inspectionData.finding ? [inspectionData.finding.id.toString()] : [],
+            selectedGearFindings: gearFindings,
             serialNumber: inspectionData.gear?.serial_number || '',
             hydroPerformed: inspectionData.hydro_test_performed || false,
             hydroResult: inspectionData.hydro_test_result?.toLowerCase() || undefined,
@@ -528,15 +535,15 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         roster_id: resolvedRosterId,
         
         inspection_date: new Date().toISOString().split('T')[0],
-        inspection_status:  mode === 'create' ? 'PRE-INSPECTION': 'ONGOING-INSPECTION',
+        inspection_status: mode === 'create' ? 'PRE-INSPECTION' : 'ONGOING-INSPECTION',
         
         hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
-        hydro_test_performed: formData.hydroPerformed,
-        hydro_failure_reason: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
+        hydro_test_performed: formData.hydroPerformed ? "YES" : "NO",
+        hydrotest_remarks: formData.hydroResult === 'Fail' ? formData.hydroFailureReason : null,
         
-        gear_findings: JSON.stringify(formData.selectedGearFindings),
+        finding_id: formData.selectedGearFindings.map(id => parseInt(id)),
         
-        inspection_cost:inspectionCost,
+        inspection_cost: inspectionCost,
         
         inspection_image_url: images,
         remarks: formData.remarks,
@@ -547,7 +554,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         gear_status_id: gearStatusId,
         service_type_id: mapServiceTypeToId(formData.serviceType),
         tag_color: formData.selectedColor.toLowerCase().trim(),
-        harness_type: formData.harnessType,
+        is_harness: formData.harnessType ? "YES" : "NO",
         gear_size: formData.size,
       };
 
@@ -1233,7 +1240,9 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
+  
   addImageBox: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -1243,9 +1252,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   addImageText: {
-    fontSize: 20,
+    fontSize: 28,
     color: '#666',
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
   addImageLabel: {
     fontSize: 10,

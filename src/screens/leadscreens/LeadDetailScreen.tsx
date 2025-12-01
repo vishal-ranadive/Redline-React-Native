@@ -1,8 +1,8 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl } from 'react-native';
 import Pdf from 'react-native-pdf';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import {
@@ -121,11 +121,20 @@ const LeadDetailScreen = () => {
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.lead_status);
 
   // Water hardness state
   const [showHardnessInput, setShowHardnessInput] = useState(false);
-  const [hardnessValue, setHardnessValue] = useState('');
+  const [hardnessValue, setHardnessValue] = useState(() => {
+    // Initialize from initialLead if available, handling null and float numbers
+    if (initialLead?.water_hardness !== null && initialLead?.water_hardness !== undefined) {
+      return typeof initialLead.water_hardness === 'number' 
+        ? initialLead.water_hardness.toString() 
+        : String(initialLead.water_hardness);
+    }
+    return '';
+  });
   const [isEditingHardness, setIsEditingHardness] = useState(false);
 
   // Remarks editing state
@@ -156,11 +165,6 @@ const LeadDetailScreen = () => {
     return getHardnessColor(currentHardnessCategory);
   }, [currentHardnessCategory]);
 
-  // Fetch latest lead data when screen focuses
-  useEffect(() => {
-    fetchLeadDetail();
-  }, []);
-
   // Update remarks value when lead data changes
   useEffect(() => {
     setRemarksValue(lead?.remarks || '');
@@ -169,23 +173,59 @@ const LeadDetailScreen = () => {
   /**
    * Fetch detailed lead information from API
    */
-  const fetchLeadDetail = async () => {
+  const fetchLeadDetail = useCallback(async (isRefreshing = false) => {
     try {
-      setLoading(true);
-      const leadDetail:any = await fetchLeadById(lead?.lead_id);
+      const leadId = lead?.lead_id || initialLead?.lead_id;
+      if (!leadId) {
+        console.error('No lead ID available');
+        return;
+      }
+
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const leadDetail:any = await fetchLeadById(leadId);
       printTable('Lead Details', leadDetail);
       if(leadDetail){
         setLead(leadDetail);
-        setCurrentStatus(leadDetail?.lead_status);        
+        setCurrentStatus(leadDetail?.lead_status);
+        // Update water hardness value if available (handle null and float numbers)
+        if (leadDetail.water_hardness !== null && leadDetail.water_hardness !== undefined) {
+          const hardnessValue = typeof leadDetail.water_hardness === 'number' 
+            ? leadDetail.water_hardness.toString() 
+            : String(leadDetail.water_hardness);
+          setHardnessValue(hardnessValue);
+        } else {
+          // Reset to empty string if null or undefined
+          setHardnessValue('');
+        }
       }
       printTable("currentLead",currentLead)
     } catch (error) {
       console.error('Error fetching lead details:', error);
       Alert.alert('Error', 'Failed to fetch lead details');
     } finally {
-      setLoading(false);
+      if (isRefreshing) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
-  };
+  }, [lead?.lead_id, initialLead?.lead_id]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchLeadDetail();
+    }, [fetchLeadDetail])
+  );
+
+  // Handle pull-to-refresh
+  const onRefresh = useCallback(() => {
+    fetchLeadDetail(true);
+  }, [fetchLeadDetail]);
 
   /**
    * Update lead status with validation
@@ -473,7 +513,17 @@ const LeadDetailScreen = () => {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Station Banner with Image */}
         <View style={styles.banner}>
           <Image
