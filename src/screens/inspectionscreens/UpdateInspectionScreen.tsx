@@ -671,7 +671,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         isColorLocked={isColorLocked}
         onHistoryPress={() => {
           if (gear?.gear_id) {
-            navigation.navigate('GearDetail', { gearId: gear.gear_id });
+            console.log("handleHistoryPress-gearId", gear.gear_id);
+            navigation.navigate('GearDetail', { gear_id: gear.gear_id });
           }
         }}
         onColorPickerOpen={() => setColorPickerVisible(true)}

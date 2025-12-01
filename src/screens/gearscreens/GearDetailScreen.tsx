@@ -85,25 +85,92 @@ const GearDetailScreen = () => {
       return;
     }
 
+    const rosterName = roster.roster_name || `${roster.first_name} ${roster.last_name}` || 'this firefighter';
+    const isUpdating = !!currentGear.roster;
+    const currentRosterName = currentGear.roster 
+      ? `${currentGear.roster.first_name} ${currentGear.roster.last_name}`.trim() || 'current firefighter'
+      : '';
+
+    // Show confirmation if updating existing roster
+    if (isUpdating) {
+      Alert.alert(
+        'Update Firefighter Assignment',
+        `This gear is currently assigned to ${currentRosterName}. Do you want to reassign it to ${rosterName}?`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Update',
+            style: 'default',
+            onPress: async () => {
+              await performRosterUpdate(roster);
+            },
+          },
+        ]
+      );
+    } else {
+      // No confirmation needed for first-time assignment
+      await performRosterUpdate(roster);
+    }
+  };
+
+  const performRosterUpdate = async (roster: any) => {
+    console.log('performRosterUpdate - currentGear:', currentGear);
+    console.log('performRosterUpdate - gear_id:', gear_id);
+    console.log('performRosterUpdate - roster:', roster);
+
+    if (!currentGear) {
+      Alert.alert('Error', 'Gear information not available. Please refresh the page.');
+      return;
+    }
+
+    if (!gear_id) {
+      Alert.alert('Error', 'Gear ID not available. Please refresh the page.');
+      return;
+    }
+
     try {
       const rosterId = roster.roster_id || roster.id;
-      const gearData = {
+      
+      // Build gearData with proper null checks and optional chaining
+      const gearData: any = {
         gear_name: currentGear.gear_name,
         serial_number: currentGear.serial_number,
-        gear_type_id: currentGear.gear_type.gear_type_id,
-        manufacturer_id: currentGear.manufacturer.manufacturer_id,
-        firestation_id: currentGear.firestation.id,
-        franchise_id: currentGear.franchise.id,
+        manufacturer_id: currentGear.manufacturer?.manufacturer_id,
+        firestation_id: currentGear.firestation?.id,
         roster_id: rosterId,
-        gear_size: currentGear.gear_size,
-        manufacturing_date: currentGear.manufacturing_date,
         active_status: currentGear.active_status,
-        remarks: currentGear.remarks || '',
       };
+
+      // Add optional fields only if they exist
+      if (currentGear.gear_type?.gear_type_id) {
+        gearData.gear_type_id = currentGear.gear_type.gear_type_id;
+      }
+      
+      if (currentGear.franchise?.id) {
+        gearData.franchise_id = currentGear.franchise.id;
+      }
+      
+      if (currentGear.gear_size) {
+        gearData.gear_size = currentGear.gear_size;
+      }
+      
+      if (currentGear.manufacturing_date) {
+        gearData.manufacturing_date = currentGear.manufacturing_date;
+      }
+      
+      if (currentGear.remarks) {
+        gearData.remarks = currentGear.remarks;
+      }
+
+      console.log('performRosterUpdate - gearData:', gearData);
 
       const updatedGear = await updateGear(gear_id, gearData);
       if (updatedGear) {
-        Alert.alert('Success', `Firefighter ${roster.roster_name || `${roster.first_name} ${roster.last_name}`} assigned successfully`);
+        const rosterName = roster.roster_name || `${roster.first_name} ${roster.last_name}` || 'Firefighter';
+        Alert.alert('Success', `${rosterName} ${currentGear.roster ? 'updated' : 'assigned'} successfully`);
         setRosterModalVisible(false);
         // Refresh gear data
         fetchGearById(gear_id);
@@ -111,6 +178,7 @@ const GearDetailScreen = () => {
         Alert.alert('Error', 'Failed to update gear');
       }
     } catch (error: any) {
+      console.error('performRosterUpdate - error:', error);
       Alert.alert('Error', error.message || 'Failed to update gear');
     }
   };
@@ -121,7 +189,24 @@ const GearDetailScreen = () => {
 
   const handleUpdateFirefighter = () => {
     setActionModalVisible(false);
-    setRosterModalVisible(true);
+    
+    Alert.alert(
+      'Update Firefighter',
+      'Are you sure you want to update the assigned firefighter for this gear?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Update',
+          style: 'default',
+          onPress: () => {
+            setRosterModalVisible(true);
+          },
+        },
+      ]
+    );
   };
 
   const handleRemoveFirefighter = async () => {
@@ -139,25 +224,52 @@ const GearDetailScreen = () => {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            if (!currentGear || !gear_id) {
-              Alert.alert('Error', 'Gear information not available');
+            console.log('handleRemoveFirefighter - currentGear:', currentGear);
+            console.log('handleRemoveFirefighter - gear_id:', gear_id);
+
+            if (!currentGear) {
+              Alert.alert('Error', 'Gear information not available. Please refresh the page.');
+              return;
+            }
+
+            if (!gear_id) {
+              Alert.alert('Error', 'Gear ID not available. Please refresh the page.');
               return;
             }
 
             try {
-              const gearData = {
+              // Build gearData with proper null checks and optional chaining
+              const gearData: any = {
                 gear_name: currentGear.gear_name,
                 serial_number: currentGear.serial_number,
-                gear_type_id: currentGear.gear_type.gear_type_id,
-                manufacturer_id: currentGear.manufacturer.manufacturer_id,
-                firestation_id: currentGear.firestation.id,
-                franchise_id: currentGear.franchise.id,
+                manufacturer_id: currentGear.manufacturer?.manufacturer_id,
+                firestation_id: currentGear.firestation?.id,
                 roster_id: null,
-                gear_size: currentGear.gear_size,
-                manufacturing_date: currentGear.manufacturing_date,
                 active_status: currentGear.active_status,
-                remarks: currentGear.remarks || '',
               };
+
+              // Add optional fields only if they exist
+              if (currentGear.gear_type?.gear_type_id) {
+                gearData.gear_type_id = currentGear.gear_type.gear_type_id;
+              }
+              
+              if (currentGear.franchise?.id) {
+                gearData.franchise_id = currentGear.franchise.id;
+              }
+              
+              if (currentGear.gear_size) {
+                gearData.gear_size = currentGear.gear_size;
+              }
+              
+              if (currentGear.manufacturing_date) {
+                gearData.manufacturing_date = currentGear.manufacturing_date;
+              }
+              
+              if (currentGear.remarks) {
+                gearData.remarks = currentGear.remarks;
+              }
+
+              console.log('handleRemoveFirefighter - gearData:', gearData);
 
               const updatedGear = await updateGear(gear_id, gearData);
               if (updatedGear) {
@@ -168,6 +280,7 @@ const GearDetailScreen = () => {
                 Alert.alert('Error', 'Failed to remove firefighter');
               }
             } catch (error: any) {
+              console.error('handleRemoveFirefighter - error:', error);
               Alert.alert('Error', error.message || 'Failed to remove firefighter');
             }
           },
