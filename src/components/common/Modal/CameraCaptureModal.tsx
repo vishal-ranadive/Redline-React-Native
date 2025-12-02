@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Dimensions,
 } from 'react-native';
 import { Camera, CameraType, type CameraApi } from 'react-native-camera-kit';
 import { useTheme, IconButton } from 'react-native-paper';
@@ -26,6 +27,22 @@ const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured
   const [hasPermission, setHasPermission] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   const requestPermission = useCallback(async () => {
     if (Platform.OS === 'android') {
@@ -83,7 +100,12 @@ const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      onRequestClose={onClose}
+      supportedOrientations={supportedOrientations}
+    >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <IconButton icon="close" iconColor={colors.onSurface} size={p(24)} onPress={onClose} />

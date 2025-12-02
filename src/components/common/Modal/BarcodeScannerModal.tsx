@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, PermissionsAndroid, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, PermissionsAndroid, Platform, Modal, ActivityIndicator, Dimensions } from 'react-native';
 import { Text, Button, Icon, Card, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-camera-kit';
@@ -21,6 +21,22 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [flashOn, setFlashOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   // Request Camera Permission
   useEffect(() => {
@@ -64,6 +80,7 @@ const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       visible={visible}
       animationType="slide"
       onRequestClose={onClose}
+      supportedOrientations={supportedOrientations}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}

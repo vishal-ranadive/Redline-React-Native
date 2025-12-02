@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   Modal,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -41,6 +42,22 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -127,6 +144,7 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={handleClose}
+      supportedOrientations={supportedOrientations}
     >
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
         {/* Header */}

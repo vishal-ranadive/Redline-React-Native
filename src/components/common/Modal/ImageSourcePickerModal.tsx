@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
   TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import { Text, Icon, useTheme } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
@@ -27,11 +28,33 @@ const ImageSourcePickerModal: React.FC<Props> = ({
   subtitle = 'Choose how you want to add the image',
 }) => {
   const { colors } = useTheme();
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   if (!visible) return null;
 
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onDismiss}>
+    <Modal 
+      transparent 
+      animationType="fade" 
+      visible={visible} 
+      onRequestClose={onDismiss}
+      supportedOrientations={supportedOrientations}
+    >
       <TouchableWithoutFeedback onPress={onDismiss}>
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>

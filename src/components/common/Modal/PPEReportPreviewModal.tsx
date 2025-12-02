@@ -1,11 +1,12 @@
 // src/components/common/Modal/PPEReportPreviewModal.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   Modal,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -40,6 +41,22 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
   isLoadingPDF = false,
 }) => {
   const { colors } = useTheme();
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   if (!ppeData || !analyticsData) {
     return null;
@@ -70,6 +87,7 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
       transparent={false}
+      supportedOrientations={supportedOrientations}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}

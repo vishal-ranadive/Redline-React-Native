@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -61,10 +62,26 @@ const RosterModal: React.FC<RosterModalProps> = ({
   const [page, setPage] = useState(1);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(1000);
   const debouncedSearch = useDebounce(searchQuery, 500);
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
   
   // Stores
   const { rosters, loading, fetchRosters, pagination, fetchRostersByFirestation } = useRosterStore();
   const { currentLead } = useLeadStore();
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   const numberOfItemsPerPageList = [200, 300, 400, 500];
 
@@ -186,6 +203,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      supportedOrientations={supportedOrientations}
     >
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
         {/* Header */}

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -30,9 +31,25 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 500);
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
   
   // Store
   const { manufacturers, loading, fetchManufacturers } = useManufacturerStore();
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   // Filter manufacturers based on search query
   const filteredManufacturers = manufacturers.filter(mfr =>
@@ -89,7 +106,13 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
   );
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      presentationStyle="pageSheet" 
+      onRequestClose={onClose}
+      supportedOrientations={supportedOrientations}
+    >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <Text style={[styles.title, { color: colors.onSurface, fontSize: p(20) }]}>Select Manufacturer</Text>
