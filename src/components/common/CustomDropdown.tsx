@@ -75,13 +75,19 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
         transparent
         animationType="fade"
         onRequestClose={() => setVisible(false)}
+        supportedOrientations={['portrait', 'landscape', 'portrait-upside-down', 'landscape-left', 'landscape-right']}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity
           style={styles.dropdownOverlay}
           activeOpacity={1}
           onPress={() => setVisible(false)}
         >
-          <View style={[styles.dropdownModal, { backgroundColor: colors.surface }]}>
+          <View 
+            style={[styles.dropdownModal, { backgroundColor: colors.surface }]}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+          >
             <ScrollView style={styles.dropdownScroll}>
               {options.map((option) => (
                 <TouchableOpacity

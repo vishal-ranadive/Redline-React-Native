@@ -68,9 +68,24 @@ const LoadPicker: React.FC<LoadPickerProps> = ({
         {value ? `Load ${value}` : placeholder}
       </Button>
 
-      <Modal transparent visible={visible} animationType="fade" onRequestClose={closeModal}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+      <Modal 
+        transparent 
+        visible={visible} 
+        animationType="fade" 
+        onRequestClose={closeModal}
+        supportedOrientations={['portrait', 'landscape', 'portrait-upside-down', 'landscape-left', 'landscape-right']}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeModal}
+        >
+          <View 
+            style={[styles.modalContainer, { backgroundColor: colors.surface }]}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+          >
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Select Load</Text>
 
             <FlatList
@@ -88,7 +103,7 @@ const LoadPicker: React.FC<LoadPickerProps> = ({
               </Button>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

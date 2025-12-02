@@ -533,12 +533,12 @@ const LeadScreen = () => {
         </View>
 
         {/* Loading State or Lead Grid */}
-        {loading || filteredLeads.length === 0 ? (
+        {loading ? (
           <View >
             <LeadCardSkeleton />
           </View>
         ) : (
-          <View style={{paddingRight: p(10)}}>
+          <View style={{paddingRight: p(10), paddingBottom: p(300)}}>
             {/* Grid of Leads */}
             <FlatList
               key={numColumns.toString()}
@@ -558,6 +558,7 @@ const LeadScreen = () => {
                   <Button 
                     mode="contained" 
                     style={{ marginTop: 16 }}
+                    onPress={() => fetchData()}
                   >
                     Refresh
                   </Button>
@@ -599,7 +600,7 @@ const LeadScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: p(10) },
+  container: { flex: 1, paddingHorizontal: p(10),  },
   header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
   search: { marginBottom: p(10), width: '100%' },
   filterRow: {
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
     marginVertical: p(4),
   },
   grid: {
-    paddingBottom: p(100),
+    paddingBottom: p(200),
     paddingHorizontal: p(5),
     gap: p(6),
   },
@@ -721,6 +722,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 50,
+    minHeight: 400,
+    paddingBottom: p(200),
   },
 });
 
