@@ -501,6 +501,15 @@ export const generateReportHTML = (
             color: #991b1b;
         }
 
+        /* Page Break Classes */
+        .page-break-after {
+            page-break-after: always;
+        }
+
+        .page-break-before {
+            page-break-before: always;
+        }
+
         @media print {
             body {
                 background: white;
@@ -527,6 +536,14 @@ export const generateReportHTML = (
             .summary-card {
                 min-width: 13%;
                 max-width: 14%;
+            }
+
+            .page-break-after {
+                page-break-after: always;
+            }
+
+            .page-break-before {
+                page-break-before: always;
             }
         }
     </style>
@@ -587,8 +604,10 @@ export const generateReportHTML = (
                 <td>${escapeHtml(inspectionDate)}</td>
             </tr>
         </table>
+        <div class="page-break-after"></div>
 
         <!-- Summary Statistics Cards -->
+        <div class="page-break-before">
         <h2 class="section-title">Inspection Summary</h2>
         
         <!-- First Row Container - Primary Stats -->
@@ -716,6 +735,7 @@ export const generateReportHTML = (
                     <div class="card-label">Other Gear</div>
                 </div>
             </div>
+        </div>
         </div>
         </div>
 
