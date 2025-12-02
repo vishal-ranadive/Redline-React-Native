@@ -9,7 +9,8 @@ import {
   Modal,
   FlatList,
   TouchableOpacity,
-  Image 
+  Image,
+  Alert
 } from 'react-native';
 import { Text, Button, Icon, Card, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +20,8 @@ import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGearStore } from '../../store/gearStore';
+import { useLeadStore } from '../../store/leadStore';
+import { useAuthStore } from '../../store/authStore';
 import { printTable } from '../../utils/printTable';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail' | 'AddGear' | 'UpadateInspection'>;
@@ -70,7 +73,9 @@ const MOCK_GEARS: ScannedGear[] = [
 const GearScanScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { searchGears, gears, loading } = useGearStore();
+  const { searchGears, gears, loading, scanGear } = useGearStore();
+  const { currentLead } = useLeadStore();
+  const { user } = useAuthStore();
 
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
@@ -209,24 +214,103 @@ const stopScanning = () => {
     setIsSimulationMode(false);
 
     try {
-      // Search gears by serial number
-      const result = await searchGears({ serial_number: scannedValue });
-      printTable("searchGears result", result);
-      printTable("scannedValue", scannedValue);
-      printTable("gears from store", gears);
+      // Get firestationId and leadId
+      const firestationId = currentLead?.firestation?.id || user?.firestationId;
+      const leadId = currentLead?.lead_id;
 
-      if (result.success && gears && gears.length > 0) {
-        // Gears found successfully
-        setScannedGears(gears);
+      if (!firestationId) {
+        Alert.alert('Error', 'Firestation ID not found. Please select a lead first.');
+        setShowNotFoundModal(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!leadId) {
+        Alert.alert('Error', 'Lead ID not found. Please select a lead first.');
+        setShowNotFoundModal(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Call scan-gear API
+      const scanResponse = await scanGear(firestationId, scannedValue, leadId);
+      printTable("scanGear result", scanResponse);
+
+      // Handle different response structures (array or wrapped in status object)
+      let gearDataArray: any[] = [];
+      if (Array.isArray(scanResponse)) {
+        gearDataArray = scanResponse;
+      } else if (scanResponse?.status && Array.isArray(scanResponse.data)) {
+        gearDataArray = scanResponse.data;
+      } else if (scanResponse?.data && Array.isArray(scanResponse.data)) {
+        gearDataArray = scanResponse.data;
+      }
+
+      if (gearDataArray.length > 0) {
+        const gearData = gearDataArray[0]; // Get first item from array
+        
+        // Check if inspectionId exists and is not empty
+        const hasInspectionId = gearData.inspectionId && 
+          gearData.inspectionId.toString().trim() !== '' && 
+          gearData.inspectionId.toString().trim() !== 'null';
+        
+        // Get gearId by searching for the gear with this serial number
+        const searchResult = await searchGears({ serial_number: scannedValue });
+        
+        // Wait a bit for store to update, then check gears
+        // The gears should be updated in the store after searchGears completes
+        if (searchResult.success) {
+          // Get fresh gears from store (they should be updated by now)
+          const { gears: updatedGears } = useGearStore.getState();
+          
+          if (updatedGears && updatedGears.length > 0) {
+            const gear = updatedGears[0]; // Get first matching gear
+            
+            // Prepare roster data for navigation
+            const roster = gearData.roster ? {
+              roster_id: gearData.roster.rosterId,
+              id: gearData.roster.rosterId,
+              first_name: gearData.roster.rosterName?.split(' ')[0] || '',
+              last_name: gearData.roster.rosterName?.split(' ').slice(1).join(' ') || '',
+              name: gearData.roster.rosterName || '',
+              email: '',
+              phone: '',
+            } : undefined;
+
+            // Navigate to inspection screen
+            navigation.navigate('UpadateInspection', {
+              gearId: gear.gear_id,
+              inspectionId: hasInspectionId ? parseInt(gearData.inspectionId.toString()) : undefined,
+              mode: hasInspectionId ? 'update' : 'create',
+              firefighter: roster,
+              colorLocked: false,
+            });
+          } else {
+            // Gear not found in system, show not found modal
+            printTable("Gear not found in system after search", searchResult);
+            setShowNotFoundModal(true);
+          }
+        } else {
+          // Search failed, show not found modal
+          printTable("Gear search failed", searchResult);
+          setShowNotFoundModal(true);
+        }
       } else {
-        // No gears found or API returned error
-        printTable("No gears found, showing modal", result);
+        // No gear data returned from scan API
+        printTable("No gear data from scan API", scanResponse);
         setShowNotFoundModal(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.log('API error:', err);
       printTable("API error caught", err);
-      setShowNotFoundModal(true);
+      
+      // If it's a 404 or gear not found, show not found modal
+      if (err.response?.status === 404 || err.message?.includes('not found')) {
+        setShowNotFoundModal(true);
+      } else {
+        Alert.alert('Error', err.message || 'Failed to scan gear. Please try again.');
+        setShowNotFoundModal(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -248,7 +332,10 @@ const stopScanning = () => {
   };
 
   const handleGearPress = (gear: ScannedGear) => {
-    navigation.navigate('UpadateInspection', { gearId: gear.gear_id })
+    navigation.navigate('UpadateInspection', { 
+      gearId: gear.gear_id,
+      mode: 'create' // Default to create mode when navigating from gear list
+    })
   };
 
   printTable("scannedGears state", scannedGears);
@@ -448,14 +535,14 @@ const stopScanning = () => {
                   Add New Gear
                 </Button>
                 
-                <Button
+                {/* <Button
                   mode="outlined"
                   style={styles.modalButton}
                   onPress={handleSearchGear}
                   icon="magnify"
                 >
                   Search Gear
-                </Button>
+                </Button> */}
                 
                 <Button
                   mode="contained"

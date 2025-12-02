@@ -93,6 +93,7 @@ interface GearState {
   fetchGearById: (id: number) => Promise<Gear | null>;
   searchGears: (params?: any) => Promise<{success: boolean, message?: string}>;
   ScanGearsWithBarcode: (params?: any) => Promise<void>;
+  scanGear: (firestationId: number, serialNumber: string, leadId: number) => Promise<any>;
   
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -297,6 +298,22 @@ export const useGearStore = create<GearState>()(
             error: error.message || 'Network error',
             loading: false,
           });
+        }
+      },
+
+      // Scan gear by serial number
+      scanGear: async (firestationId: number, serialNumber: string, leadId: number) => {
+        set({ loading: true, error: null });
+        try {
+          const response = await gearApi.scanGear(firestationId, serialNumber, leadId);
+          set({ loading: false, error: null });
+          return response;
+        } catch (error: any) {
+          set({
+            error: error.message || 'Network error',
+            loading: false,
+          });
+          throw error;
         }
       },
 

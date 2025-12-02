@@ -62,4 +62,21 @@ export const gearApi = {
     const response = await axiosInstance.delete(`/gear/${id}/`);
     return response.data;
   },
+
+  // Scan gear by serial number
+  scanGear: async (firestationId: number, serialNumber: string, leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL GET /scan-gear/${firestationId}/${serialNumber}/?leadId=${leadId}`);
+    try {
+      const response = await axiosInstance.get(`/scan-gear/${firestationId}/${serialNumber}/`, {
+        params: { leadId }
+      });
+      console.log(`✅ API Response /scan-gear/${firestationId}/${serialNumber}/`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.log('❌ API Error /scan-gear/:', error);
+      console.log('❌ Error message:', error.message);
+      console.log('❌ Error response:', error.response?.data);
+      throw error;
+    }
+  },
 };
