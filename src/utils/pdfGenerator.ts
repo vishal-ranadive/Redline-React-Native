@@ -604,10 +604,9 @@ export const generateReportHTML = (
                 <td>${escapeHtml(inspectionDate)}</td>
             </tr>
         </table>
-        <div class="page-break-after"></div>
 
         <!-- Summary Statistics Cards -->
-        <div class="page-break-before">
+        <div style="page-break-before: always;">
         <h2 class="section-title">Inspection Summary</h2>
         
         <!-- First Row Container - Primary Stats -->
