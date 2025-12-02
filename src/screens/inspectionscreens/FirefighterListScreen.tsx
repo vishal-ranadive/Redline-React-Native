@@ -420,6 +420,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     position: 'relative',
     overflow: 'hidden',
+
     minHeight: p(150),
   },
   rosterTagBadge: {
@@ -438,6 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: p(10),
     paddingRight: p(30),
+    paddingTop: p(10),
   },
   rosterName: {
     fontSize: p(14),

@@ -302,10 +302,8 @@ export default function FirefighterGearsScreen() {
         : 'N/A';
       const remarks = inspection.remarks || 'N/A';
       const serviceType = inspection.service_type?.status || 'N/A';
-      const finding = inspection.finding?.findings || 'N/A';
       const hydrotestRemarks = inspection.hydrotest_remarks || null;
       const specialisedCleaningRemarks = inspection.specialisedcleaning_remarks || null;
-      const inspectionImages = inspection.inspection_images || [];
 
       return (
         <View style={styles.inspectionSection}>
@@ -351,38 +349,6 @@ export default function FirefighterGearsScreen() {
             <Icon source="wrench" size={14} color="#666" />
             <Text style={styles.detailLabel}>Service:</Text>
             <Text style={styles.detailValue}>{serviceType}</Text>
-          </View>
-
-          {inspectionImages.length > 0 && (
-            <View style={styles.imagesRow}>
-              <Icon source="image-multiple" size={14} color="#666" />
-              <Text style={styles.detailLabel}>Images:</Text>
-              <View style={styles.imagesContainer}>
-                {inspectionImages.slice(0, 3).map((img: string, idx: number) => {
-                  const gearType = inspection.gear?.gear_type?.gear_type || inspection.gear?.gear_name || null;
-                  return (
-                    <View key={idx} style={{ marginRight: p(4) }}>
-                      <Icon 
-                        source={getGearTypeIcon(gearType)} 
-                        size={16} 
-                        color={colors.primary} 
-                      />
-                    </View>
-                  );
-                })}
-                {inspectionImages.length > 3 && (
-                  <Text style={styles.imageCount}>+{inspectionImages.length - 3}</Text>
-                )}
-              </View>
-            </View>
-          )}
-
-          <View style={styles.detailRow}>
-            <Icon source="alert-circle" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Finding:</Text>
-            <Text style={[styles.detailValue, styles.findingText]} numberOfLines={1}>
-              {finding}
-            </Text>
           </View>
 
           {hydrotestRemarks && (
@@ -501,7 +467,7 @@ export default function FirefighterGearsScreen() {
                   <View style={styles.detailRow}>
                     <Icon source="ruler" size={14} color="#666" />
                     <Text style={styles.detailLabel}>Size:</Text>
-                    <Text style={styles.detailValue}>{detail?.gear_size ?? 'N/A'}</Text>
+                    <Text style={styles.detailValue}>{gear.current_inspection?.gear_size || detail?.gear_size || 'N/A'}</Text>
                   </View>
                 </View>
 

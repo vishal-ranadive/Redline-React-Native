@@ -387,7 +387,7 @@ export default function GearsScreen() {
                 <View style={styles.detailRow}>
                   <Icon source="ruler" size={14} color="#666" />
                   <Text style={styles.detailLabel}>Size:</Text>
-                  <Text style={styles.detailValue}>{item.gear.gear_size || 'N/A'}</Text>
+                  <Text style={styles.detailValue}>{(item as any).gear_size || item.gear.gear_size || 'N/A'}</Text>
                 </View>
 
                 <View style={styles.detailRow}>

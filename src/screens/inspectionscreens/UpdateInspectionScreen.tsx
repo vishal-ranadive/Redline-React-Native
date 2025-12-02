@@ -302,9 +302,9 @@ export default function UpdateInspectionScreen() {
           // Initialize form with gear data
           setFormData(prev => ({
             ...prev,
-            size: gearResponse.gear_size || '',
+            // size: gearResponse.gear_size || '',
             serialNumber: gearResponse.serial_number || '',
-            remarks: gearResponse.remarks || '',
+            // remarks: gearResponse.remarks || '',
           }));
         } else {
           setError('Failed to fetch gear data');
@@ -399,7 +399,7 @@ export default function UpdateInspectionScreen() {
           }
 
           // Get gear_size from inspection data (directly on inspection) or fallback to gear.gear_size
-          const gearSize = inspectionData.gear_size || inspectionData.gear?.gear_size || '';
+          const gearSize = inspectionData.gear_size || '';
 
           setFormData(prev => ({
             ...prev,

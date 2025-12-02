@@ -760,7 +760,7 @@ const handleGearPress = (gear: any) => {
       const gearDetail = gear.current_inspection?.gear || gearDetailsCache[gear.gear_id];
       const serialNumber = gearDetail?.serial_number || 'N/A';
       const manufacturerName = gearDetail?.manufacturer?.manufacturer_name || 'N/A';
-      const gearSize = gearDetail?.gear_size || 'N/A';
+      const gearSize = gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A';
 
       return (
         <View style={styles.cardWrapper}>
