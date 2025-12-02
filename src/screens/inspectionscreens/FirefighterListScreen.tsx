@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { Text, Icon, useTheme, TextInput, DataTable, ActivityIndicator } from 'react-native-paper';
+import { Text, Icon, useTheme, TextInput, DataTable, ActivityIndicator, Card } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,9 +15,35 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Firefighter
 type Firefighter = {
   id: number;
   name: string;
-  email: string;
+  email: string | null;
   total_gear_scan_count: number;
-  tag_color: string;
+  tag_color: string | null;
+};
+
+type GearCard = {
+  gear_id: number;
+  gear_name: string;
+  gear_status: string;
+  roster_id: number;
+  roster_name: string;
+  tag_color: string | null;
+};
+
+type RosterGroup = {
+  roster_id: number;
+  roster_name: string;
+  tag_color: string | null;
+  email: string | null;
+  gears: GearCard[];
+};
+
+const statusColorMap: { [key: string]: string } = {
+  Pass: '#34A853',
+  Repair: '#F9A825',
+  Expired: '#ff0303ff',
+  'Recommended Out Of Service': '#f15719ff',
+  'Corrective Action Required': '#F9A825',
+  Fail: '#8B4513',
 };
 
 export default function FirefighterListScreen() {
@@ -26,6 +52,7 @@ export default function FirefighterListScreen() {
 
   const { currentLead } = useLeadStore();
 
+  const [gearCards, setGearCards] = useState<GearCard[]>([]);
   const [rosters, setRosters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,8 +60,9 @@ export default function FirefighterListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination state
-  const [page, setPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [page, setPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const numberOfItemsPerPageList = [4, 8, 12, 16];
 
   const currentLeadId = currentLead?.lead_id;
   const MANUAL_LEAD_ID = 101;
@@ -42,160 +70,222 @@ export default function FirefighterListScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchRosters(effectiveLeadId);
+      fetchAllGears(effectiveLeadId);
     }, [effectiveLeadId]),
   );
 
-  const fetchRosters = async (leadId: number) => {
+  const fetchAllGears = async (leadId: number) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await inspectionApi.getInspectionRosters(leadId);
-      const apiRosters: Firefighter[] = Array.isArray(response?.roster)
-        ? response.roster
+      // First, fetch all rosters
+      const rostersResponse = await inspectionApi.getInspectionRosters(leadId);
+      const rosters: Firefighter[] = Array.isArray(rostersResponse?.roster)
+        ? rostersResponse.roster
         : [];
 
-      if (apiRosters.length) {
-        setRosters(apiRosters);
-      } else {
-        // Fallback dummy data if API returns empty
-        setRosters([
-          { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'red' },
-          { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'green' },
-          { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'yellow' },
-          { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'black' },
-        ]);
+      if (rosters.length === 0) {
+        setGearCards([]);
+        setRosters([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
       }
+
+      // Store rosters for later use
+      setRosters(rosters);
+
+      // Fetch gear inspection info for each roster
+      const allGearCards: GearCard[] = [];
+      
+      await Promise.all(
+        rosters.map(async (roster) => {
+          try {
+            const gearResponse = await inspectionApi.getFirefighterInspectionInfo(leadId, roster.id);
+            const gears = Array.isArray(gearResponse?.gear) ? gearResponse.gear : [];
+
+            // Filter only gears with current_inspection
+            const gearsWithInspection = gears.filter(
+              (gear: any) => gear.current_inspection !== null && gear.current_inspection !== undefined
+            );
+
+            // Create gear cards
+            gearsWithInspection.forEach((gear: any) => {
+              const gearStatus = gear.current_inspection?.gear_status?.status || 'No Status';
+              const tagColor = gear.current_inspection?.tag_color || roster.tag_color;
+
+              allGearCards.push({
+                gear_id: gear.gear_id,
+                gear_name: gear.gear_name || 'Unknown Gear',
+                gear_status: gearStatus,
+                roster_id: roster.id,
+                roster_name: roster.name,
+                tag_color: tagColor,
+              });
+            });
+          } catch (err) {
+            console.error(`Error fetching gears for roster ${roster.id}:`, err);
+          }
+        })
+      );
+
+      setGearCards(allGearCards);
     } catch (e: any) {
-      console.error('Error fetching inspection rosters:', e);
-      setError('Failed to load firefighters. Showing sample data.');
-      // Fallback to dummy data on error
-      setRosters([
-        { id: 8, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'red' },
-        { id: 9, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'green' },
-        { id: 10, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'yellow' },
-        { id: 11, name: 'John Doe', email: 'admin@.com', total_gear_scan_count: 3, tag_color: 'black' },
-      ]);
+      console.error('Error fetching gears:', e);
+      setError('Failed to load gears.');
+      setGearCards([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const filteredFirefighters = useMemo(() => {
+  // Group gears by roster
+  const rosterGroups = useMemo(() => {
+    const grouped = new Map<number, RosterGroup>();
+    
+    gearCards.forEach((gear) => {
+      if (!grouped.has(gear.roster_id)) {
+        const rosterData = rosters.find(r => r.id === gear.roster_id);
+        grouped.set(gear.roster_id, {
+          roster_id: gear.roster_id,
+          roster_name: gear.roster_name,
+          tag_color: gear.tag_color || rosterData?.tag_color || null,
+          email: rosterData?.email || null,
+          gears: [],
+        });
+      }
+      grouped.get(gear.roster_id)!.gears.push(gear);
+    });
+    
+    return Array.from(grouped.values());
+  }, [gearCards, rosters]);
+
+  // Filter roster groups based on search
+  const filteredRosterGroups = useMemo(() => {
     if (!searchQuery.trim()) {
-      return rosters;
+      return rosterGroups;
     }
     const query = searchQuery.toLowerCase();
-    return rosters.filter((roster) => {
-      const nameMatch = roster.name?.toLowerCase().includes(query);
-      const emailMatch = roster.email?.toLowerCase().includes(query);
-      return nameMatch || emailMatch;
-    });
-  }, [rosters, searchQuery]);
+    return rosterGroups
+      .map((group) => {
+        const filteredGears = group.gears.filter((gear) => {
+          const nameMatch = gear.gear_name?.toLowerCase().includes(query);
+          const rosterMatch = gear.roster_name?.toLowerCase().includes(query);
+          const statusMatch = gear.gear_status?.toLowerCase().includes(query);
+          return nameMatch || rosterMatch || statusMatch;
+        });
+        return { ...group, gears: filteredGears };
+      })
+      .filter((group) => group.gears.length > 0);
+  }, [rosterGroups, searchQuery]);
 
-  const totalCount = filteredFirefighters.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage) || 1);
-  const paginatedFirefighters = useMemo(() => {
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredFirefighters.slice(startIndex, endIndex);
-  }, [filteredFirefighters, page, itemsPerPage]);
+  const totalItems = filteredRosterGroups.reduce((sum, group) => sum + group.gears.length, 0);
+  const totalPages = Math.max(1, Math.ceil(filteredRosterGroups.length / itemsPerPage) || 1);
+  const from = page * itemsPerPage;
+  const to = Math.min(from + itemsPerPage, filteredRosterGroups.length);
+  const currentRosterGroups = filteredRosterGroups.slice(from, to);
 
   useEffect(() => {
-    setPage(1);
+    setPage(0);
   }, [itemsPerPage, searchQuery]);
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
+    if (page >= totalPages && totalPages > 0) {
+      setPage(totalPages - 1);
     }
   }, [page, totalPages]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchRosters(effectiveLeadId);
+    await fetchAllGears(effectiveLeadId);
   }, [effectiveLeadId]);
 
-  const handleViewGears = (roster: Firefighter) => {
-    navigation.navigate('FirefighterGearsScreen', { roster ,leadId:currentLead.lead_id });
+  const handleViewGears = (rosterGroup: RosterGroup) => {
+    const roster = {
+      id: rosterGroup.roster_id,
+      name: rosterGroup.roster_name,
+      email: rosterGroup.email ?? '', // Use actual email or empty string (handle null)
+      total_scan_count: rosterGroup.gears.length,
+      tag_color: rosterGroup.tag_color,
+    };
+    navigation.navigate('FirefighterGearsScreen', { 
+      roster,
+      leadId: currentLead?.lead_id || effectiveLeadId 
+    });
   };
 
-  const getInitials = (name: string) => {
-    if (!name) {
-      return '?';
-    }
-    return name
-      .split(' ')
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getAvatarColor = (id: number) => {
-    const palette = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
-      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
-    ];
-    const index = Math.abs(id) % palette.length;
-    return palette[index];
-  };
-
-  const getTagColor = (roster: Firefighter) => {
-    const rawColor = roster.tag_color?.trim();
-    if (!rawColor) {
+  const normalizeTagColor = (color?: string | null) => {
+    if (!color) {
       return null;
     }
-
-    if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(rawColor)) {
-      return rawColor;
+    const trimmed = color.trim();
+    if (!trimmed) {
+      return null;
     }
+    if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    return trimmed.toLowerCase();
+  };
 
-    return rawColor.toLowerCase();
+  const getStatusColor = (status: string) => {
+    return statusColorMap[status] || '#9E9E9E';
   };
 
   /**
-   * Render individual firefighter row
+   * Render roster group with gears
    */
-  const renderFirefighter = ({ item }: { item: Firefighter }) => {
-    const tagColor = getTagColor(item);
-    return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => handleViewGears(item)}
-      style={[styles.firefighterRow, { backgroundColor: colors.surface }]}
-    > 
-      {tagColor && (
-        <View style={[styles.tagBadge, { backgroundColor: tagColor }]} />
-      )}
-      {/* Left: Profile Avatar and Name/Email */}
-      <View style={styles.leftSection}>
-        <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.id) }]}>
-          <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
-        </View>
-        <View style={styles.nameEmailContainer}>
-          <Text variant="titleMedium" style={{ fontWeight: 'bold', fontSize: p(14) }}>
-            {item.name}
-          </Text>
-          <Text style={{ fontSize: p(12), color: '#666' }} numberOfLines={1}>
-            {item.email}
-          </Text>
-        </View>
-      </View>
+  const renderRosterGroup = ({ item }: { item: RosterGroup }) => {
+    const tagColor = normalizeTagColor(item.tag_color);
+    const scannedCount = item.gears.length;
 
-      {/* Right: Total Scanned Gears and Arrow */}
-      <View style={styles.rightSection}>
-        <View style={styles.gearCountContainer}>
-          <Icon source="tools" size={p(16)} color={colors.primary} />
-          <Text style={styles.gearCountText}>{item.total_gear_scan_count ?? 0}</Text>
-          <Text style={styles.gearLabel}>Total Scanned Gears</Text>
-        </View>
-        <Icon source="chevron-right" size={p(20)} color="#666" />
+    return (
+      <View style={styles.cardWrapper}>
+        <Card style={[styles.rosterCard, { backgroundColor: colors.surface }]}>
+          {tagColor && (
+            <View style={[styles.rosterTagBadge, { backgroundColor: tagColor }]} />
+          )}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleViewGears(item)}
+          >
+            <Card.Content>
+              {/* Roster Header */}
+              <View style={styles.rosterHeader}>
+                <Text variant="titleMedium" style={[styles.rosterName, { color: colors.onSurface }]} numberOfLines={1}>
+                  {item.roster_name}
+                </Text>
+                <View style={styles.rosterInfo}>
+                  <Icon source="tools" size={p(14)} color={colors.primary} />
+                  <Text style={[styles.scannedCount, { color: colors.onSurface }]}>
+                    {scannedCount}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Gears List */}
+              <View style={styles.gearsList}>
+                {item.gears.map((gear) => {
+                  const statusColor = getStatusColor(gear.gear_status);
+                  return (
+                    <View key={gear.gear_id} style={styles.gearRow}>
+                      <Text style={[styles.gearName, { color: colors.onSurface }]} numberOfLines={1}>
+                        {gear.gear_name}
+                      </Text>
+                      <Text style={[styles.gearStatus, { color: statusColor }]} numberOfLines={1}>
+                        {gear.gear_status}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </Card.Content>
+          </TouchableOpacity>
+        </Card>
       </View>
-    </TouchableOpacity> 
-  );
+    );
   };
 
   if (loading && !refreshing) {
@@ -218,7 +308,7 @@ export default function FirefighterListScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by email or name"
+          placeholder="Search by firefighter name, gear name, or status"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
@@ -226,8 +316,6 @@ export default function FirefighterListScreen() {
           dense
         />
       </View>
-
-    
 
       {error && (
         <View style={[styles.errorBanner, { backgroundColor: colors.errorContainer }]}>
@@ -238,13 +326,15 @@ export default function FirefighterListScreen() {
         </View>
       )}
 
-      {/* Firefighters List - Horizontal Rows */}
+      {/* Roster Groups List - Two Columns */}
       <FlatList
-        data={paginatedFirefighters}
-        renderItem={renderFirefighter}
-        keyExtractor={(item) => item.id.toString()}
-        showsVerticalScrollIndicator={false}
+        data={currentRosterGroups}
+        renderItem={renderRosterGroup}
+        keyExtractor={(item) => item.roster_id.toString()}
+        numColumns={2}
         contentContainerStyle={styles.listContainer}
+        columnWrapperStyle={styles.columnWrapper}
+        showsVerticalScrollIndicator={true}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         ListEmptyComponent={
@@ -252,10 +342,10 @@ export default function FirefighterListScreen() {
             <View style={styles.emptyContainer}>
               <Icon source="account-search" size={64} color={colors.outline} />
               <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-                {error ? 'No roster available' : 'No Firefighters Found'}
+                {error ? 'No rosters available' : 'No Rosters Found'}
               </Text>
               <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-                {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No firefighters available')}
+                {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
               </Text>
             </View>
           ) : null
@@ -265,17 +355,15 @@ export default function FirefighterListScreen() {
       {/* Pagination */}
       <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
         <DataTable.Pagination
-          page={page - 1}
+          page={page}
           numberOfPages={totalPages}
-          onPageChange={newPage => setPage(newPage + 1)}
-          label={`${
-            totalCount === 0 ? 0 : (page - 1) * itemsPerPage + 1
-          }-${totalCount === 0 ? 0 : Math.min(page * itemsPerPage, totalCount)} of ${totalCount}`}
+          onPageChange={setPage}
+          label={`${from + 1}-${to} of ${filteredRosterGroups.length}`}
           showFastPaginationControls
-          numberOfItemsPerPageList={[10, 20, 30]}
+          numberOfItemsPerPageList={numberOfItemsPerPageList}
           numberOfItemsPerPage={itemsPerPage}
           onItemsPerPageChange={setItemsPerPage}
-          selectPageDropdownLabel={'Firefighters per page'}
+          selectPageDropdownLabel={'Rosters per page'}
           theme={{
             colors: {
               primary: colors.primary,
@@ -309,15 +397,18 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: p(100),
+    paddingHorizontal: p(5),
     flexGrow: 1,
   },
-  firefighterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  columnWrapper: {
     justifyContent: 'space-between',
-    padding: p(12),
-    marginHorizontal: p(14),
-    marginBottom: p(8),
+    paddingHorizontal: p(9),
+  },
+  cardWrapper: {
+    width: '48%',
+    marginBottom: p(12),
+  },
+  rosterCard: {
     borderRadius: p(8),
     elevation: 2,
     shadowColor: '#000',
@@ -326,46 +417,59 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     position: 'relative',
     overflow: 'hidden',
+    minHeight: p(150),
   },
-  leftSection: {
+  rosterTagBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: p(30),
+    height: p(24),
+    borderTopRightRadius: p(8),
+    borderBottomLeftRadius: p(10),
+    zIndex: 1,
+  },
+  rosterHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: p(10),
+    paddingRight: p(30),
   },
-  avatar: {
-    width: p(40),
-    height: p(40),
-    borderRadius: p(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: p(12),
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  rosterName: {
     fontSize: p(14),
-  },
-  nameEmailContainer: {
+    fontWeight: 'bold',
     flex: 1,
+    marginRight: p(4),
   },
-  rightSection: {
+  rosterInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: p(8),
+    gap: p(4),
   },
-  gearCountContainer: {
+  scannedCount: {
+    fontSize: p(11),
+    fontWeight: '600',
+  },
+  gearsList: {
+    gap: p(6),
+  },
+  gearRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: p(8),
+    paddingVertical: p(4),
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  gearCountText: {
-    fontSize: p(16),
-    fontWeight: 'bold',
-    marginTop: p(2),
+  gearName: {
+    fontSize: p(12),
+    flex: 1,
+    marginRight: p(6),
   },
-  gearLabel: {
-    fontSize: p(10),
-    color: '#666',
-    marginTop: p(2),
+  gearStatus: {
+    fontSize: p(12),
+    fontWeight: '500',
   },
   paginationContainer: {
     position: 'absolute',
@@ -394,28 +498,5 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: p(12),
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: p(14),
-    marginBottom: p(8),
-    borderRadius: p(8),
-    paddingHorizontal: p(12),
-    paddingVertical: p(8),
-    gap: p(8),
-  },
-  infoText: {
-    flex: 1,
-    fontSize: p(12),
-  },
-  tagBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: p(30),
-    height: p(24),
-    borderTopRightRadius: p(8),
-    borderBottomLeftRadius: p(10),
   },
 });
