@@ -22,19 +22,7 @@ interface ColorPickerModalProps {
   usedColors?: string[]; // Colors already used by other rosters
 }
 
-// Color mapping for display purposes
-const COLOR_MAP: { [key: string]: string } = {
-  red: '#FF4444',
-  blue: '#4444FF',
-  green: '#44FF44',
-  yellow: '#FFFF44',
-  orange: '#FF8844',
-  purple: '#8844FF',
-  pink: '#FF44FF',
-  cyan: '#44FFFF',
-  lime: '#88FF44',
-  teal: '#44FF88',
-};
+import { COLOR_MAP } from '../../constants/colors';
 
 export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   visible,

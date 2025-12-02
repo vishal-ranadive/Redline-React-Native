@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGearStore, type Gear } from '../../store/gearStore';
 import { useInspectionStore } from '../../store/inspectionStore';
+import { getColorHex } from '../../constants/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
@@ -82,10 +83,12 @@ const normalizeTagColor = (color?: string | null) => {
   if (!trimmed) {
     return null;
   }
+  // If it's already a hex color, return it
   if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
     return trimmed;
   }
-  return trimmed.toLowerCase();
+  // Otherwise, map color name to hex using COLOR_MAP
+  return getColorHex(trimmed);
 };
 
 export default function FirefighterGearsScreen() {

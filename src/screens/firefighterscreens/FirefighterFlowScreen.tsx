@@ -36,6 +36,7 @@ import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inspectionApi } from '../../services/inspectionApi';
+import { getColorHex } from '../../constants/colors';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -127,27 +128,6 @@ const getGearEmoji = (gearType: string | null) => {
   if (type.includes('BOOT')) return '👢';
   
   return '📦'; // Default for others
-};
-
-// Color mapping for display purposes (convert color name to hex)
-const COLOR_MAP: { [key: string]: string } = {
-  red: '#FF4444',
-  blue: '#4444FF',
-  green: '#44FF44',
-  yellow: '#FFFF44',
-  orange: '#FF8844',
-  purple: '#8844FF',
-  pink: '#FF44FF',
-  cyan: '#44FFFF',
-  lime: '#88FF44',
-  teal: '#44FF88',
-};
-
-// Helper to get hex color from color name for UI display
-const getColorHex = (colorName?: string | null): string => {
-  if (!colorName) return '#CCCCCC';
-  const normalized = colorName.toLowerCase().trim();
-  return COLOR_MAP[normalized] || '#CCCCCC';
 };
 
 const FirefighterFlowScreen = () => {

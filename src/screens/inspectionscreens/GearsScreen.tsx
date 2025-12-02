@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inspectionApi } from '../../services/inspectionApi';
 import { useLeadStore } from '../../store/leadStore';
+import { getColorHex } from '../../constants/colors';
 
 type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
 
@@ -111,10 +112,12 @@ const normalizeTagColor = (color?: string | null) => {
   if (!trimmed) {
     return null;
   }
+  // If it's already a hex color, return it
   if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
     return trimmed;
   }
-  return trimmed.toLowerCase();
+  // Otherwise, map color name to hex using COLOR_MAP
+  return getColorHex(trimmed);
 };
 
 export default function GearsScreen() {

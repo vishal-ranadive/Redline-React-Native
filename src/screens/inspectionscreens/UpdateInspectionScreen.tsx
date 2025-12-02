@@ -375,12 +375,18 @@ export default function UpdateInspectionScreen() {
           }
 
           // Populate form data with inspection data
-          // Handle finding as array or single object
-          const gearFindings = Array.isArray(inspectionData.finding)
-            ? inspectionData.finding.map((f: any) => f.id?.toString()).filter(Boolean)
-            : inspectionData.finding?.id
-            ? [inspectionData.finding.id.toString()]
-            : [];
+          // Handle finding_ids as array of IDs (new API format) or finding as array/object (legacy format)
+          let gearFindings: string[] = [];
+          if (inspectionData.finding_ids && Array.isArray(inspectionData.finding_ids)) {
+            // New API format: finding_ids is an array of IDs
+            gearFindings = inspectionData.finding_ids.map((id: number) => id.toString()).filter(Boolean);
+          } else if (Array.isArray(inspectionData.finding)) {
+            // Legacy format: finding is an array of objects
+            gearFindings = inspectionData.finding.map((f: any) => f.id?.toString()).filter(Boolean);
+          } else if (inspectionData.finding?.id) {
+            // Legacy format: finding is a single object
+            gearFindings = [inspectionData.finding.id.toString()];
+          }
 
           // Convert hydro_test_performed from "YES"/"NO" string to boolean
           const hydroPerformed = inspectionData.hydro_test_performed === "YES" || inspectionData.hydro_test_performed === "yes";
@@ -392,12 +398,15 @@ export default function UpdateInspectionScreen() {
             hydroResult = result.charAt(0).toUpperCase() + result.slice(1); // "pass" -> "Pass", "fail" -> "Fail"
           }
 
+          // Get gear_size from inspection data (directly on inspection) or fallback to gear.gear_size
+          const gearSize = inspectionData.gear_size || inspectionData.gear?.gear_size || '';
+
           setFormData(prev => ({
             ...prev,
             status: getStatusValue(inspectionData.gear_status?.status) || '',
             serviceType: getServiceTypeValue(inspectionData.service_type?.status) || '',
-            harnessType: inspectionData.harness_type || false,
-            size: inspectionData.gear?.gear_size || '',
+            harnessType: inspectionData.is_harness === true || inspectionData.is_harness === "YES" || inspectionData.harness_type || false,
+            size: gearSize,
             selectedGearFindings: gearFindings,
             serialNumber: inspectionData.gear?.serial_number || '',
             hydroPerformed: hydroPerformed,

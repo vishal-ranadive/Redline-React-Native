@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
+import { COLOR_MAP, getColorHex } from '../../constants/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
 
@@ -186,7 +187,7 @@ export default function FirefighterListScreen() {
   const from = page * itemsPerPage;
   const to = Math.min(from + itemsPerPage, filteredRosterGroups.length);
   const currentRosterGroups = filteredRosterGroups.slice(from, to);
-
+  console.log("currentRosterGroups", currentRosterGroups);
   useEffect(() => {
     setPage(0);
   }, [itemsPerPage, searchQuery]);
@@ -224,10 +225,12 @@ export default function FirefighterListScreen() {
     if (!trimmed) {
       return null;
     }
+    // If it's already a hex color, return it
     if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(trimmed)) {
       return trimmed;
     }
-    return trimmed.toLowerCase();
+    // Otherwise, map color name to hex using COLOR_MAP
+    return getColorHex(trimmed);
   };
 
   const getStatusColor = (status: string) => {
@@ -243,14 +246,14 @@ export default function FirefighterListScreen() {
 
     return (
       <View style={styles.cardWrapper}>
-        <Card style={[styles.rosterCard, { backgroundColor: colors.surface }]}>
-          {tagColor && (
-            <View style={[styles.rosterTagBadge, { backgroundColor: tagColor }]} />
-          )}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => handleViewGears(item)}
-          >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => handleViewGears(item)}
+        >
+          <Card style={[styles.rosterCard, { backgroundColor: colors.surface }]}>
+            {tagColor && (
+              <View style={[styles.rosterTagBadge, { backgroundColor: tagColor }]} />
+            )}
             <Card.Content>
               {/* Roster Header */}
               <View style={styles.rosterHeader}>
@@ -282,8 +285,8 @@ export default function FirefighterListScreen() {
                 })}
               </View>
             </Card.Content>
-          </TouchableOpacity>
-        </Card>
+          </Card>
+        </TouchableOpacity>
       </View>
     );
   };

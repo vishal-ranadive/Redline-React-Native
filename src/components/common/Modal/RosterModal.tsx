@@ -22,27 +22,7 @@ import { p } from '../../../utils/responsive';
 import { useRosterStore } from '../../../store/rosterStore';
 import { useLeadStore } from '../../../store/leadStore';
 import useDebounce from '../../../hooks/useDebounce';
-
-// Color mapping for display purposes (convert color name to hex)
-const COLOR_MAP: { [key: string]: string } = {
-  red: '#FF4444',
-  blue: '#4444FF',
-  green: '#44FF44',
-  yellow: '#FFFF44',
-  orange: '#FF8844',
-  purple: '#8844FF',
-  pink: '#FF44FF',
-  cyan: '#44FFFF',
-  lime: '#88FF44',
-  teal: '#44FF88',
-};
-
-// Helper to get hex color from color name for UI display
-const getColorHex = (colorName?: string | null): string => {
-  if (!colorName) return '#CCCCCC';
-  const normalized = colorName.toLowerCase().trim();
-  return COLOR_MAP[normalized] || '#CCCCCC';
-};
+import { getColorHex } from '../../../constants/colors';
 
 interface RosterModalProps {
   visible: boolean;
