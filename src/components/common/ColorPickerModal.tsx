@@ -19,6 +19,7 @@ interface ColorPickerModalProps {
   selectedColor: string;
   onColorSelect: (color: string) => void;
   colorOptions?: ColorOption[];
+  usedColors?: string[]; // Colors already used by other rosters
 }
 
 // Color mapping for display purposes
@@ -52,8 +53,12 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
     { value: 'lime', label: 'Lime' },
     { value: 'teal', label: 'Teal' },
   ],
+  usedColors = [],
 }) => {
   const { colors } = useTheme();
+
+  // Normalize used colors to lowercase for comparison
+  const normalizedUsedColors = usedColors.map((color) => color.toLowerCase().trim()).filter(Boolean);
 
   return (
     <Modal
@@ -91,6 +96,8 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               const colorValue = colorOption.value.toLowerCase();
               const displayColor = COLOR_MAP[colorValue] || '#CCCCCC';
               const isSelected = selectedColor?.toLowerCase() === colorValue;
+              // Color is locked if it's used by another roster AND not the selected color
+              const isLocked = normalizedUsedColors.includes(colorValue) && !isSelected;
               
               return (
                 <TouchableOpacity
@@ -101,16 +108,28 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                       backgroundColor: displayColor,
                       borderColor: isSelected ? colors.primary : 'transparent',
                       borderWidth: 3,
+                      opacity: isLocked ? 0.6 : 1,
                     },
                   ]}
                   onPress={() => {
-                    onColorSelect(colorOption.value);
-                    onClose();
+                    if (!isLocked) {
+                      onColorSelect(colorOption.value);
+                      onClose();
+                    }
                   }}
+                  disabled={isLocked}
                 >
                   {isSelected && (
                     <IconButton
                       icon="check"
+                      size={16}
+                      iconColor="#fff"
+                      style={styles.colorCheckIcon}
+                    />
+                  )}
+                  {isLocked && !isSelected && (
+                    <IconButton
+                      icon="lock"
                       size={16}
                       iconColor="#fff"
                       style={styles.colorCheckIcon}

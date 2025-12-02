@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, TextInput } from 'react-native-paper';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
@@ -129,12 +129,7 @@ export default function GearsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GearStatus | 'All'>('All');
 
-  // Fetch gear inspections on mount
-  useEffect(() => {
-    fetchGearInspections();
-  }, [load, currentLead]);
-
-  const fetchGearInspections = async () => {
+  const fetchGearInspections = useCallback(async () => {
     if (!load?.loadNumber || !currentLead?.lead_id) {
       console.log('Missing loadId or leadId');
       setLoading(false);
@@ -156,7 +151,19 @@ export default function GearsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [load?.loadNumber, currentLead?.lead_id]);
+
+  // Fetch gear inspections on mount
+  useEffect(() => {
+    fetchGearInspections();
+  }, [fetchGearInspections]);
+
+  // Refresh gear inspections when screen comes into focus (e.g., returning from UpdateInspectionScreen)
+  useFocusEffect(
+    useCallback(() => {
+      fetchGearInspections();
+    }, [fetchGearInspections])
+  );
   
   const filteredGearInspections = gearInspections.filter(inspection => {
     const matchesSearch =

@@ -746,7 +746,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
           if (response.status) {
             Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-            navigation.navigate("FirefighterFlow", { firefighter });
+            // Go back to the previous screen (wherever we came from)
+            navigation.goBack();
           } else {
             Alert.alert('Error', response.message || 'Failed to save inspection');
           }

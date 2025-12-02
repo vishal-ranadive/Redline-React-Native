@@ -35,6 +35,7 @@ import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { inspectionApi } from '../../services/inspectionApi';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -175,6 +176,8 @@ const FirefighterFlowScreen = () => {
   const [colorLocked, setColorLocked] = useState<boolean>(false);
   const [colorPickerVisible, setColorPickerVisible] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [usedColors, setUsedColors] = useState<string[]>([]);
+  const [loadingUsedColors, setLoadingUsedColors] = useState<boolean>(false);
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
@@ -217,6 +220,9 @@ useFocusEffect(
       return;
     }
 
+    // Clear color state when changing firefighter - will be set again if gear has tag_color
+    setRosterColor("");
+    setColorLocked(false);
     setSelectedFirefighter(roster);
     setSelectedCategory(null);
     
@@ -249,6 +255,10 @@ useFocusEffect(
     if (!selectedFirefighter) {
       clearFirefighterGears();
       setGearDetailsCache({});
+      // Clear color state when firefighter is deselected
+      setRosterColor("");
+      setColorLocked(false);
+      AsyncStorage.removeItem(TAG_COLOR_STORAGE_KEY);
     }
   }, [selectedFirefighter]);
 
@@ -287,7 +297,12 @@ useFocusEffect(
   }, [firefighterGears, fetchGearById]);
 
 useEffect(() => {
-  if (!firefighterGears) return;
+  if (!firefighterGears || firefighterGears.length === 0) {
+    // No gears or empty array - clear color state
+    setRosterColor("");
+    setColorLocked(false);
+    return;
+  }
 
   // Find first gear with current inspection & tag_color
   const found = firefighterGears.find(
@@ -296,17 +311,18 @@ useEffect(() => {
 
   if (found) {
     // Case 1: color exists → lock it
-    const color = found.current_inspection.tag_color.toLowerCase();
+    const color = found.current_inspection.tag_color.toLowerCase().trim();
     setRosterColor(color);
     setColorLocked(true);
     // Save to AsyncStorage
     AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, color);
-  } 
-  // else {
-  //   // Case 2: no inspection → allow selecting color
-  //   // setRosterColor(""); 
-  //   // setColorLocked(false);
-  // }
+  } else {
+    // Case 2: no gear with tag_color → clear color and unlock
+    setRosterColor("");
+    setColorLocked(false);
+    // Clear AsyncStorage to avoid using old color
+    AsyncStorage.removeItem(TAG_COLOR_STORAGE_KEY);
+  }
 }, [firefighterGears]);
 
 // Save tag color to AsyncStorage whenever rosterColor changes
@@ -600,6 +616,49 @@ const handleGearPress = (gear: any) => {
   const handleFirefighterAdded = () => {
     console.log('Firefighter added successfully');
   };
+
+  // Fetch used colors from other rosters
+  const fetchUsedColors = useCallback(async () => {
+    if (!currentLead?.lead_id) {
+      setUsedColors([]);
+      return;
+    }
+
+    try {
+      setLoadingUsedColors(true);
+      const response = await inspectionApi.getInspectionRosters(currentLead.lead_id);
+      const rosters = Array.isArray(response?.roster) ? response.roster : [];
+      
+      // Extract tag colors from rosters, excluding current firefighter and null values
+      const usedColorsList = rosters
+        .filter((roster: any) => {
+          // Exclude current firefighter's roster
+          if (selectedFirefighter?.roster_id || selectedFirefighter?.id) {
+            const currentRosterId = selectedFirefighter.roster_id || selectedFirefighter.id;
+            return roster.id !== currentRosterId && roster.tag_color;
+          }
+          return roster.tag_color;
+        })
+        .map((roster: any) => roster.tag_color.toLowerCase().trim())
+        .filter((color: string) => color); // Remove empty strings
+
+      // Remove duplicates
+      const uniqueUsedColors: string[] = Array.from(new Set(usedColorsList)) as string[];
+      setUsedColors(uniqueUsedColors);
+    } catch (error) {
+      console.error('Error fetching used colors:', error);
+      setUsedColors([]);
+    } finally {
+      setLoadingUsedColors(false);
+    }
+  }, [currentLead?.lead_id, selectedFirefighter]);
+
+  // Fetch used colors when color picker opens
+  useEffect(() => {
+    if (colorPickerVisible && !colorLocked) {
+      fetchUsedColors();
+    }
+  }, [colorPickerVisible, colorLocked, fetchUsedColors]);
 
   /**
    * Render inspection details section
@@ -1249,6 +1308,7 @@ const handleGearPress = (gear: any) => {
               AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, normalizedColor);
               setColorPickerVisible(false);
             }}
+            usedColors={usedColors}
           />
 
         <AddFirefighterModal

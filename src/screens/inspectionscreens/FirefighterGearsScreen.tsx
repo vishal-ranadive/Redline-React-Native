@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, DataTable, TextInput, ActivityIndicator } from 'react-native-paper';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
@@ -142,9 +142,17 @@ export default function FirefighterGearsScreen() {
     [fetchFirefighterGears, leadId, roster?.id],
   );
 
+  // Load gears on mount
   useEffect(() => {
     loadGears();
   }, [loadGears]);
+
+  // Refresh gears when screen comes into focus (e.g., returning from UpdateInspectionScreen)
+  useFocusEffect(
+    useCallback(() => {
+      loadGears(true); // Pass true to indicate refresh
+    }, [loadGears])
+  );
 
   useEffect(() => {
     let isMounted = true;
