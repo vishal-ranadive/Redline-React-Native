@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl, Dimensions } from 'react-native';
 import Pdf from 'react-native-pdf';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -147,6 +147,17 @@ const LeadDetailScreen = () => {
   const [pdfModalVisible, setPdfModalVisible] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  
+  // Screen dimensions for responsive design
+  const [screenWidth, setScreenWidth] = useState<number>(Dimensions.get('window').width);
+  const [screenHeight, setScreenHeight] = useState<number>(Dimensions.get('window').height);
+  const isMobile = screenWidth < 600;
+  const isTablet = screenWidth >= 600 && screenWidth < 1024;
+  
+  // Modal orientation lock - force portrait
+  const [modalSupportedOrientations, setModalSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'portrait-upside-down']);
 
   /**
    * Get available statuses based on lead type
@@ -171,6 +182,26 @@ const LeadDetailScreen = () => {
   useEffect(() => {
     setRemarksValue(lead?.remarks || '');
   }, [lead?.remarks]);
+
+  // Handle screen dimension changes
+  useEffect(() => {
+    const updateDimensions = () => {
+      const { width, height } = Dimensions.get('window');
+      setScreenWidth(width);
+      setScreenHeight(height);
+    };
+
+    const subscription = Dimensions.addEventListener('change', updateDimensions);
+    return () => subscription.remove();
+  }, []);
+
+  // Lock modal to portrait when it opens
+  useEffect(() => {
+    if (statusDialogVisible) {
+      // Force portrait orientation when modal opens
+      setModalSupportedOrientations(['portrait', 'portrait-upside-down']);
+    }
+  }, [statusDialogVisible]);
 
   /**
    * Fetch detailed lead information from API
@@ -725,10 +756,15 @@ const LeadDetailScreen = () => {
           ]}
         >
           <Card.Content>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
-                Water Hardness <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12) }]}>(Must be below 60 ppm. Over 60 ppm needs treatment)</Text>
-              </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <View style={{ flex: 1, minWidth: '60%' }}>
+                <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
+                  Water Hardness
+                </Text>
+                <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12), marginTop: p(4) }]}>
+                  (Must be below 60 ppm. Over 60 ppm needs treatment)
+                </Text>
+              </View>
 
               {/* Display current hardness or edit button */}
               {!isEditingHardness ? (
@@ -930,43 +966,116 @@ const LeadDetailScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Status Update Dialog */}
-      <Portal>
-        <Dialog
-          visible={statusDialogVisible}
-          onDismiss={() => setStatusDialogVisible(false)}
-        >
-          <Dialog.Title>Update Job Status</Dialog.Title>
-          <Dialog.Content>
-            {/* Dynamically generated status options based on lead type */}
-            {availableStatuses.map(({ status, icon, label }:any) => (
+      {/* Status Update Modal - Responsive for Mobile and Tablet */}
+      <Modal
+        visible={statusDialogVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setStatusDialogVisible(false)}
+        supportedOrientations={modalSupportedOrientations}
+      >
+        <SafeAreaView style={[styles.statusModalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+          <View style={[
+            styles.statusModalContainer,
+            {
+              backgroundColor: colors.surface,
+              maxWidth: isTablet ? p(500) : '90%',
+              maxHeight: isTablet ? p(600) : '80%',
+            }
+          ]}>
+            {/* Modal Header */}
+            <View style={[
+              styles.statusModalHeader,
+              { borderBottomColor: colors.outline }
+            ]}>
+              <Text style={[
+                styles.statusModalTitle,
+                { color: colors.onSurface, fontSize: p(20) }
+              ]}>
+                Update Job Status
+              </Text>
               <Button
-                key={status}
-                icon={icon}
-                mode={currentStatus === status ? 'contained-tonal' : 'text'}
-                onPress={() => handleStatusUpdate(status)}
-                style={{
-                  marginVertical: p(4),
-                  alignSelf: 'flex-start',
-                }}
-                contentStyle={{
-                  flexDirection: 'row',
-                  justifyContent: 'flex-start',
-                }}
-                labelStyle={{
-                  fontSize: p(16),
-                  textAlign: 'left',
-                }}
+                mode="text"
+                compact
+                onPress={() => setStatusDialogVisible(false)}
+                contentStyle={{ padding: 0 }}
               >
-                {label}
+                <Icon source="close" size={p(24)} color={colors.onSurface} />
               </Button>
-            ))}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setStatusDialogVisible(false)}>Cancel</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+            </View>
+
+            {/* Modal Content - Scrollable for many statuses */}
+            <ScrollView
+              style={styles.statusModalContent}
+              contentContainerStyle={styles.statusModalContentContainer}
+              showsVerticalScrollIndicator={true}
+            >
+              {/* Dynamically generated status options based on lead type */}
+              {availableStatuses.map(({ status, icon, label }:any) => (
+                <TouchableOpacity
+                  key={status}
+                  activeOpacity={0.7}
+                  onPress={() => handleStatusUpdate(status)}
+                  style={[
+                    styles.statusOptionButton,
+                    {
+                      backgroundColor: currentStatus === status ? colors.primaryContainer : 'transparent',
+                      borderColor: currentStatus === status ? colors.primary : colors.outline,
+                      paddingVertical: isMobile ? p(12) : p(14),
+                      paddingHorizontal: isMobile ? p(12) : p(16),
+                    }
+                  ]}
+                >
+                  <View style={styles.statusOptionContent}>
+                    {icon && (
+                      <Icon
+                        source={icon}
+                        size={p(20)}
+                        color={currentStatus === status ? colors.primary : colors.onSurface}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.statusOptionText,
+                        {
+                          color: currentStatus === status ? colors.primary : colors.onSurface,
+                          fontSize: isMobile ? p(15) : p(16),
+                          fontWeight: currentStatus === status ? '700' : '500',
+                          marginLeft: icon ? p(12) : 0,
+                        }
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                  {currentStatus === status && (
+                    <Icon
+                      source="check-circle"
+                      size={p(20)}
+                      color={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Modal Footer */}
+            <View style={[
+              styles.statusModalFooter,
+              { borderTopColor: colors.outline }
+            ]}>
+              <Button
+                mode="outlined"
+                onPress={() => setStatusDialogVisible(false)}
+                style={styles.statusModalCancelButton}
+                labelStyle={{ fontSize: p(14) }}
+              >
+                Cancel
+              </Button>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
 
       {/* Assign Technician Dialog */}
       <Portal>
@@ -1332,6 +1441,66 @@ const styles = StyleSheet.create({
     fontSize: p(14),
     marginTop: p(8),
     textAlign: 'center',
+  },
+  statusModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusModalContainer: {
+    width: '90%',
+    borderRadius: p(16),
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  statusModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: p(20),
+    paddingVertical: p(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  statusModalTitle: {
+    fontSize: p(20),
+    fontWeight: '700',
+    flex: 1,
+  },
+  statusModalContent: {
+    flex: 1,
+  },
+  statusModalContentContainer: {
+    padding: p(16),
+    gap: p(8),
+  },
+  statusOptionButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: p(12),
+    borderWidth: 1,
+    marginBottom: p(8),
+  },
+  statusOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  statusOptionText: {
+    flex: 1,
+  },
+  statusModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: p(20),
+    paddingVertical: p(16),
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  statusModalCancelButton: {
+    minWidth: p(100),
   },
 });
 

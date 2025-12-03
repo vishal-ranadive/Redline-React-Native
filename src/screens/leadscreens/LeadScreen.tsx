@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadScreen.tsx
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList, ScrollView } from 'react-native';
 import {
   Text,
   TextInput,
@@ -10,8 +10,11 @@ import {
   Icon,
   Badge,
   DataTable,
+  Modal,
+  Portal,
+  Checkbox,
+  Divider,
 } from 'react-native-paper';
-import { MultiSelect } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,14 +41,6 @@ const p = (size: number): number => size;
 
 type LeadDetailNavProp = NativeStackNavigationProp<RootStackParamList, 'LeadDetail'>;
 
-type StatusDropdownOption = {
-  label: string;
-  value: string;
-  icon?: string;
-  isSection?: boolean;
-  disable?: boolean;
-};
-
 /**
  * LeadScreen - Main screen for displaying and filtering leads
  * Features dynamic status handling for Repair and Inspection leads
@@ -65,12 +60,18 @@ const LeadScreen = () => {
   ); // Screen orientation
   const [screenWidth, setScreenWidth] = useState<number>(Dimensions.get('window').width); // Screen width for responsive design
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]); // Selected status filters
-  const [statusDropdownFocus, setStatusDropdownFocus] = useState(false);
+  const [statusModalVisible, setStatusModalVisible] = useState(false); // Modal visibility state
   
   // Determine if device is mobile (typically < 600px width)
   const isMobile = screenWidth < 600;
   // Determine if device is mobile or tablet (typically < 1024px width) - for absolute button positioning
   const isMobileOrTablet = screenWidth < 1024;
+  
+  // Get screen height for modal sizing - reactive to dimension changes
+  const modalHeight = useMemo(() => {
+    const screenHeight = Dimensions.get('window').height;
+    return screenHeight * 0.8; // 80% of screen height
+  }, [orientation, screenWidth]);
   
   // Pagination state
   const [page, setPage] = useState<number>(1); // Current page
@@ -90,60 +91,71 @@ const LeadScreen = () => {
     );
   }, [orderTypeFilter]);
 
-  const statusOptions = useMemo<StatusDropdownOption[]>(() => {
-    return groupedStatusSections.flatMap((group) => [
-      {
-        label: group.title.toUpperCase(),
-        value: `__header__${group.type}`,
-        isSection: true,
-        disable: true,
-      },
-      ...group.data.map(({ status, label, icon }) => ({
-        label,
-        value: status,
-        icon,
-      })),
-    ]);
-  }, [groupedStatusSections]);
-
-  const renderStatusItem = useCallback(
-    (item: StatusDropdownOption) => {
-      if (item.isSection) {
-        return (
-          <View style={styles.dropdownSectionHeader}>
-            <Text style={styles.dropdownSectionHeaderText}>{item.label}</Text>
-          </View>
-        );
+  /**
+   * Toggle status selection in modal
+   */
+  const toggleStatusSelection = useCallback((status: LeadStatus) => {
+    setStatusFilters((prev) => {
+      if (prev.includes(status)) {
+        return prev.filter((s) => s !== status);
+      } else {
+        return [...prev, status];
       }
+    });
+  }, []);
 
-      const isSelected = statusFilters.includes(item.value as LeadStatus);
+  /**
+   * Handle modal close and apply filters
+   */
+  const handleModalClose = useCallback(() => {
+    setStatusModalVisible(false);
+    setPage(1);
+  }, []);
+
+  /**
+   * Render status item in modal
+   */
+  const renderModalStatusItem = useCallback(
+    (statusItem: { status: LeadStatus; label: string; icon: string }) => {
+      const isSelected = statusFilters.includes(statusItem.status);
 
       return (
-        <View style={styles.dropdownItem}>
-          {item.icon && (
+        <TouchableOpacity
+          key={statusItem.status}
+          style={[
+            styles.modalStatusItem,
+            isSelected && { backgroundColor: colors.primaryContainer },
+          ]}
+          onPress={() => toggleStatusSelection(statusItem.status)}
+          activeOpacity={0.7}
+        >
+          <Checkbox
+            status={isSelected ? 'checked' : 'unchecked'}
+            onPress={() => toggleStatusSelection(statusItem.status)}
+            color={colors.primary}
+          />
+          {statusItem.icon && (
             <Icon
-              source={item.icon}
+              source={statusItem.icon}
               size={22}
               color={isSelected ? colors.primary : colors.onSurfaceVariant}
-              testID={`status-icon-${item.value}`}
             />
           )}
-          {item.icon && <View style={{ width: p(10) }} />}
           <Text
             style={[
-              styles.dropdownItemLabel,
+              styles.modalStatusItemLabel,
               {
-                color: colors.onSurface,
-                fontWeight: isSelected ? '700' : '500',
+                color: isSelected ? colors.primary : colors.onSurface,
+                fontWeight: isSelected ? '600' : '400',
               },
             ]}
           >
-            {item.label}
+            {statusItem.label}
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     },
-    [colors.onSurface, colors.onSurfaceVariant, colors.primary, statusFilters],
+    [statusFilters, colors, toggleStatusSelection],
   );
 
   // Effect for handling screen orientation and size changes
@@ -476,33 +488,19 @@ const LeadScreen = () => {
 
             {/* Mobile: Row 2 - Select Status | Clear */}
             <View style={styles.filterRowMobile}>
-              <View style={[styles.multiSelectWrapper, styles.multiSelectWrapperMobile]}>
-                <MultiSelect
-                  style={[
-                    styles.dropdown,
-                    { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
-                  ]}
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  selectedTextStyle={{ display: 'none' }}
-                  data={statusOptions}
-                  value={statusFilters}
-                  labelField="label"
-                  valueField="value"
-                  placeholder="Select status"
-                  onFocus={() => setStatusDropdownFocus(true)}
-                  onBlur={() => setStatusDropdownFocus(false)}
-                  renderSelectedItem={() => <View />}
-                  onChange={(selected) => {
-                    const sanitized = (selected as string[]).filter(
-                      (value) => !value.startsWith('__header__'),
-                    ) as LeadStatus[];
-                    setStatusFilters(sanitized);
-                    setPage(1);
-                  }}
-                  renderItem={renderStatusItem}
-                  maxHeight={p(620)}
-                />
-              </View>
+              <Button
+                mode="outlined"
+                onPress={() => setStatusModalVisible(true)}
+                style={[styles.statusButton, styles.statusButtonMobile]}
+                labelStyle={styles.statusButtonLabel}
+                buttonColor={colors.surface}
+                textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+                icon="filter-variant"
+              >
+                {statusFilters.length > 0
+                  ? `${statusFilters.length} Selected`
+                  : 'Select Status'}
+              </Button>
 
               <View style={{ position: 'relative', flex: 1 }}>
                 <Button
@@ -574,33 +572,19 @@ const LeadScreen = () => {
               Inspection
             </Button>
 
-            <View style={styles.multiSelectWrapper}>
-              <MultiSelect
-                style={[
-                  styles.dropdown,
-                  { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
-                ]}
-                placeholderStyle={styles.dropdownPlaceholder}
-                selectedTextStyle={{ display: 'none' }}
-                data={statusOptions}
-                value={statusFilters}
-                labelField="label"
-                valueField="value"
-                placeholder="Select status"
-                onFocus={() => setStatusDropdownFocus(true)}
-                onBlur={() => setStatusDropdownFocus(false)}
-                renderSelectedItem={() => <View />}
-                onChange={(selected) => {
-                  const sanitized = (selected as string[]).filter(
-                    (value) => !value.startsWith('__header__'),
-                  ) as LeadStatus[];
-                  setStatusFilters(sanitized);
-                  setPage(1);
-                }}
-                renderItem={renderStatusItem}
-                maxHeight={p(620)}
-              />
-            </View>
+            <Button
+              mode="outlined"
+              onPress={() => setStatusModalVisible(true)}
+              style={styles.statusButton}
+              labelStyle={styles.statusButtonLabel}
+              buttonColor={colors.surface}
+              textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+              icon="filter-variant"
+            >
+              {statusFilters.length > 0
+                ? `${statusFilters.length} Selected`
+                : 'Select Status'}
+            </Button>
 
             <View style={{ position: 'relative' }}>
               <Button
@@ -733,6 +717,101 @@ const LeadScreen = () => {
       
       {/* Bottom Navigation */}
       <BottomNavBar />
+
+      {/* Status Selection Modal */}
+      <Portal>
+        <Modal
+          visible={statusModalVisible}
+          onDismiss={handleModalClose}
+          contentContainerStyle={[
+            styles.modalContainer,
+            isMobile && styles.modalContainerMobile,
+            { 
+              backgroundColor: colors.surface,
+              height: modalHeight,
+            },
+          ]}
+        >
+          {/* Modal Header */}
+          <View style={[styles.modalHeader, { borderBottomColor: colors.outline }]}>
+            <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
+              Select Status
+            </Text>
+            <Button
+              mode="text"
+              onPress={handleModalClose}
+              icon="close"
+              textColor={colors.onSurface}
+              style={styles.modalCloseButton}
+            >
+              Close
+            </Button>
+          </View>
+
+          {/* Selected Status Summary */}
+          {statusFilters.length > 0 && (
+            <View style={[styles.selectedStatusSummary, { backgroundColor: colors.primaryContainer }]}>
+              <Text variant="bodyMedium" style={{ color: colors.onPrimaryContainer, fontWeight: '600' }}>
+                {statusFilters.length} status{statusFilters.length > 1 ? 'es' : ''} selected
+              </Text>
+            </View>
+          )}
+
+          {/* Status Options */}
+          <ScrollView
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+          >
+            {groupedStatusSections.map((section, sectionIndex) => (
+              <View key={section.type} style={styles.modalSection}>
+                {/* Section Header */}
+                <View style={[styles.modalSectionHeader, { backgroundColor: colors.surfaceVariant }]}>
+                  <Text
+                    variant="titleMedium"
+                    style={[
+                      styles.modalSectionHeaderText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {section.title}
+                  </Text>
+                </View>
+
+                {/* Section Items */}
+                {section.data.map((statusItem) => renderModalStatusItem(statusItem))}
+
+                {/* Divider between sections (except last) */}
+                {sectionIndex < groupedStatusSections.length - 1 && (
+                  <Divider style={{ marginVertical: p(8) }} />
+                )}
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Modal Footer */}
+          <View style={[styles.modalFooter, { borderTopColor: colors.outline }]}>
+            <Button
+              mode="text"
+              onPress={() => {
+                setStatusFilters([]);
+              }}
+              textColor={colors.error}
+              disabled={statusFilters.length === 0}
+            >
+              Clear All
+            </Button>
+            <Button
+              mode="contained"
+              onPress={handleModalClose}
+              buttonColor={colors.primary}
+              textColor={colors.onPrimary}
+            >
+              Apply ({statusFilters.length})
+            </Button>
+          </View>
+        </Modal>
+      </Portal>
     </SafeAreaView>
   );
 };
@@ -772,54 +851,88 @@ const styles = StyleSheet.create({
     marginRight: 0,
     marginVertical: 0,
   },
-  multiSelectWrapper: {
-    flexGrow: 1,
-    minWidth: p(140),
-    maxWidth: p(260),
+  statusButton: {
     marginRight: p(8),
+    borderRadius: p(16),
+    borderWidth: 1,
+    paddingHorizontal: p(4),
     marginVertical: p(4),
+    minWidth: p(160),
   },
-  multiSelectWrapperMobile: {
+  statusButtonMobile: {
     flex: 1,
-    minWidth: 0,
-    maxWidth: '100%',
     marginRight: p(8),
     marginVertical: 0,
+    minWidth: 0,
   },
-  dropdown: {
-    borderWidth: 1,
-    borderRadius: p(10),
-    paddingHorizontal: p(12),
-    paddingLeft: p(16),
-    minHeight: p(44),
-    justifyContent: 'center',
-  },
-  dropdownPlaceholder: {
-    color: '#999',
+  statusButtonLabel: {
     fontSize: p(14),
   },
-  dropdownSelectedText: {
-    fontSize: p(14),
+  modalContainer: {
+    backgroundColor: 'white',
+    margin: p(20),
+    borderRadius: p(16),
+    width: p(600),
+    alignSelf: 'center',
+    display: 'flex',
+    flexDirection: 'column',
   },
-  dropdownItem: {
+  modalContainerMobile: {
+    margin: p(10),
+    width: '95%',
+  },
+  modalHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    padding: p(16),
+    borderBottomWidth: 1,
+  },
+  modalCloseButton: {
+    marginLeft: 'auto',
+  },
+  selectedStatusSummary: {
+    padding: p(12),
+    marginHorizontal: p(16),
+    marginTop: p(8),
+    borderRadius: p(8),
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: p(16),
     paddingVertical: p(8),
   },
-  dropdownItemLabel: {
-    fontSize: p(18),
-    fontWeight: '600',
+  modalSection: {
+    marginBottom: p(16),
   },
-  dropdownSectionHeader: {
-    paddingVertical: p(6),
-    paddingHorizontal: p(12),
-    backgroundColor: '#f5f2fb',
+  modalSectionHeader: {
+    padding: p(12),
+    borderRadius: p(8),
+    marginBottom: p(8),
   },
-  dropdownSectionHeaderText: {
-    fontSize: p(11),
+  modalSectionHeaderText: {
     fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#7a6a92',
+    letterSpacing: 0.5,
+  },
+  modalStatusItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: p(12),
+    paddingHorizontal: p(8),
+    borderRadius: p(8),
+    marginBottom: p(4),
+  },
+  modalStatusItemLabel: {
+    fontSize: p(16),
+    marginLeft: p(12),
+    flex: 1,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: p(16),
+    borderTopWidth: 1,
   },
   filterLabel: {
     fontSize: p(14),
