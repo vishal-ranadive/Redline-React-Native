@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { Text, Card, Icon, useTheme, Portal, Dialog, TextInput, DataTable, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -44,6 +44,11 @@ export default function LoadsScreen() {
   const [page, setPage] = useState(0);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(5);
   const numberOfItemsPerPageList = [3, 4, 5, 6];
+
+  // Detect if device is mobile (width < 600)
+  const screenWidth = Dimensions.get('window').width;
+  const isMobile = screenWidth < 600;
+  const numColumns = isMobile ? 1 : 2;
 
   // Pagination calculations
   const from = page * numberOfItemsPerPage;
@@ -137,7 +142,7 @@ export default function LoadsScreen() {
   const renderLoadCard = ({ item: load }: { item: Load }) => (
     <TouchableOpacity 
       onPress={() => handleCardPress(load)}
-      style={styles.cardWrapper}
+      style={[styles.cardWrapper, isMobile && styles.cardWrapperMobile]}
       activeOpacity={0.7}
     >
       <Card style={[styles.loadCard, { backgroundColor: colors.surface }]}>
@@ -220,9 +225,9 @@ export default function LoadsScreen() {
           data={currentLoads}
           renderItem={renderLoadCard}
           keyExtractor={(item) => item.id}
-          numColumns={2}
-          contentContainerStyle={styles.listContainer}
-          columnWrapperStyle={styles.columnWrapper}
+          numColumns={numColumns}
+          contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -275,6 +280,9 @@ const styles = StyleSheet.create({
     paddingBottom: p(100),
     gap: p(10),
   },
+  listContainerMobile: {
+    paddingHorizontal: p(12),
+  },
   columnWrapper: {
     justifyContent: 'space-between',
     gap: p(10),
@@ -282,6 +290,9 @@ const styles = StyleSheet.create({
   cardWrapper: {
     width: '48%',
     marginBottom: p(8),
+  },
+  cardWrapperMobile: {
+    width: '100%',
   },
   searchFilterContainer: {
     paddingHorizontal: p(12),

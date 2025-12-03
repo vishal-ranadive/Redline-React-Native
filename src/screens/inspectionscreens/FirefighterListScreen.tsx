@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import { Text, Icon, useTheme, TextInput, DataTable, ActivityIndicator, Card } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -64,6 +64,11 @@ export default function FirefighterListScreen() {
   const [page, setPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const numberOfItemsPerPageList = [4, 8, 12, 16];
+
+  // Detect if device is mobile (width < 600)
+  const screenWidth = Dimensions.get('window').width;
+  const isMobile = screenWidth < 600;
+  const numColumns = isMobile ? 1 : 2;
 
   const currentLeadId = currentLead?.lead_id;
   const MANUAL_LEAD_ID = 101;
@@ -245,7 +250,7 @@ export default function FirefighterListScreen() {
     const scannedCount = item.gears.length;
 
     return (
-      <View style={styles.cardWrapper}>
+      <View style={[styles.cardWrapper, isMobile && styles.cardWrapperMobile]}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => handleViewGears(item)}
@@ -329,14 +334,14 @@ export default function FirefighterListScreen() {
         </View>
       )}
 
-      {/* Roster Groups List - Two Columns */}
+      {/* Roster Groups List - Responsive Columns */}
       <FlatList
         data={currentRosterGroups}
         renderItem={renderRosterGroup}
         keyExtractor={(item) => item.roster_id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.listContainer}
-        columnWrapperStyle={styles.columnWrapper}
+        numColumns={numColumns}
+        contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         showsVerticalScrollIndicator={true}
         refreshing={refreshing}
         onRefresh={handleRefresh}
@@ -403,6 +408,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: p(5),
     flexGrow: 1,
   },
+  listContainerMobile: {
+    paddingHorizontal: 0,
+  },
   columnWrapper: {
     justifyContent: 'space-between',
     paddingHorizontal: p(9),
@@ -410,6 +418,9 @@ const styles = StyleSheet.create({
   cardWrapper: {
     width: '48%',
     marginBottom: p(12),
+  },
+  cardWrapperMobile: {
+    width: '100%',
   },
   rosterCard: {
     borderRadius: p(8),

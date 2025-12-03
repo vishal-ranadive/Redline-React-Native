@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, TextInput } from 'react-native-paper';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inspectionApi } from '../../services/inspectionApi';
 import { useLeadStore } from '../../store/leadStore';
 import { getColorHex } from '../../constants/colors';
+import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 
 type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
 
@@ -178,6 +179,52 @@ export default function GearsScreen() {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Dummy gear inspection data for testing when backend is not responding
+  const dummyGearInspection: GearInspection = useMemo(() => ({
+    gear: {
+      gear_id: 999,
+      gear_name: 'Firefighter Jacket',
+      manufacturer: {
+        manufacturer_id: 1,
+        manufacturer_name: 'FireGear Pro',
+      },
+      gear_type: {
+        gear_type_id: 1,
+        gear_type: 'Jacket',
+      },
+      manufacturing_date: '2020-01-15',
+      gear_size: 'Large',
+      serial_number: 'FFJ-2024-001',
+    },
+    roster: {
+      name: 'John Doe',
+      tag_color: 'Red',
+    },
+    inspection_id: 999,
+    inspection_date: '2024-01-15',
+    hydro_test_result: 'PASS',
+    hydro_test_performed: 'YES',
+    gear_findings: null,
+    inspection_cost: 150.00,
+    remarks: 'All checks passed. Gear is in excellent condition.',
+    gear_status: {
+      id: 1,
+      status: 'Pass',
+    },
+    service_type: {
+      id: 1,
+      status: 'Cleaned and Inspected',
+    },
+  }), []);
+
+  // Add dummy card if no gears are available (for testing)
+  const gearsToDisplay = useMemo(() => {
+    if (filteredGearInspections.length === 0 && !loading) {
+      return [dummyGearInspection];
+    }
+    return filteredGearInspections;
+  }, [filteredGearInspections, loading, dummyGearInspection]);
 
   const getGearStatusColor = (status: string) => {
     return statusColorMap[status] || '#9E9E9E';
@@ -444,7 +491,7 @@ export default function GearsScreen() {
                 {load.name || 'Load Name'}
               </Text>
               <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: p(2) }}>
-                {gearInspections.length} Gear Inspections
+                {gearsToDisplay.length} Gear Inspections
               </Text>
             </View>
           </View>
@@ -490,20 +537,15 @@ export default function GearsScreen() {
         </View>
       </View>
 
-      {/* Gears Grid - Two Columns */}
+      {/* Gears List - Single Column */}
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.onSurfaceVariant }}>Loading gear inspections...</Text>
-        </View>
+        <GearCardSkeleton count={3} />
       ) : (
         <FlatList
-          data={filteredGearInspections}
+          data={gearsToDisplay}
           renderItem={renderGear}
           keyExtractor={(item) => item.inspection_id.toString()}
-          numColumns={2}
           contentContainerStyle={styles.grid}
-          columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -585,14 +627,10 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingBottom: p(100),
-    paddingHorizontal: p(5),
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
-    paddingHorizontal: p(9),
+    paddingHorizontal: p(10),
   },
   cardWrapper: {
-    width: '48%',
+    width: '100%',
     marginBottom: p(12),
   },
   shadow: {
@@ -605,7 +643,6 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 0,
     borderRadius: p(10),
-    minHeight: p(400),
     overflow: 'hidden',
   },
   cardHeader: {
@@ -616,7 +653,7 @@ const styles = StyleSheet.create({
     paddingRight: p(12),
   },
   headerStatusChip: {
-    height: p(26),
+    // height: p(26),
     alignSelf: 'flex-start',
     marginRight: p(6),
   },

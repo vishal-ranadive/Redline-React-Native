@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGearStore, type Gear } from '../../store/gearStore';
 import { useInspectionStore } from '../../store/inspectionStore';
 import { getColorHex } from '../../constants/colors';
+import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
@@ -242,10 +243,55 @@ export default function FirefighterGearsScreen() {
     });
   }, [gearsWithInspection, searchQuery]);
 
-  const totalItems = filteredGears.length;
+  // Dummy card data for testing when backend is not responding
+  const dummyGearCard: GearCard = useMemo(() => ({
+    gear: {
+      gear_id: 999,
+      gear_type_id: 1,
+      gear_usage: null,
+      gear_name: 'Firefighter Jacket',
+      current_inspection: {
+        inspection_id: 999,
+        inspection_date: '2024-01-15',
+        hydro_test_result: 'PASS',
+        hydro_test_performed: true,
+        inspection_cost: 150.00,
+        remarks: 'All checks passed. Gear is in excellent condition.',
+        service_type: { status: 'Cleaned and Inspected' },
+        gear_status: { status: 'Pass' },
+        tag_color: '#FF0000',
+        gear_size: 'Large',
+        hydrotest_remarks: null,
+        specialisedcleaning_remarks: null,
+      },
+      previous_inspection: null,
+    },
+    detail: {
+      gear_id: 999,
+      gear_name: 'Firefighter Jacket',
+      serial_number: 'FFJ-2024-001',
+      gear_size: 'Large',
+      manufacturer: { manufacturer_id: 1, manufacturer_name: 'FireGear Pro' },
+      gear_type: { gear_type_id: 1, gear_type: 'Jacket' },
+    } as Gear,
+    color: '#FF0000',
+    gearStatus: 'Pass',
+  }), []);
+
+  const isLoading = (loading || inspectionLoading || buildingCards) && !refreshing;
+
+  // Add dummy card if no gears are available (for testing)
+  const gearsToDisplay = useMemo(() => {
+    if (filteredGears.length === 0 && !isLoading) {
+      return [dummyGearCard];
+    }
+    return filteredGears;
+  }, [filteredGears, isLoading, dummyGearCard]);
+
+  const totalItems = gearsToDisplay.length;
   const from = page * numberOfItemsPerPage;
   const to = Math.min(from + numberOfItemsPerPage, totalItems);
-  const currentGears = filteredGears.slice(from, to);
+  const currentGears = gearsToDisplay.slice(from, to);
 
   const handleUpdateGear = (card: GearCard) => {
     const gearId = card.detail?.gear_id ?? card.gear.gear_id;
@@ -497,8 +543,6 @@ export default function FirefighterGearsScreen() {
     [colors, navigation, renderInspectionDetails],
   );
 
-  const isLoading = (loading || inspectionLoading || buildingCards) && !refreshing;
-
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -562,7 +606,7 @@ export default function FirefighterGearsScreen() {
             <View style={styles.rightSection}>
               <View style={styles.gearCountContainer}>
                 {/* <Icon source="tools" size={p(20)} color={colors.primary} /> */}
-                <Text style={styles.gearCountText}>{gearsWithInspection.length}</Text>
+                <Text style={styles.gearCountText}>{gearsToDisplay.length}</Text>
                 <Text style={styles.gearLabel}>Total Scanned Gears</Text>
               </View>
             </View>
@@ -583,54 +627,58 @@ export default function FirefighterGearsScreen() {
         />
       </View>
 
-      {/* Gears Grid - Two Columns */}
-      <FlatList
-        data={currentGears}
-        renderItem={renderGear}
-        keyExtractor={(item) => item.gear.gear_id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.grid}
-        columnWrapperStyle={styles.columnWrapper}
-        showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Icon source="package-variant-closed" size={64} color={colors.outline} />
-            <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-              No Gears Found
-            </Text>
-            <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-              {searchQuery
-                ? 'Try adjusting your search criteria' 
-                : 'No gears assigned to this roster'
-              }
-            </Text>
-          </View>
-        }
-      />
+      {/* Gears List - Single Column */}
+      {isLoading ? (
+        <GearCardSkeleton count={3} />
+      ) : (
+        <FlatList
+          data={currentGears}
+          renderItem={renderGear}
+          keyExtractor={(item) => item.gear.gear_id.toString()}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon source="package-variant-closed" size={64} color={colors.outline} />
+              <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
+                No Gears Found
+              </Text>
+              <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
+                {searchQuery
+                  ? 'Try adjusting your search criteria' 
+                  : 'No gears assigned to this roster'
+                }
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Pagination */}
-      <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
-        <DataTable.Pagination
-          page={page}
-          numberOfPages={Math.ceil(filteredGears.length / numberOfItemsPerPage)}
-          onPageChange={newPage => setPage(newPage)}
-          label={`${from + 1}-${to} of ${filteredGears.length}`}
-          showFastPaginationControls
-          numberOfItemsPerPageList={numberOfItemsPerPageList}
-          numberOfItemsPerPage={numberOfItemsPerPage}
-          onItemsPerPageChange={setNumberOfItemsPerPage}
-          selectPageDropdownLabel={'Gears per page'}
-          theme={{
-            colors: {
-              primary: colors.primary,
-              onSurface: colors.onSurface,
-              surface: colors.surface,
-            },
-          }}
-        />
-      </View>
+      {!isLoading && gearsToDisplay.length > 0 && (
+        <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
+          <DataTable.Pagination
+            page={page}
+            numberOfPages={Math.ceil(gearsToDisplay.length / numberOfItemsPerPage)}
+            onPageChange={newPage => setPage(newPage)}
+            label={`${from + 1}-${to} of ${gearsToDisplay.length}`}
+            showFastPaginationControls
+            numberOfItemsPerPageList={numberOfItemsPerPageList}
+            numberOfItemsPerPage={numberOfItemsPerPage}
+            onItemsPerPageChange={setNumberOfItemsPerPage}
+            selectPageDropdownLabel={'Gears per page'}
+            theme={{
+              colors: {
+                primary: colors.primary,
+                onSurface: colors.onSurface,
+                surface: colors.surface,
+              },
+            }}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -716,14 +764,10 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingBottom: p(100),
-    paddingHorizontal: p(5),
-  },
-  columnWrapper: {
-    justifyContent: 'space-between',
-    paddingHorizontal: p(9),
+    paddingHorizontal: p(10),
   },
   cardWrapper: {
-    width: '48%',
+    width: '100%',
     marginBottom: p(12),
   },
   shadow: {
@@ -736,7 +780,6 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 0,
     borderRadius: p(10),
-    // minHeight: p(400),
     overflow: 'hidden',
   },
   cardTypeText: {
@@ -755,7 +798,7 @@ const styles = StyleSheet.create({
     paddingRight: p(12),
   },
   headerStatusChip: {
-    height: p(26),
+    // height: p(26),
     alignSelf: 'flex-start',
     marginRight: p(6),
   },
