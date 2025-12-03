@@ -63,8 +63,14 @@ const LeadScreen = () => {
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   ); // Screen orientation
+  const [screenWidth, setScreenWidth] = useState<number>(Dimensions.get('window').width); // Screen width for responsive design
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]); // Selected status filters
   const [statusDropdownFocus, setStatusDropdownFocus] = useState(false);
+  
+  // Determine if device is mobile (typically < 600px width)
+  const isMobile = screenWidth < 600;
+  // Determine if device is mobile or tablet (typically < 1024px width) - for absolute button positioning
+  const isMobileOrTablet = screenWidth < 1024;
   
   // Pagination state
   const [page, setPage] = useState<number>(1); // Current page
@@ -140,11 +146,12 @@ const LeadScreen = () => {
     [colors.onSurface, colors.onSurfaceVariant, colors.primary, statusFilters],
   );
 
-  // Effect for handling screen orientation changes
+  // Effect for handling screen orientation and size changes
   useEffect(() => {
     const updateLayout = () => {
       const { width, height } = Dimensions.get('window');
       setOrientation(width > height ? 'LANDSCAPE' : 'PORTRAIT');
+      setScreenWidth(width);
     };
 
     const subscription = Dimensions.addEventListener('change', updateLayout);
@@ -213,8 +220,8 @@ const LeadScreen = () => {
     }
   }, [error]);
 
-  // Calculate number of columns - always 2 columns for 50% width cards
-  const numColumns = 2;
+  // Calculate number of columns - 1 for mobile, 2 for larger screens
+  const numColumns = isMobile ? 1 : 2;
 
   /**
    * Convert API lead data to frontend format
@@ -265,12 +272,12 @@ const LeadScreen = () => {
         // styles.shadow,
         { 
           borderColor: colors.outline,
-          width: '50%',
+          width: isMobile ? '100%' : '50%',
         }
       ]}
     > 
-      <Card style={{backgroundColor: colors.surface}}>
-        <Card.Content>
+      <Card style={[styles.cardContainer, {backgroundColor: colors.surface}]}>
+        <Card.Content style={isMobileOrTablet ? styles.cardContentMobile : undefined}>
           {/* Card Header with Job ID and Status */}
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
@@ -291,8 +298,8 @@ const LeadScreen = () => {
           </View>
 
           {/* Lead Details */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
-            <View>
+          <View style={isMobileOrTablet ? styles.leadDetailsMobile : { flexDirection: 'row', justifyContent: 'space-between', alignItems:"flex-end" }}>
+            <View style={isMobileOrTablet ? { flex: 1, paddingBottom: p(10) } : undefined}>
               {/* Customer Name */}
               {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Icon source="account" size={18} color="#555" />
@@ -352,34 +359,58 @@ const LeadScreen = () => {
               )} */}
             </View>
             
-            {/* Lead Type Badge */}
-            <View>
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems:"flex-end" }}>
-                <View
-                  style={[
-                    styles.orderTypePill,
-                    {
-                      borderColor: colors.outline,
-                      backgroundColor: colors.surface,
-                    },
-                  ]}
-                >
-                  <Icon
-                    source={item.leadType === 'REPAIR' ? 'wrench' : 'magnify'}
-                    color={colors.primary}
-                    size={p(14)}
-                  />
-                  <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
-                    {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
-                  </Text>
+            {/* Lead Type Badge - Only for desktop (not mobile/tablet) */}
+            {!isMobileOrTablet && (
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems:"flex-end" }}>
+                  <View
+                    style={[
+                      styles.orderTypePill,
+                      {
+                        borderColor: colors.outline,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <Icon
+                      source={item.leadType === 'REPAIR' ? 'wrench' : 'magnify'}
+                      color={colors.primary}
+                      size={p(14)}
+                    />
+                    <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
+                      {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
           </View>
         </Card.Content>
+        
+        {/* Mobile/Tablet: Lead Type Badge - Absolute positioned at bottom right */}
+        {isMobileOrTablet && (
+          <View
+            style={[
+              styles.orderTypePillMobile,
+              {
+                borderColor: colors.outline,
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <Icon
+              source={item.leadType === 'REPAIR' ? 'wrench' : 'magnify'}
+              color={colors.primary}
+              size={p(14)}
+            />
+            <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
+              {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
+            </Text>
+          </View>
+        )}
       </Card>
     </TouchableOpacity> 
-  )}, [colors, navigation]);
+  )}, [colors, navigation, isMobile, isMobileOrTablet]);
 
   // Pagination calculations
   const from = (page - 1) * numberOfItemsPerPage;
@@ -387,7 +418,7 @@ const LeadScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View>
+      <View style={[styles.contentWrapper, isMobile && styles.contentWrapperMobile]}>
         {/* Header */}
         <Text
           variant="headlineMedium"
@@ -399,7 +430,7 @@ const LeadScreen = () => {
         {/* Search Input */}
         <TextInput
           mode="outlined"
-          placeholder="Search by job id"
+          placeholder="Search by lead id"
           value={search}
           onChangeText={setSearch}
           style={styles.search}
@@ -407,106 +438,206 @@ const LeadScreen = () => {
           activeOutlineColor={colors.primary}
         />
 
-        {/* Filter Row */}
-        <View style={styles.filterRow}>
-          {/* Repair Type Filter Button */}
-          <Button
-            mode={orderTypeFilter === 'REPAIR' ? 'contained' : 'outlined'}
-            onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'REPAIR' ? null : 'REPAIR');
-              setPage(1);
-            }}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'REPAIR' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'REPAIR' ? colors.onPrimary : colors.onSurface}
-            rippleColor={colors.primaryContainer}
-          >
-            Repair
-          </Button>
+        {/* Filter Rows - Responsive Layout */}
+        {isMobile ? (
+          <>
+            {/* Mobile: Row 1 - Repair | Inspection */}
+            <View style={styles.filterRowMobile}>
+              <Button
+                mode={orderTypeFilter === 'REPAIR' ? 'contained' : 'outlined'}
+                onPress={() => {
+                  setOrderTypeFilter(orderTypeFilter === 'REPAIR' ? null : 'REPAIR');
+                  setPage(1);
+                }}
+                style={[styles.filterButton, styles.filterButtonMobile]}
+                labelStyle={styles.filterLabel}
+                buttonColor={orderTypeFilter === 'REPAIR' ? colors.primary : colors.surface}
+                textColor={orderTypeFilter === 'REPAIR' ? colors.onPrimary : colors.onSurface}
+                rippleColor={colors.primaryContainer}
+              >
+                Repair
+              </Button>
 
-          {/* Inspection Type Filter Button */}
-          <Button
-            mode={orderTypeFilter === 'INSPECTION' ? 'contained' : 'outlined'}
-            onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'INSPECTION' ? null : 'INSPECTION');
-              setPage(1);
-            }}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'INSPECTION' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'INSPECTION' ? colors.onPrimary : colors.onSurface}
-            rippleColor={colors.primaryContainer}
-          >
-            Inspection
-          </Button>
+              <Button
+                mode={orderTypeFilter === 'INSPECTION' ? 'contained' : 'outlined'}
+                onPress={() => {
+                  setOrderTypeFilter(orderTypeFilter === 'INSPECTION' ? null : 'INSPECTION');
+                  setPage(1);
+                }}
+                style={[styles.filterButton, styles.filterButtonMobile]}
+                labelStyle={styles.filterLabel}
+                buttonColor={orderTypeFilter === 'INSPECTION' ? colors.primary : colors.surface}
+                textColor={orderTypeFilter === 'INSPECTION' ? colors.onPrimary : colors.onSurface}
+                rippleColor={colors.primaryContainer}
+              >
+                Inspection
+              </Button>
+            </View>
 
-          {/* Status Filter Button */}
-          <View style={styles.multiSelectWrapper}>
-            <MultiSelect
-              style={[
-                styles.dropdown,
-                { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
-              ]}
-              placeholderStyle={styles.dropdownPlaceholder}
-              selectedTextStyle={{ display: 'none' }}
-              data={statusOptions}
-              value={statusFilters}
-              labelField="label"
-              valueField="value"
-              placeholder="Select status"
-              onFocus={() => setStatusDropdownFocus(true)}
-              onBlur={() => setStatusDropdownFocus(false)}
-              renderSelectedItem={() => <View />}
-              onChange={(selected) => {
-                const sanitized = (selected as string[]).filter(
-                  (value) => !value.startsWith('__header__'),
-                ) as LeadStatus[];
-                setStatusFilters(sanitized);
+            {/* Mobile: Row 2 - Select Status | Clear */}
+            <View style={styles.filterRowMobile}>
+              <View style={[styles.multiSelectWrapper, styles.multiSelectWrapperMobile]}>
+                <MultiSelect
+                  style={[
+                    styles.dropdown,
+                    { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
+                  ]}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  selectedTextStyle={{ display: 'none' }}
+                  data={statusOptions}
+                  value={statusFilters}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select status"
+                  onFocus={() => setStatusDropdownFocus(true)}
+                  onBlur={() => setStatusDropdownFocus(false)}
+                  renderSelectedItem={() => <View />}
+                  onChange={(selected) => {
+                    const sanitized = (selected as string[]).filter(
+                      (value) => !value.startsWith('__header__'),
+                    ) as LeadStatus[];
+                    setStatusFilters(sanitized);
+                    setPage(1);
+                  }}
+                  renderItem={renderStatusItem}
+                  maxHeight={p(620)}
+                />
+              </View>
+
+              <View style={{ position: 'relative', flex: 1 }}>
+                <Button
+                  mode="text"
+                  onPress={clearFilters}
+                  textColor={
+                    statusFilters.length > 0 || orderTypeFilter || search
+                      ? colors.primary
+                      : colors.outline
+                  }
+                  style={styles.clearFilterButtonMobile}
+                  icon="filter-remove-outline"
+                >
+                  Clear
+                </Button>
+                {/* Show badge when filters are active */}
+                {(statusFilters.length > 0 || orderTypeFilter || search) && (
+                  <Badge
+                    visible
+                    size={16}
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -6,
+                      backgroundColor: colors.error,
+                      color: colors.onError,
+                    }}
+                  >
+                    {[
+                      statusFilters.length > 0 ? 1 : 0,
+                      orderTypeFilter ? 1 : 0,
+                      search ? 1 : 0,
+                    ].reduce((a, b) => a + b, 0)}
+                  </Badge>
+                )}
+              </View>
+            </View>
+          </>
+        ) : (
+          /* Desktop/Tablet: Single Row Layout */
+          <View style={styles.filterRow}>
+            <Button
+              mode={orderTypeFilter === 'REPAIR' ? 'contained' : 'outlined'}
+              onPress={() => {
+                setOrderTypeFilter(orderTypeFilter === 'REPAIR' ? null : 'REPAIR');
                 setPage(1);
               }}
-              renderItem={renderStatusItem}
-              maxHeight={p(620)}
-            />
-          </View>
-
-          {/* Clear Filters Button with Badge */}
-          <View style={{ position: 'relative' }}>
-            <Button
-              mode="text"
-              onPress={clearFilters}
-              textColor={
-                statusFilters.length > 0 || orderTypeFilter || search
-                  ? colors.primary
-                  : colors.outline
-              }
-              style={styles.clearFilterButton}
-              icon="filter-remove-outline"
+              style={styles.filterButton}
+              labelStyle={styles.filterLabel}
+              buttonColor={orderTypeFilter === 'REPAIR' ? colors.primary : colors.surface}
+              textColor={orderTypeFilter === 'REPAIR' ? colors.onPrimary : colors.onSurface}
+              rippleColor={colors.primaryContainer}
             >
-              Clear
+              Repair
             </Button>
-            {/* Show badge when filters are active */}
-            {(statusFilters.length > 0 || orderTypeFilter || search) && (
-              <Badge
-                visible
-                size={16}
-                style={{
-                  position: 'absolute',
-                  top: -2,
-                  right: -6,
-                  backgroundColor: colors.error,
-                  color: colors.onError,
+
+            <Button
+              mode={orderTypeFilter === 'INSPECTION' ? 'contained' : 'outlined'}
+              onPress={() => {
+                setOrderTypeFilter(orderTypeFilter === 'INSPECTION' ? null : 'INSPECTION');
+                setPage(1);
+              }}
+              style={styles.filterButton}
+              labelStyle={styles.filterLabel}
+              buttonColor={orderTypeFilter === 'INSPECTION' ? colors.primary : colors.surface}
+              textColor={orderTypeFilter === 'INSPECTION' ? colors.onPrimary : colors.onSurface}
+              rippleColor={colors.primaryContainer}
+            >
+              Inspection
+            </Button>
+
+            <View style={styles.multiSelectWrapper}>
+              <MultiSelect
+                style={[
+                  styles.dropdown,
+                  { borderColor: statusDropdownFocus ? colors.primary : colors.outline },
+                ]}
+                placeholderStyle={styles.dropdownPlaceholder}
+                selectedTextStyle={{ display: 'none' }}
+                data={statusOptions}
+                value={statusFilters}
+                labelField="label"
+                valueField="value"
+                placeholder="Select status"
+                onFocus={() => setStatusDropdownFocus(true)}
+                onBlur={() => setStatusDropdownFocus(false)}
+                renderSelectedItem={() => <View />}
+                onChange={(selected) => {
+                  const sanitized = (selected as string[]).filter(
+                    (value) => !value.startsWith('__header__'),
+                  ) as LeadStatus[];
+                  setStatusFilters(sanitized);
+                  setPage(1);
                 }}
+                renderItem={renderStatusItem}
+                maxHeight={p(620)}
+              />
+            </View>
+
+            <View style={{ position: 'relative' }}>
+              <Button
+                mode="text"
+                onPress={clearFilters}
+                textColor={
+                  statusFilters.length > 0 || orderTypeFilter || search
+                    ? colors.primary
+                    : colors.outline
+                }
+                style={styles.clearFilterButton}
+                icon="filter-remove-outline"
               >
-                {[
-                  statusFilters.length > 0 ? 1 : 0,
-                  orderTypeFilter ? 1 : 0,
-                  search ? 1 : 0,
-                ].reduce((a, b) => a + b, 0)}
-              </Badge>
-            )}
+                Clear
+              </Button>
+              {(statusFilters.length > 0 || orderTypeFilter || search) && (
+                <Badge
+                  visible
+                  size={16}
+                  style={{
+                    position: 'absolute',
+                    top: -2,
+                    right: -6,
+                    backgroundColor: colors.error,
+                    color: colors.onError,
+                  }}
+                >
+                  {[
+                    statusFilters.length > 0 ? 1 : 0,
+                    orderTypeFilter ? 1 : 0,
+                    search ? 1 : 0,
+                  ].reduce((a, b) => a + b, 0)}
+                </Badge>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Active Status Filter Chips */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
@@ -538,7 +669,7 @@ const LeadScreen = () => {
             <LeadCardSkeleton />
           </View>
         ) : (
-          <View style={{paddingRight: p(10), paddingBottom: p(300)}}>
+          <View style={[styles.leadsContainer, isMobile && styles.leadsContainerMobile]}>
             {/* Grid of Leads */}
             <FlatList
               key={numColumns.toString()}
@@ -546,9 +677,12 @@ const LeadScreen = () => {
               renderItem={renderLead}
               keyExtractor={(item) => item.lead_id}
               numColumns={numColumns}
-              contentContainerStyle={styles.grid}
+              contentContainerStyle={[styles.grid, isMobile && styles.gridMobile]}
               columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
+              style={isMobile ? styles.flatListMobile : undefined}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
                   <Icon source="inbox" size={64} color={colors.outline} />
@@ -571,7 +705,11 @@ const LeadScreen = () => {
 
       {/* Pagination Controls */}
       {pagination && pagination.total > 0 && (
-        <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
+        <View style={[
+          styles.paginationContainer, 
+          isMobile && styles.paginationContainerMobile,
+          { backgroundColor: colors.surface, borderTopColor: colors.outline }
+        ]}>
           <DataTable.Pagination
             page={page - 1}
             numberOfPages={Math.ceil((pagination.total || 0) / numberOfItemsPerPage)}
@@ -601,6 +739,12 @@ const LeadScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: p(10),  },
+  contentWrapper: {
+    flex: 1,
+  },
+  contentWrapperMobile: {
+    flex: 1,
+  },
   header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
   search: { marginBottom: p(10), width: '100%' },
   filterRow: {
@@ -609,6 +753,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginBottom: p(10),
   },
+  filterRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: p(8),
+    gap: p(8),
+  },
   filterButton: {
     marginRight: p(8),
     borderRadius: p(16),
@@ -616,12 +767,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: p(4),
     marginVertical: p(4),
   },
+  filterButtonMobile: {
+    flex: 1,
+    marginRight: 0,
+    marginVertical: 0,
+  },
   multiSelectWrapper: {
     flexGrow: 1,
     minWidth: p(140),
     maxWidth: p(260),
     marginRight: p(8),
     marginVertical: p(4),
+  },
+  multiSelectWrapperMobile: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '100%',
+    marginRight: p(8),
+    marginVertical: 0,
   },
   dropdown: {
     borderWidth: 1,
@@ -665,10 +828,33 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     marginVertical: p(4),
   },
+  clearFilterButtonMobile: {
+    marginLeft: 0,
+    marginVertical: 0,
+  },
   grid: {
     paddingBottom: p(200),
     paddingHorizontal: p(5),
     gap: p(6),
+  },
+  gridMobile: {
+    paddingBottom: p(120),
+    paddingHorizontal: 0,
+    paddingTop: p(5),
+    gap: p(10),
+  },
+  leadsContainer: {
+    paddingRight: p(10),
+    paddingBottom: p(300),
+  },
+  leadsContainerMobile: {
+    paddingRight: 0,
+    // paddingBottom: 0,
+    paddingBottom: p(100),
+    flex: 1,
+  },
+  flatListMobile: {
+    flex: 1,
   },
   columnWrapper: {
     justifyContent: 'flex-start',
@@ -684,6 +870,15 @@ const styles = StyleSheet.create({
   card: {
     margin: 0,
     borderRadius: p(10),
+  },
+  cardContainer: {
+    position: 'relative',
+  },
+  cardContentMobile: {
+    paddingBottom: p(50), // Increased padding to accommodate absolute positioned button in both portrait and landscape
+  },
+  leadDetailsMobile: {
+    flexDirection: 'column',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -706,6 +901,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: 'flex-start',
   },
+  orderTypePillMobile: {
+    position: 'absolute',
+    bottom: p(12),
+    right: p(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: p(8),
+    paddingVertical: p(4),
+    borderRadius: p(15),
+    borderWidth: 1,
+    zIndex: 1,
+  },
   paginationContainer: {
     position: 'absolute',
     bottom: 0,
@@ -716,6 +923,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    zIndex: 10,
+  },
+  paginationContainerMobile: {
+    marginBottom: p(65),
+    paddingTop: 0,
+    marginTop: 0,
   },
   emptyContainer: {
     flex: 1,
