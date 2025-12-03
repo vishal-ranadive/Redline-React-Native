@@ -625,151 +625,277 @@ const AddGearScreen = () => {
               </Text>
               <Divider style={{ marginVertical: p(8) }} />
 
-              {/* Fire Fighter & Manufacturer side-by-side */}
-              <View
-                style={[
-                  styles.inputRow,
-                  { marginTop: p(8), alignItems: 'flex-start', gap: p(6) },
-                ]}
-              >
-              <View
-                style={[
-                  styles.inputCol,
-                  isLandscape ? { flex: 1 } : { flex: 1 },
-                ]}
-              >
-                <Text style={[styles.label, { color: colors.onSurface }]}>
-                  Fire Fighter *
-                </Text>
-                {renderSelectedRosterCard()}
-              </View>
-
-                <View
-                  style={{
-                    width: isLandscape ? p(12) : 0,
-                    height: isLandscape ? undefined : p(12),
-                  }}
-                />
-
-              <View
-                style={[
-                  styles.inputCol,
-                  isLandscape ? { flex: 1 } : { flex: 1 },
-                ]}
-              >
-                <Text style={[styles.label, { color: colors.onSurface }]}>
-                  Manufacturer *
-                </Text>
-                {renderSelectedManufacturerCard()}
-              </View>
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputCol, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: colors.onSurface }]}>
-                    Serial Number
-                  </Text>
-                  <TextInput
-                    mode="outlined"
-                    value={serialNumber}
-                    onChangeText={setSerialNumber}
-                    placeholder="Enter serial number"
-                    style={styles.input}
-                    outlineColor={colors.outline}
-                    activeOutlineColor={colors.primary}
-                    dense
-                    right={
-                      <TextInput.Icon
-                        icon="barcode-scan"
-                        onPress={() => setBarcodeScannerVisible(true)}
-                        color={colors.primary}
-                      />
-                    }
-                  />
-                </View>
-
-                <View style={{ width: p(12) }} />
-
-                <View style={[styles.inputCol, { flex: 1 }]}>
-                  <MonthYearPicker
-                    label="Manufacturing Month & Year"
-                    value={manufacturingDate}
-                    onChange={setManufacturingDate}
-                    placeholder="Select month & year"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputCol, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: colors.onSurface }]}>
-                    Gear Type *
-                  </Text>
-                <Dropdown
-                  style={[
-                    styles.dropdown,
-                    { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
-                  ]}
-                  selectedTextStyle={styles.dropdownSelectedText}
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
-                  itemTextStyle={{ color: colors.onSurface }}
-                  activeColor={colors.surfaceVariant}
-                  data={gearTypeOptions}
-                  labelField="label"
-                  valueField="value"
-                  placeholder="Select gear type"
-                  value={
-                    selectedGearType
-                      ? String(selectedGearType.gear_type_id)
-                      : null
-                  }
-                  onFocus={() => setGearTypeDropdownFocus(true)}
-                  onBlur={() => setGearTypeDropdownFocus(false)}
-                  onChange={(item) => {
-                    onGearTypeSelect(item.value);
-                    setGearTypeDropdownFocus(false);
-                  }}
-                />
-                </View>
-
-                <View style={{ width: p(12) }} />
-
-                <View style={[styles.inputCol, { flex: 1 }]}>
-                  <Text style={[styles.label, { color: colors.onSurface }]}>
-                    Gear Name{isCustomGearNameRequired ? ' *' : ''}
-                  </Text>
-                  <TextInput
-                    mode="outlined"
-                    value={gearName}
-                    onChangeText={(text) => {
-                      setGearName(text);
-                      if (text.trim()) {
-                        setGearNameError('');
-                      }
-                    }}
-                    placeholder="Enter gear name"
-                    style={styles.input}
-                    outlineColor={colors.outline}
-                    activeOutlineColor={colors.primary}
-                    dense
-                    editable={isGearNameEditable}
-                    disabled={!isGearNameEditable}
-                    error={!!gearNameError}
-                  />
-                  {!!gearNameError && (
-                    <Text
-                      style={{
-                        color: colors.error,
-                        marginTop: p(2),
-                        fontSize: p(11),
-                      }}
+              {isLandscape ? (
+                // Landscape layout: side-by-side
+                <>
+                  {/* Fire Fighter & Manufacturer side-by-side */}
+                  <View
+                    style={[
+                      styles.inputRow,
+                      { marginTop: p(8), alignItems: 'flex-start', gap: p(6) },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.inputCol,
+                        { flex: 1 },
+                      ]}
                     >
-                      {gearNameError}
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Fire Fighter *
+                      </Text>
+                      {renderSelectedRosterCard()}
+                    </View>
+
+                    <View
+                      style={{
+                        width: p(12),
+                      }}
+                    />
+
+                    <View
+                      style={[
+                        styles.inputCol,
+                        { flex: 1 },
+                      ]}
+                    >
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Manufacturer *
+                      </Text>
+                      {renderSelectedManufacturerCard()}
+                    </View>
+                  </View>
+
+                  <View style={styles.inputRow}>
+                    <View style={[styles.inputCol, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Serial Number
+                      </Text>
+                      <TextInput
+                        mode="outlined"
+                        value={serialNumber}
+                        onChangeText={setSerialNumber}
+                        placeholder="Enter serial number"
+                        style={styles.input}
+                        outlineColor={colors.outline}
+                        activeOutlineColor={colors.primary}
+                        dense
+                        right={
+                          <TextInput.Icon
+                            icon="barcode-scan"
+                            onPress={() => setBarcodeScannerVisible(true)}
+                            color={colors.primary}
+                          />
+                        }
+                      />
+                    </View>
+
+                    <View style={{ width: p(12) }} />
+
+                    <View style={[styles.inputCol, { flex: 1 }]}>
+                      <MonthYearPicker
+                        label="Manufacturing Month & Year"
+                        value={manufacturingDate}
+                        onChange={setManufacturingDate}
+                        placeholder="Select month & year"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.inputRow}>
+                    <View style={[styles.inputCol, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Gear Type *
+                      </Text>
+                      <Dropdown
+                        style={[
+                          styles.dropdown,
+                          { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
+                        ]}
+                        selectedTextStyle={styles.dropdownSelectedText}
+                        placeholderStyle={styles.dropdownPlaceholder}
+                        containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
+                        itemTextStyle={{ color: colors.onSurface }}
+                        activeColor={colors.surfaceVariant}
+                        data={gearTypeOptions}
+                        labelField="label"
+                        valueField="value"
+                        placeholder="Select gear type"
+                        value={
+                          selectedGearType
+                            ? String(selectedGearType.gear_type_id)
+                            : null
+                        }
+                        onFocus={() => setGearTypeDropdownFocus(true)}
+                        onBlur={() => setGearTypeDropdownFocus(false)}
+                        onChange={(item) => {
+                          onGearTypeSelect(item.value);
+                          setGearTypeDropdownFocus(false);
+                        }}
+                      />
+                    </View>
+
+                    <View style={{ width: p(12) }} />
+
+                    <View style={[styles.inputCol, { flex: 1 }]}>
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Gear Name{isCustomGearNameRequired ? ' *' : ''}
+                      </Text>
+                      <TextInput
+                        mode="outlined"
+                        value={gearName}
+                        onChangeText={(text) => {
+                          setGearName(text);
+                          if (text.trim()) {
+                            setGearNameError('');
+                          }
+                        }}
+                        placeholder="Enter gear name"
+                        style={styles.input}
+                        outlineColor={colors.outline}
+                        activeOutlineColor={colors.primary}
+                        dense
+                        editable={isGearNameEditable}
+                        disabled={!isGearNameEditable}
+                        error={!!gearNameError}
+                      />
+                      {!!gearNameError && (
+                        <Text
+                          style={{
+                            color: colors.error,
+                            marginTop: p(2),
+                            fontSize: p(11),
+                          }}
+                        >
+                          {gearNameError}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </>
+              ) : (
+                // Mobile (Portrait) layout: stacked vertically in order
+                <>
+                  {/* 1. Fire Fighter */}
+                  <View style={[styles.inputCol, { marginTop: p(8) }]}>
+                    <Text style={[styles.label, { color: colors.onSurface }]}>
+                      Fire Fighter *
                     </Text>
-                  )}
-                </View>
-              </View>
+                    {renderSelectedRosterCard()}
+                  </View>
+
+                  {/* 2. Manufacturer */}
+                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                    <Text style={[styles.label, { color: colors.onSurface }]}>
+                      Manufacturer *
+                    </Text>
+                    {renderSelectedManufacturerCard()}
+                  </View>
+
+                  {/* 3. Manufacturing Month & Year */}
+                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                    <MonthYearPicker
+                      label="Manufacturing Month & Year"
+                      value={manufacturingDate}
+                      onChange={setManufacturingDate}
+                      placeholder="Select month & year"
+                    />
+                  </View>
+
+                  {/* 4. Serial Number */}
+                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                    <Text style={[styles.label, { color: colors.onSurface }]}>
+                      Serial Number
+                    </Text>
+                    <TextInput
+                      mode="outlined"
+                      value={serialNumber}
+                      onChangeText={setSerialNumber}
+                      placeholder="Enter serial number"
+                      style={styles.input}
+                      outlineColor={colors.outline}
+                      activeOutlineColor={colors.primary}
+                      dense
+                      right={
+                        <TextInput.Icon
+                          icon="barcode-scan"
+                          onPress={() => setBarcodeScannerVisible(true)}
+                          color={colors.primary}
+                        />
+                      }
+                    />
+                  </View>
+
+                  {/* 5. Gear Type */}
+                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                    <Text style={[styles.label, { color: colors.onSurface }]}>
+                      Gear Type *
+                    </Text>
+                    <Dropdown
+                      style={[
+                        styles.dropdown,
+                        { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
+                      ]}
+                      selectedTextStyle={styles.dropdownSelectedText}
+                      placeholderStyle={styles.dropdownPlaceholder}
+                      containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
+                      itemTextStyle={{ color: colors.onSurface }}
+                      activeColor={colors.surfaceVariant}
+                      data={gearTypeOptions}
+                      labelField="label"
+                      valueField="value"
+                      placeholder="Select gear type"
+                      value={
+                        selectedGearType
+                          ? String(selectedGearType.gear_type_id)
+                          : null
+                      }
+                      onFocus={() => setGearTypeDropdownFocus(true)}
+                      onBlur={() => setGearTypeDropdownFocus(false)}
+                      onChange={(item) => {
+                        onGearTypeSelect(item.value);
+                        setGearTypeDropdownFocus(false);
+                      }}
+                    />
+                  </View>
+
+                  {/* 6. Gear Name */}
+                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                    <Text style={[styles.label, { color: colors.onSurface }]}>
+                      Gear Name{isCustomGearNameRequired ? ' *' : ''}
+                    </Text>
+                    <TextInput
+                      mode="outlined"
+                      value={gearName}
+                      onChangeText={(text) => {
+                        setGearName(text);
+                        if (text.trim()) {
+                          setGearNameError('');
+                        }
+                      }}
+                      placeholder="Enter gear name"
+                      style={styles.input}
+                      outlineColor={colors.outline}
+                      activeOutlineColor={colors.primary}
+                      dense
+                      editable={isGearNameEditable}
+                      disabled={!isGearNameEditable}
+                      error={!!gearNameError}
+                    />
+                    {!!gearNameError && (
+                      <Text
+                        style={{
+                          color: colors.error,
+                          marginTop: p(2),
+                          fontSize: p(11),
+                        }}
+                      >
+                        {gearNameError}
+                      </Text>
+                    )}
+                  </View>
+                </>
+              )}
             </Card.Content>
           </Card>
 

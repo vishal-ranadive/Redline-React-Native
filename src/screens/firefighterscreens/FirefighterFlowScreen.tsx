@@ -161,6 +161,9 @@ const FirefighterFlowScreen = () => {
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   );
+  const [isTablet, setIsTablet] = useState<boolean>(
+    Math.min(Dimensions.get('window').width, Dimensions.get('window').height) >= 600
+  );
   // Store gear details for gears without current_inspection
   const [gearDetailsCache, setGearDetailsCache] = useState<Record<number, any>>({});
 
@@ -184,6 +187,7 @@ useFocusEffect(
     const updateLayout = () => {
       const { width, height } = Dimensions.get('window');
       setOrientation(width > height ? 'LANDSCAPE' : 'PORTRAIT');
+      setIsTablet(Math.min(width, height) >= 600);
     };
 
     const subscription = Dimensions.addEventListener('change', updateLayout);
@@ -763,7 +767,7 @@ const handleGearPress = (gear: any) => {
       const gearSize = gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A';
 
       return (
-        <View style={styles.cardWrapper}>
+        <View style={[styles.cardWrapper, { width: isTablet ? '48%' : '100%' }]}>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => handleGearPress(gear)}
@@ -860,7 +864,7 @@ const handleGearPress = (gear: any) => {
         </View>
       );
     },
-    [colors, navigation, renderInspectionDetails, gearTypes, gearDetailsCache],
+    [colors, navigation, renderInspectionDetails, gearTypes, gearDetailsCache, isTablet],
   );
 
   // Render category gears in 2-column grid
@@ -1072,6 +1076,7 @@ const handleGearPress = (gear: any) => {
         {selectedFirefighter ? (
           <Card style={[styles.firefighterCard, { backgroundColor: colors.surface }]}>
             <Card.Content>
+              {/* Row 1: Avatar and Firefighter Info */}
               <View style={styles.firefighterHeader}>
                 <View style={styles.firefighterInfo}>
                   <View style={styles.avatar}>
@@ -1091,64 +1096,56 @@ const handleGearPress = (gear: any) => {
                     </Text>
                   </View>
                 </View>
-<View style={{ gap: 10 }}>
+              </View>
 
-  {/* 1️⃣ CHANGE FIREFIGHTER BUTTON (always visible) */}
-  <Button
-    mode="outlined"
-    onPress={handleOpenRosterModal}
-    style={styles.changeButton}       // same style as before
-    labelStyle={styles.changeButtonLabel}
-    icon="account-switch"
-  >
-    Change Firefighter
-  </Button>
+              {/* Row 2: Change Firefighter and Select Color Buttons */}
+              <View style={styles.firefighterButtonsRow}>
+                <Button
+                  mode="outlined"
+                  onPress={handleOpenRosterModal}
+                  style={[styles.changeButton, { flex: 1 }]}
+                  labelStyle={styles.changeButtonLabel}
+                  icon="account-switch"
+                >
+                  Change Firefighter
+                </Button>
 
-  {/* 2️⃣ TAG COLOR BUTTON */}
-{/* TAG COLOR BUTTON */}
-{rosterColor ? (
-  <Button
-    mode="outlined"
-    icon="pencil"
-    onPress={() => {
-      if (!colorLocked) setColorPickerVisible(true);
-    }}
-    disabled={colorLocked} // disable if locked
-    style={[styles.changeButton, { backgroundColor: getColorHex(rosterColor) }]}
-    labelStyle={styles.changeButtonLabel}
-    contentStyle={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}
-  >
-    <Text
-      style={{
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 2,
-        fontWeight: '600',
-        fontSize: 16,
-        color:"white"
-      }}
-    >
-      {colorLocked ? "Color Locked" : "Change Color"}
-    </Text>
-  </Button>
-) : (
-  <Button
-    mode="outlined"
-    onPress={() => setColorPickerVisible(true)}
-    icon="palette"
-    style={styles.changeButton}
-    labelStyle={styles.changeButtonLabel}
-  >
-    Select Color
-  </Button>
-)}
-
-
-</View>
-
-
-
-
+                {rosterColor ? (
+                  <Button
+                    mode="outlined"
+                    icon="pencil"
+                    onPress={() => {
+                      if (!colorLocked) setColorPickerVisible(true);
+                    }}
+                    disabled={colorLocked}
+                    style={[styles.changeButton, { flex: 1, backgroundColor: getColorHex(rosterColor) }]}
+                    labelStyle={styles.changeButtonLabel}
+                    contentStyle={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}
+                  >
+                    <Text
+                      style={{
+                        textShadowColor: 'rgba(0,0,0,0.3)',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 2,
+                        fontWeight: '600',
+                        fontSize: 16,
+                        color: "white"
+                      }}
+                    >
+                      {colorLocked ? "Color Locked" : "Change Color"}
+                    </Text>
+                  </Button>
+                ) : (
+                  <Button
+                    mode="outlined"
+                    onPress={() => setColorPickerVisible(true)}
+                    icon="palette"
+                    style={[styles.changeButton, { flex: 1 }]}
+                    labelStyle={styles.changeButtonLabel}
+                  >
+                    Select Color
+                  </Button>
+                )}
               </View>
             </Card.Content>
           </Card>
@@ -1168,45 +1165,88 @@ const handleGearPress = (gear: any) => {
           </View>
         )}
 
-        {/* Three Action Buttons - Always visible */}
-        <View style={styles.actionRow}>
-          <Button
-            mode="contained"
-            onPress={handleScanGear}
-            style={[styles.actionButton, 
-              // { backgroundColor: colors.primary }
-            ]}
-            icon="barcode-scan"
-            labelStyle={styles.actionButtonLabel}
-            contentStyle={styles.actionButtonContent}
-            disabled={!selectedFirefighter}
-          >
-            Scan Gear
-          </Button>
+        {/* Action Buttons - Responsive layout */}
+        {isTablet ? (
+          // Tablet: All three buttons in one row
+          <View style={styles.actionRowTablet}>
+            <Button
+              mode="contained"
+              onPress={handleScanGear}
+              style={[styles.actionButton, { flex: 1 }]}
+              icon="barcode-scan"
+              labelStyle={styles.actionButtonLabel}
+              contentStyle={styles.actionButtonContent}
+              disabled={!selectedFirefighter}
+            >
+              Scan Gear
+            </Button>
 
-          <Button
-            mode="outlined"
-            onPress={handleManualAddGear}
-            style={styles.actionButton}
-            icon="plus-circle"
-            labelStyle={styles.actionButtonLabel}
-            contentStyle={styles.actionButtonContent}
-            disabled={!selectedFirefighter}
-          >
-            Add New Gear
-          </Button>
+            <Button
+              mode="outlined"
+              onPress={handleManualAddGear}
+              style={[styles.actionButton, { flex: 1 }]}
+              icon="plus-circle"
+              labelStyle={styles.actionButtonLabel}
+              contentStyle={styles.actionButtonContent}
+              disabled={!selectedFirefighter}
+            >
+              Add New Gear
+            </Button>
 
-          <Button
-            mode="outlined"
-            onPress={handleAddRosterManual}
-            style={styles.actionButton}
-            icon="account-plus"
-            labelStyle={styles.actionButtonLabel}
-            contentStyle={styles.actionButtonContent}
-          >
-            Add New Fire Fighter
-          </Button>
-        </View>
+            <Button
+              mode="outlined"
+              onPress={handleAddRosterManual}
+              style={[styles.actionButton, { flex: 1 }]}
+              icon="account-plus"
+              labelStyle={styles.actionButtonLabel}
+              contentStyle={styles.actionButtonContent}
+            >
+              Add New Fire Fighter
+            </Button>
+          </View>
+        ) : (
+          // Mobile: Scan Gear on one line, Add New Gear and Add New Firefighter on another line
+          <>
+            {/* Scan Gear - Full width */}
+            <Button
+              mode="contained"
+              onPress={handleScanGear}
+              style={styles.scanGearButton}
+              icon="barcode-scan"
+              labelStyle={styles.actionButtonLabel}
+              contentStyle={styles.actionButtonContent}
+              disabled={!selectedFirefighter}
+            >
+              Scan Gear
+            </Button>
+
+            {/* Add New Gear and Add New Firefighter - Side by side */}
+            <View style={styles.addButtonsRow}>
+              <Button
+                mode="outlined"
+                onPress={handleManualAddGear}
+                style={[styles.actionButton, { flex: 1 }]}
+                icon="plus-circle"
+                labelStyle={styles.actionButtonLabel}
+                contentStyle={styles.actionButtonContent}
+                disabled={!selectedFirefighter}
+              >
+                Add New Gear
+              </Button>
+
+              <Button
+                mode="outlined"
+                onPress={handleAddRosterManual}
+                style={[styles.actionButton, { flex: 1 }]}
+                icon="account-plus"
+                labelStyle={styles.actionButtonLabel}
+                contentStyle={styles.actionButtonContent}
+              >
+                Add New Fire Fighter
+              </Button>
+            </View>
+          </>
+        )}
 
         {/* Loading State */}
         {loading && (
@@ -1222,17 +1262,6 @@ const handleGearPress = (gear: any) => {
         {selectedCategory ? (
           // When category selected, show gears in full width
           <View style={styles.gearsSectionFull}>
-            <View style={styles.gearsHeaderWithBack}>
-              <TouchableOpacity 
-                onPress={() => setSelectedCategory(null)}
-                style={styles.backButton}
-              >
-                <IconButton icon="arrow-left" size={24} iconColor={colors.primary} />
-                <Text style={[styles.backText, { color: colors.primary }]}>
-                  Back to Categories
-                </Text>
-              </TouchableOpacity>
-            </View>
             <View style={styles.gearsHeader}>
               <Divider style={styles.divider} />
               <Text style={[styles.gearsTitle, { color: colors.onSurfaceVariant, backgroundColor: colors.background }]}>
@@ -1297,6 +1326,19 @@ const handleGearPress = (gear: any) => {
           onSuccess={handleFirefighterAdded}
         />
       </ScrollView>
+      
+      {/* Back to Categories Button - Fixed Bottom Right (Outside ScrollView) */}
+      {selectedCategory && (
+        <TouchableOpacity 
+          onPress={() => setSelectedCategory(null)}
+          style={[styles.backButtonFixed, { backgroundColor: colors.primary }]}
+        >
+          <IconButton icon="arrow-left" size={24} iconColor="#fff" />
+          <Text style={styles.backTextFixed}>
+            Back to Categories
+          </Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 };
@@ -1305,6 +1347,7 @@ const handleGearPress = (gear: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   scrollView: {
     flex: 1,
@@ -1325,7 +1368,7 @@ const styles = StyleSheet.create({
   firefighterHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    marginBottom: p(12),
   },
   firefighterInfo: {
     flexDirection: 'row',
@@ -1358,9 +1401,13 @@ const styles = StyleSheet.create({
     fontSize: p(12),
     marginBottom: p(2),
   },
+  firefighterButtonsRow: {
+    flexDirection: 'row',
+    gap: p(8),
+    marginTop: p(8),
+  },
   changeButton: {
     borderRadius: p(8),
-    marginLeft: p(8),
   },
   changeButtonLabel: {
     fontSize: p(12),
@@ -1382,13 +1429,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Action Buttons
-  actionRow: {
+  scanGearButton: {
+    borderRadius: p(8),
+    width: '100%',
+    marginBottom: p(8),
+  },
+  addButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: p(8),
+  },
+  actionRowTablet: {
+    flexDirection: 'row',
     gap: p(8),
   },
   actionButton: {
-    flex: 1,
     borderRadius: p(8),
   },
   actionButtonContent: {
@@ -1423,18 +1477,27 @@ const styles = StyleSheet.create({
     // marginVertical: p(16),
     marginBottom: p(4),
   },
-  gearsHeaderWithBack: {
-    marginTop: p(8),
-    marginBottom: p(8),
-  },
-  backButton: {
+  backButtonFixed: {
+    position: 'absolute',
+    bottom: p(20),
+    right: p(20),
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: p(16),
+    paddingVertical: p(12),
+    borderRadius: p(25),
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 1000,
   },
-  backText: {
-    fontSize: p(16),
+  backTextFixed: {
+    fontSize: p(14),
     fontWeight: '600',
-    marginLeft: p(4),
+    color: '#fff',
+    marginLeft: p(8),
   },
   divider: {
     flex: 1,
@@ -1516,11 +1579,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: p(5),
-    paddingBottom: p(20),
+    paddingBottom: p(80), // Extra padding for fixed back button
     gap: p(10),
   },
   cardWrapper: {
-    width: '48%',
     marginBottom: p(12),
   },
   shadow: {
