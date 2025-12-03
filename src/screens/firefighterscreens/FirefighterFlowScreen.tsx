@@ -798,7 +798,7 @@ const handleGearPress = (gear: any) => {
                         { backgroundColor: '#9E9E9E', borderColor: '#9E9E9E' },
                       ]}
                     >
-                      No Status
+                      Not Inspected
                     </Chip>
                   )}
                 </View>
@@ -1479,12 +1479,12 @@ const styles = StyleSheet.create({
   },
   backButtonFixed: {
     position: 'absolute',
-    bottom: p(20),
+    bottom: p(60), // Increased to avoid bottom bar
     right: p(20),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: p(16),
-    paddingVertical: p(12),
+    paddingHorizontal: p(12),
+    paddingVertical: p(0),
     borderRadius: p(25),
     elevation: 8,
     shadowColor: '#000',
@@ -1580,10 +1580,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: p(5),
     paddingBottom: p(80), // Extra padding for fixed back button
-    gap: p(10),
+    gap: p(8),
   },
   cardWrapper: {
-    marginBottom: p(12),
+    marginBottom: 0, // Remove margin since we use gap in container
   },
   shadow: {
     shadowColor: '#000',
@@ -1595,7 +1595,6 @@ const styles = StyleSheet.create({
   gearCardNew: {
     marginHorizontal: 0,
     borderRadius: p(10),
-    minHeight: p(400),
     overflow: 'hidden',
   },
   cardTagBadge: {
@@ -1613,12 +1612,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: p(8),
-    paddingRight: p(12),
+    paddingRight: p(4),
   },
   headerStatusChip: {
-    height: p(26),
+    // height: p(26),
     alignSelf: 'flex-start',
     marginRight: p(6),
+    // paddingHorizontal: p(10),
+    // minWidth: p(85),
+    paddingVertical: p(0),
   },
   gearStatusChipText: {
     fontSize: 11,
