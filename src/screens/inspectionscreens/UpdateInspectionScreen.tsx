@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Modal,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -192,6 +193,17 @@ export default function UpdateInspectionScreen() {
   const { currentLead } = useLeadStore();
 
   const { gearId, inspectionId, mode, firefighter, colorLocked } = route.params;
+
+  // Mobile detection
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const isMobile = screenWidth < 600;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription.remove();
+  }, []);
 
   const resolvedRosterId = useMemo(() => {
     if (!firefighter) {
@@ -906,12 +918,11 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         </View> */}
 
         {/* Main form grid */}
-        <View style={styles.row}>
-          {/* Left Column - Inspection Details */}
-          <View style={[styles.col, { marginRight: 8 }]}>
+        {isMobile ? (
+          /* Mobile Layout - Single Column */
+          <View style={styles.mobileContainer}>
+            {/* Service Type */}
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-             
-
               <ServiceTypeSelection
                 selectedServiceType={formData.serviceType}
                 onServiceTypeChange={(type) => handleFieldChange('serviceType', type)}
@@ -938,56 +949,16 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                 </View>
               )}
 
-
               {/* Load Selection */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Select Load</Text>
               <LoadPicker
-                // label="Load"
                 value={formData.selectedLoad}
                 onChange={(value) => handleFieldChange('selectedLoad', value)}
                 placeholder="Select Load"
                 options={INSPECTION_CONSTANTS.LOAD_OPTIONS}
               />
-
-              {/* Status Selection - Now using API data */}
-              <StatusSelection
-                selectedStatus={formData.status}
-                onStatusChange={(status) => handleFieldChange('status', status)}
-                {...({ statusOptions: formattedStatusOptions } as any)}
-              />
-
-              {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
-              {(formData.status === 'CORRECTIVE_ACTION_REQUIRED' || formData.status === 'REPAIR') && (
-                <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 0 }]}>
-                  <RepairCostFields
-                    cost={formData.cost}
-                    repairNeeded={formData.repairNeeded}
-                    onCostChange={(cost) => handleFieldChange('cost', cost)}
-                    onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
-                  />
-                </View>
-              )}
             </View>
 
-            {/* Remarks */}
-            <View style={[styles.card, { backgroundColor: colors.surface, }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
-              <Input
-                placeholder="Add notes or remarks..."
-                value={formData.remarks}
-                onChangeText={(text) => handleFieldChange('remarks', text)}
-                multiline
-                numberOfLines={4}
-                enableVoice
-                appendVoiceResults
-                style={{ minHeight: 90, fontSize: p(14) }}
-                containerStyle={{ alignItems: 'flex-start' }}
-              />
-            </View>
-          </View>
-
-          {/* Right Column - Images, Hydro Test, and Repair */}
-          <View style={styles.col}>
             {/* Hydro Test Section - Only for liners */}
             {requiresHydroTest && (
               <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -1053,8 +1024,6 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                           onChangeText={(text) => handleFieldChange('hydroFailureReason', text)}
                           multiline
                           numberOfLines={3}
-                          enableVoice
-                          appendVoiceResults
                           style={{ minHeight: 80, fontSize: p(14) }}
                           containerStyle={{ alignItems: 'flex-start' }}
                         />
@@ -1065,9 +1034,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
               </View>
             )}
 
-            {/* Gear Findings and Images */}
+            {/* Size and Gear Findings */}
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-
               {/* Size as Text Input */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
               <Input
@@ -1076,7 +1044,6 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                 onChangeText={(text) => handleFieldChange('size', text)}
                 style={styles.textInput}
               />
-
 
               {/* Gear Findings */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
@@ -1117,7 +1084,10 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                   ))}
                 </View>
               )}
+            </View>
 
+            {/* Gear Images */}
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
               <View style={styles.imagesContainer}>
                 {images.map((imageUri, index) => (
@@ -1142,8 +1112,274 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Status and Remarks - Combined Section */}
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+              {/* Status Selection */}
+              <StatusSelection
+                selectedStatus={formData.status}
+                onStatusChange={(status) => handleFieldChange('status', status)}
+                {...({ statusOptions: formattedStatusOptions } as any)}
+              />
+
+              {/* Repair & Cost - Only show when status is CORRECTIVE_ACTION_REQUIRED or REPAIR */}
+              {(formData.status === 'CORRECTIVE_ACTION_REQUIRED' || formData.status === 'REPAIR') && (
+                <View style={{ marginTop: 16 }}>
+                  <RepairCostFields
+                    cost={formData.cost}
+                    repairNeeded={formData.repairNeeded}
+                    onCostChange={(cost) => handleFieldChange('cost', cost)}
+                    onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
+                  />
+                </View>
+              )}
+
+              {/* Remarks */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
+                <Input
+                  placeholder="Add notes or remarks..."
+                  value={formData.remarks}
+                  onChangeText={(text) => handleFieldChange('remarks', text)}
+                  multiline
+                  numberOfLines={4}
+                  style={{ minHeight: 90, fontSize: p(14) }}
+                  containerStyle={{ alignItems: 'flex-start' }}
+                />
+              </View>
+            </View>
           </View>
-        </View>
+        ) : (
+          /* Tablet/iPad Layout - Two Columns */
+          <View style={styles.row}>
+            {/* Left Column - Inspection Details */}
+            <View style={[styles.col, { marginRight: 8 }]}>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                <ServiceTypeSelection
+                  selectedServiceType={formData.serviceType}
+                  onServiceTypeChange={(type) => handleFieldChange('serviceType', type)}
+                />
+
+                {/* Specialized Cleaning Fields - Conditionally Rendered */}
+                {formData.serviceType === 'SPECIALIZED_CLEANING' && (
+                  <SpecializedCleaningFields
+                    specializedCleaningDetails={formData.specializedCleaningDetails}
+                    onSpecializedCleaningChange={(text) => handleFieldChange('specializedCleaningDetails', text)}
+                  />
+                )}
+
+                {/* Harness Type as Toggle - Conditionally Rendered based on gear type */}
+                {requiresHarness && (
+                  <View style={styles.rowSpace}>
+                    <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Harness </Text>
+                    <View style={styles.toggleContainer}>
+                      <Switch 
+                        value={formData.harnessType} 
+                        onValueChange={(value) => handleFieldChange('harnessType', value)} 
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {/* Load Selection */}
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Select Load</Text>
+                <LoadPicker
+                  value={formData.selectedLoad}
+                  onChange={(value) => handleFieldChange('selectedLoad', value)}
+                  placeholder="Select Load"
+                  options={INSPECTION_CONSTANTS.LOAD_OPTIONS}
+                />
+
+                {/* Status Selection - Now using API data */}
+                <StatusSelection
+                  selectedStatus={formData.status}
+                  onStatusChange={(status) => handleFieldChange('status', status)}
+                  {...({ statusOptions: formattedStatusOptions } as any)}
+                />
+
+                {/* Repair & Cost column - Only show when status is CORRECTIVE_ACTION_REQUIRED */}
+                {(formData.status === 'CORRECTIVE_ACTION_REQUIRED' || formData.status === 'REPAIR') && (
+                  <View style={[styles.card, { backgroundColor: colors.surface, marginTop: 0 }]}>
+                    <RepairCostFields
+                      cost={formData.cost}
+                      repairNeeded={formData.repairNeeded}
+                      onCostChange={(cost) => handleFieldChange('cost', cost)}
+                      onRepairNeededChange={(needed) => handleFieldChange('repairNeeded', needed)}
+                    />
+                  </View>
+                )}
+              </View>
+
+              {/* Remarks */}
+              <View style={[styles.card, { backgroundColor: colors.surface, }]}>
+                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
+                <Input
+                  placeholder="Add notes or remarks..."
+                  value={formData.remarks}
+                  onChangeText={(text) => handleFieldChange('remarks', text)}
+                  multiline
+                  numberOfLines={4}
+                  style={{ minHeight: 90, fontSize: p(14) }}
+                  containerStyle={{ alignItems: 'flex-start' }}
+                />
+              </View>
+            </View>
+
+            {/* Right Column - Images, Hydro Test, and Repair */}
+            <View style={styles.col}>
+              {/* Hydro Test Section - Only for liners */}
+              {requiresHydroTest && (
+                <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Hydro Test</Text>
+                  
+                  <View style={styles.rowSpace}>
+                    <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Performed</Text>
+                    <Switch 
+                      value={formData.hydroPerformed} 
+                      onValueChange={(value) => handleFieldChange('hydroPerformed', value)} 
+                    />
+                  </View>
+
+                  {formData.hydroPerformed && (
+                    <>
+                      <View style={styles.rowSpace}>
+                        <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Hydro Test Result</Text>
+                        <View style={styles.rowWrap}>
+                          <Chip
+                            selected={formData.hydroResult === 'Pass'}
+                            onPress={() => handleFieldChange('hydroResult', 'Pass')}
+                            style={[
+                              styles.smallChoice,
+                              { 
+                                backgroundColor: formData.hydroResult === 'Pass' ? '#34A853' : colors.surfaceVariant 
+                              }
+                            ]}
+                            textStyle={{ 
+                              color: formData.hydroResult === 'Pass' ? '#fff' : colors.onSurfaceVariant,
+                              fontSize: 12
+                            }}
+                          >
+                            Pass
+                          </Chip>
+                          <Chip
+                            selected={formData.hydroResult === 'Fail'}
+                            onPress={() => handleFieldChange('hydroResult', 'Fail')}
+                            style={[
+                              styles.smallChoice,
+                              { 
+                                backgroundColor: formData.hydroResult === 'Fail' ? '#EA4335' : colors.surfaceVariant 
+                              }
+                            ]}
+                            textStyle={{ 
+                              color: formData.hydroResult === 'Fail' ? '#fff' : colors.onSurfaceVariant,
+                              fontSize: 12
+                            }}
+                          >
+                            Fail
+                          </Chip>
+                        </View>
+                      </View>
+
+                      {/* HYDRO TEST FAILURE REASON */}
+                      {formData.hydroResult === 'Fail' && (
+                        <View style={styles.hydroFailureSection}>
+                          <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
+                            Why did the hydro test fail?
+                          </Text>
+                          <Input
+                            placeholder="Describe the reason for hydro test failure..."
+                            value={formData.hydroFailureReason}
+                            onChangeText={(text) => handleFieldChange('hydroFailureReason', text)}
+                            multiline
+                            numberOfLines={3}
+                            style={{ minHeight: 80, fontSize: p(14) }}
+                            containerStyle={{ alignItems: 'flex-start' }}
+                          />
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              )}
+
+              {/* Gear Findings and Images */}
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                {/* Size as Text Input */}
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
+                <Input
+                  placeholder="Enter gear size"
+                  value={formData.size}
+                  onChangeText={(text) => handleFieldChange('size', text)}
+                  style={styles.textInput}
+                />
+
+                {/* Gear Findings */}
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
+                <TouchableOpacity
+                  style={[styles.gearFindingsButton, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+                  onPress={() => setGearFindingsModalVisible(true)}
+                >
+                  <Text style={[styles.gearFindingsButtonText, { color: colors.onSurface }]}>
+                    {formData.selectedGearFindings.length > 0 
+                      ? `${formData.selectedGearFindings.length} findings selected` 
+                      : 'Select Gear Findings'
+                    }
+                  </Text>
+                  <IconButton
+                    icon="chevron-right"
+                    size={20}
+                    iconColor={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+
+                {/* Show selected gear findings with better layout */}
+                {formData.selectedGearFindings.length > 0 && (
+                  <View style={styles.selectedFindingsContainer}>
+                    {getSelectedGearFindingsLabels().map((label, index) => (
+                      <View key={index} style={styles.findingItem}>
+                        <Chip
+                          style={[styles.findingChip, { backgroundColor: colors.primaryContainer }]}
+                          textStyle={{ color: colors.onPrimaryContainer, fontSize: 12 }}
+                          onClose={() => {
+                            const newFindings = [...formData.selectedGearFindings];
+                            newFindings.splice(index, 1);
+                            handleFieldChange('selectedGearFindings', newFindings);
+                          }}
+                        >
+                          {label}
+                        </Chip>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+                <View style={styles.imagesContainer}>
+                  {images.map((imageUri, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.imageBox}
+                      onPress={() => handleImagePress(imageUri)}
+                    >
+                      <Image 
+                        source={{ uri: imageUri }} 
+                        style={styles.previewImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity 
+                    style={[styles.imageBox, styles.addImageBox]}
+                    onPress={addNewImage}
+                  >
+                    <Text style={styles.addImageText}>+</Text>
+                    <Text style={styles.addImageLabel}>Add Image</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Actions */}
         <View style={styles.actions}>
@@ -1282,6 +1518,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, 
   },
   col: { flex: 1 },
+  mobileContainer: {
+    paddingHorizontal: 14,
+  },
 
   card: {
     borderRadius: 12,

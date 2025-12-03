@@ -1,6 +1,6 @@
 // src/screens/inspectionscreens/components/InspectionHeader.tsx
 import { useNavigation } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   Platform,
   UIManager,
   Alert,
+  Dimensions,
 } from "react-native";
 import { Text, Icon, IconButton, Menu, useTheme, Button } from "react-native-paper";
 import Header from "../../../components/common/Header";
@@ -47,6 +48,15 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const isMobile = screenWidth < 600;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription.remove();
+  }, []);
 
   const rosterName = useMemo(() => {
     if (!roster) {
@@ -124,102 +134,181 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
 
-      {/* SCREEN TITLE WITH HISTORY BUTTON */}
+      {/* SCREEN TITLE */}
       <View style={styles.headerWithHistory}>
         <Header title={screenTitle} />
-        <Button 
-          mode="outlined" 
-          onPress={handleHistoryPress}
-          icon="history"
-          style={styles.historyButton}
-          compact
-        >
-          Gear History
-        </Button>
       </View>
-
-      {/* TAG COLOR DISPLAY */}
-      {/* {tagColor && (
-        <View style={[styles.tagColorBar, { backgroundColor: tagColor }]}>
-          <Text style={styles.tagColorText}>
-            {isColorLocked ? "🔒 Color Locked" : "Selected Color"}
-          </Text>
-        </View>
-      )} */}
 
       {/* COLLAPSIBLE HEADER */}
-      <View style={styles.headerRow}>
+      {isMobile ? (
+        /* MOBILE LAYOUT */
+        <>
+          {/* Firefighter Info - Full Width */}
+          <TouchableOpacity 
+            style={styles.mobileFirefighterRow} 
+            onPress={toggleCollapse} 
+            activeOpacity={0.8}
+          >
+            <View style={styles.firefighterInfo}>
+              <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
+                <Icon source="account" size={26} color={colors.primary} />
+              </View>
 
-                {/* RIGHT SIDE - FIREFIGHTER INFO WITH COLLAPSE */}
-        <TouchableOpacity 
-          style={styles.rightSection} 
-          onPress={toggleCollapse} 
-          activeOpacity={0.8}
-        >
-          <View style={styles.firefighterInfo}>
-            <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
-              <Icon source="account" size={26} color={colors.primary} />
+              <View style={styles.firefighterDetails}>
+                <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
+                  {rosterName}
+                </Text>
+                <View style={styles.gearInfoRow}>
+                  <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                    {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
+                  </Text>
+                  <Button 
+                    mode="text" 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleHistoryPress();
+                    }}
+                    icon="history"
+                    style={styles.mobileHistoryButton}
+                    compact
+                    labelStyle={{ fontSize: 12 }}
+                  >
+                    History
+                  </Button>
+                </View>
+              </View>
+
+              {/* Expand / Collapse Icon */}
+              <Icon
+                source={isCollapsed ? "chevron-down" : "chevron-up"}
+                size={26}
+                color={colors.primary}
+              />
             </View>
+          </TouchableOpacity>
 
-            <View style={styles.firefighterDetails}>
-              <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
-                {rosterName}
-              </Text>
-              <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
-                {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
-              </Text>
-            </View>
-
-            {/* Expand / Collapse Icon */}
-            <Icon
-              source={isCollapsed ? "chevron-down" : "chevron-up"}
-              size={26}
-              color={colors.primary}
-            />
-          </View>
-        </TouchableOpacity>
-
-
-        {/* LEFT SIDE - COLOR BUTTON */}
-        <View style={styles.leftSection}>
-          {tagColor ? (
-            <Button
-              mode="outlined"
-              icon="pencil"
-              onPress={handleColorButtonPress}
-              disabled={isColorLocked}
-              style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
-              labelStyle={styles.colorButtonLabel}
-              contentStyle={styles.colorButtonContent}
-            >
-              <Text
-                style={{
-                  textShadowColor: 'rgba(0,0,0,0.3)',
-                  textShadowOffset: { width: 1, height: 1 },
-                  textShadowRadius: 2,
-                  fontWeight: '600',
-                  fontSize: 14,
-                  color: "white"
-                }}
+          {/* Color Button - Below Firefighter */}
+          <View style={styles.mobileColorButtonContainer}>
+            {tagColor ? (
+              <Button
+                mode="outlined"
+                icon="pencil"
+                onPress={handleColorButtonPress}
+                disabled={isColorLocked}
+                style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
+                labelStyle={styles.colorButtonLabel}
+                contentStyle={styles.colorButtonContent}
               >
-                {isColorLocked ? "Color Locked" : "Change Color"}
-              </Text>
-            </Button>
-          ) : (
-            <Button
-              mode="outlined"
-              onPress={handleColorButtonPress}
-              icon="palette"
-              style={styles.colorButton}
-              labelStyle={styles.colorButtonLabel}
+                <Text
+                  style={{
+                    textShadowColor: 'rgba(0,0,0,0.3)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2,
+                    fontWeight: '600',
+                    fontSize: 14,
+                    color: "white"
+                  }}
+                >
+                  {isColorLocked ? "Color Locked" : "Change Color"}
+                </Text>
+              </Button>
+            ) : (
+              <Button
+                mode="outlined"
+                onPress={handleColorButtonPress}
+                icon="palette"
+                style={styles.colorButton}
+                labelStyle={styles.colorButtonLabel}
+              >
+                Select Color
+              </Button>
+            )}
+          </View>
+        </>
+      ) : (
+        /* TABLET LAYOUT */
+        <>
+          {/* Firefighter and Gear History - Same Row */}
+          <View style={styles.tabletTopRow}>
+            <TouchableOpacity 
+              style={styles.tabletFirefighterSection} 
+              onPress={toggleCollapse} 
+              activeOpacity={0.8}
             >
-              Select Color
+              <View style={styles.firefighterInfo}>
+                <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
+                  <Icon source="account" size={26} color={colors.primary} />
+                </View>
+
+                <View style={styles.firefighterDetails}>
+                  <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
+                    {rosterName}
+                  </Text>
+                  <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                    {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
+                  </Text>
+                </View>
+
+                {/* Expand / Collapse Icon */}
+                <Icon
+                  source={isCollapsed ? "chevron-down" : "chevron-up"}
+                  size={26}
+                  color={colors.primary}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {/* Gear History Button */}
+            <Button 
+              mode="outlined" 
+              onPress={handleHistoryPress}
+              icon="history"
+              style={styles.tabletHistoryButton}
+              compact
+            >
+              Gear History
             </Button>
-          )}
-        </View>
+          </View>
 
-
-      </View>
+          {/* Color Button - Below */}
+          <View style={styles.tabletColorButtonContainer}>
+            {tagColor ? (
+              <Button
+                mode="outlined"
+                icon="pencil"
+                onPress={handleColorButtonPress}
+                disabled={isColorLocked}
+                style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
+                labelStyle={styles.colorButtonLabel}
+                contentStyle={styles.colorButtonContent}
+              >
+                <Text
+                  style={{
+                    textShadowColor: 'rgba(0,0,0,0.3)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 2,
+                    fontWeight: '600',
+                    fontSize: 14,
+                    color: "white"
+                  }}
+                >
+                  {isColorLocked ? "Color Locked" : "Change Color"}
+                </Text>
+              </Button>
+            ) : (
+              <Button
+                mode="outlined"
+                onPress={handleColorButtonPress}
+                icon="palette"
+                style={styles.colorButton}
+                labelStyle={styles.colorButtonLabel}
+              >
+                Select Color
+              </Button>
+            )}
+          </View>
+        </>
+      )}
 
       {/* EXPANDED CONTENT */}
       {!isCollapsed && (
@@ -232,8 +321,8 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Firefighter</Text>
 
-                {/* MENU BUTTON */}
-                <Menu
+                {/* MENU BUTTON - Commented out for now */}
+                {/* <Menu
                   visible={menuVisible}
                   onDismiss={() => setMenuVisible(false)}
                   anchor={
@@ -255,7 +344,7 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
                     title="Remove Firefighter"
                     leadingIcon="delete"
                   />
-                </Menu>
+                </Menu> */}
               </View>
 
                 {roster ? (
@@ -350,16 +439,45 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   headerWithHistory: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  // Mobile Layout Styles
+  mobileFirefighterRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  mobileColorButtonContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  mobileHistoryButton: {
+    marginLeft: 8,
+  },
+  gearInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  // Tablet Layout Styles
+  tabletTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingVertical: 14,
   },
-  historyButton: {
-    position: "absolute",
-    right: 10,
-    marginRight: 0,
+  tabletFirefighterSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  tabletHistoryButton: {
+    minWidth: 140,
+  },
+  tabletColorButtonContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
   },
   tagColorBar: {
     paddingVertical: 6,
@@ -377,22 +495,6 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  leftSection: {
-    // flex: 1,
-    // marginRight: 12,width:"30%"
-    width:"30%"
-  },
-  rightSection: {
-    // flex: 2,
-    width:"30%"
   },
   firefighterInfo: {
     flexDirection: "row",

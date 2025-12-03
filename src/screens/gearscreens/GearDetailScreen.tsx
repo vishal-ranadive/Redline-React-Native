@@ -1,6 +1,6 @@
 // src/screens/gearscreens/GearDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image, Linking, Alert, Modal, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Linking, Alert, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import { 
   Text, 
   Button, 
@@ -36,6 +36,10 @@ const GearDetailScreen = () => {
   
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
+  
+  // Detect if device is mobile (width < 600)
+  const screenWidth = Dimensions.get('window').width;
+  const isMobile = screenWidth < 600;
 
   console.log("gear_id-Gear-details screen", gear_id);
 
@@ -345,8 +349,8 @@ const GearDetailScreen = () => {
 
         <Divider style={{ marginVertical: p(12) }} />
 
-        {/* Two-column layout */}
-        <View style={styles.columns}>
+        {/* Two-column layout - stacks on mobile */}
+        <View style={[styles.columns, isMobile && styles.columnsMobile]}>
           {/* LEFT COLUMN */}
           <View style={styles.column}>
             {/* Assigned Roster */}
@@ -544,51 +548,60 @@ const GearDetailScreen = () => {
             </Text>
             <Divider style={{ marginVertical: p(12) }} />
             
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>ID</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Date</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Critical</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Visual</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Hydro</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Status</Text>
-              <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Lead</Text>
-            </View>
-
-            {inspectionHistory.map((item, index) => (
-              <View key={index}>
-                <View style={styles.tableRow}>
-                  <Text 
-                    style={[styles.tableCell, { color: colors.primary, fontSize: p(12) }]}
-                    onPress={() => {/* Navigate to inspection details */}}
-                  >
-                    {item.id}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                    {item.date}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: getStatusColor(item.critStatus), fontSize: p(12), fontWeight: '600' }]}>
-                    {item.critStatus}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                    {item.preStatus}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: getStatusColor(item.hydroStatus), fontSize: p(12), fontWeight: '600' }]}>
-                    {item.hydroStatus}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                    {item.cost}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                    {item.inspectStatus}
-                  </Text>
-                  <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                    {item.lead}
-                  </Text>
+            {/* Horizontal scrollable table for mobile */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={styles.tableScrollContainer}
+            >
+              <View style={styles.tableWrapper}>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>ID</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Date</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Critical</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Visual</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Hydro</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Status</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Lead</Text>
                 </View>
-                {index < inspectionHistory.length - 1 && <Divider />}
+
+                {inspectionHistory.map((item, index) => (
+                  <View key={index}>
+                    <View style={styles.tableRow}>
+                      <Text 
+                        style={[styles.tableCell, { color: colors.primary, fontSize: p(12) }]}
+                        onPress={() => {/* Navigate to inspection details */}}
+                      >
+                        {item.id}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.date}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: getStatusColor(item.critStatus), fontSize: p(12), fontWeight: '600' }]}>
+                        {item.critStatus}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.preStatus}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: getStatusColor(item.hydroStatus), fontSize: p(12), fontWeight: '600' }]}>
+                        {item.hydroStatus}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.cost}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.inspectStatus}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.lead}
+                      </Text>
+                    </View>
+                    {index < inspectionHistory.length - 1 && <Divider />}
+                  </View>
+                ))}
               </View>
-            ))}
+            </ScrollView>
           </Card.Content>
         </Card>
 
@@ -677,6 +690,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: p(12),
   },
+  columnsMobile: {
+    flexDirection: 'column',
+  },
   column: { 
     flex: 1,
   },
@@ -742,12 +758,19 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
   },
+  tableScrollContainer: {
+    paddingBottom: p(8),
+  },
+  tableWrapper: {
+    minWidth: p(600), // Minimum width to ensure table doesn't get too cramped
+  },
   tableHeader: {
     flexDirection: 'row',
     marginBottom: p(8),
   },
   tableHeaderText: {
-    flex: 1,
+    minWidth: p(80),
+    paddingHorizontal: p(8),
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -757,7 +780,8 @@ const styles = StyleSheet.create({
     paddingVertical: p(8),
   },
   tableCell: {
-    flex: 1,
+    minWidth: p(80),
+    paddingHorizontal: p(8),
     textAlign: 'center',
   },
   ctaButton: {

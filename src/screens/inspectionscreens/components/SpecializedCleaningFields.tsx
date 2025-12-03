@@ -27,8 +27,6 @@ export const SpecializedCleaningFields: React.FC<SpecializedCleaningFieldsProps>
         onChangeText={onSpecializedCleaningChange}
         multiline
         numberOfLines={4}
-        enableVoice
-        appendVoiceResults
         style={{ minHeight: 100, fontSize: 14 }}
         containerStyle={{ alignItems: 'flex-start' }}
       />
