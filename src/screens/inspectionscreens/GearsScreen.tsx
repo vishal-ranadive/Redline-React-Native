@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, TextInput } from 'react-native-paper';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -133,6 +133,18 @@ export default function GearsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GearStatus | 'All'>('All');
 
+  // Mobile detection
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const isMobile = screenWidth < 600;
+  const numColumns = isMobile ? 1 : 2;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription.remove();
+  }, []);
+
   const fetchGearInspections = useCallback(async () => {
     if (!load?.loadNumber || !currentLead?.lead_id) {
       console.log('Missing loadId or leadId');
@@ -179,52 +191,6 @@ export default function GearsScreen() {
 
     return matchesSearch && matchesStatus;
   });
-
-  // Dummy gear inspection data for testing when backend is not responding
-  const dummyGearInspection: GearInspection = useMemo(() => ({
-    gear: {
-      gear_id: 999,
-      gear_name: 'Firefighter Jacket',
-      manufacturer: {
-        manufacturer_id: 1,
-        manufacturer_name: 'FireGear Pro',
-      },
-      gear_type: {
-        gear_type_id: 1,
-        gear_type: 'Jacket',
-      },
-      manufacturing_date: '2020-01-15',
-      gear_size: 'Large',
-      serial_number: 'FFJ-2024-001',
-    },
-    roster: {
-      name: 'John Doe',
-      tag_color: 'Red',
-    },
-    inspection_id: 999,
-    inspection_date: '2024-01-15',
-    hydro_test_result: 'PASS',
-    hydro_test_performed: 'YES',
-    gear_findings: null,
-    inspection_cost: 150.00,
-    remarks: 'All checks passed. Gear is in excellent condition.',
-    gear_status: {
-      id: 1,
-      status: 'Pass',
-    },
-    service_type: {
-      id: 1,
-      status: 'Cleaned and Inspected',
-    },
-  }), []);
-
-  // Add dummy card if no gears are available (for testing)
-  const gearsToDisplay = useMemo(() => {
-    if (filteredGearInspections.length === 0 && !loading) {
-      return [dummyGearInspection];
-    }
-    return filteredGearInspections;
-  }, [filteredGearInspections, loading, dummyGearInspection]);
 
   const getGearStatusColor = (status: string) => {
     return statusColorMap[status] || '#9E9E9E';
@@ -364,7 +330,7 @@ export default function GearsScreen() {
     const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
 
     return (
-      <View style={styles.cardWrapper}>
+      <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => handleUpdateGear(item)}
@@ -473,7 +439,7 @@ export default function GearsScreen() {
         </TouchableOpacity>
       </View>
     );
-  }, [colors, navigation, renderInspectionDetails]);
+  }, [colors, navigation, renderInspectionDetails, isMobile]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -491,7 +457,7 @@ export default function GearsScreen() {
                 {load.name || 'Load Name'}
               </Text>
               <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: p(2) }}>
-                {gearsToDisplay.length} Gear Inspections
+                {gearInspections.length} Gear Inspections
               </Text>
             </View>
           </View>
@@ -539,13 +505,15 @@ export default function GearsScreen() {
 
       {/* Gears List - Single Column */}
       {loading ? (
-        <GearCardSkeleton count={3} />
+        <GearCardSkeleton count={3} isMobile={isMobile} numColumns={numColumns} />
       ) : (
         <FlatList
-          data={gearsToDisplay}
+          data={filteredGearInspections}
           renderItem={renderGear}
           keyExtractor={(item) => item.inspection_id.toString()}
-          contentContainerStyle={styles.grid}
+          numColumns={numColumns}
+          contentContainerStyle={[styles.grid, isMobile ? styles.gridMobile : styles.gridTablet]}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -627,10 +595,18 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingBottom: p(100),
+  },
+  gridMobile: {
     paddingHorizontal: p(10),
   },
+  gridTablet: {
+    paddingHorizontal: p(12),
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: p(10),
+  },
   cardWrapper: {
-    width: '100%',
     marginBottom: p(12),
   },
   shadow: {

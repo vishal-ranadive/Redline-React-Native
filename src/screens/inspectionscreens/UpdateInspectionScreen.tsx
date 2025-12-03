@@ -47,6 +47,7 @@ import { p } from "../../utils/responsive";
 import { inspectionApi } from '../../services/inspectionApi';
 import LoadPicker from '../../components/common/LoadPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import InspectionFormSkeleton from '../skeleton/InspectionFormSkeleton';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -791,16 +792,15 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     return serviceMap[serviceType] || 1;
   };
 
-  // Show loading state
+  // Show loading state with skeleton
   if (loading || gearStatusLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>
-            {gearStatusLoading ? 'Loading status options...' : 'Loading gear data...'}
-          </Text>
-        </View>
+        <Header 
+          title={'Inspection Details'}
+          showBackButton={true}
+        />
+        <InspectionFormSkeleton isMobile={isMobile} />
       </SafeAreaView>
     );
   }

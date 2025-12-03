@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, DataTable, TextInput, ActivityIndicator } from 'react-native-paper';
 import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -108,6 +108,18 @@ export default function FirefighterGearsScreen() {
   const [page, setPage] = useState(0);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(8);
   const numberOfItemsPerPageList = [4, 8, 12, 16];
+
+  // Mobile detection
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const isMobile = screenWidth < 600;
+  const numColumns = isMobile ? 1 : 2;
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenWidth(window.width);
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Get tag color from the first gear's current inspection
   const rosterTagColor = useMemo(() => {
@@ -243,55 +255,12 @@ export default function FirefighterGearsScreen() {
     });
   }, [gearsWithInspection, searchQuery]);
 
-  // Dummy card data for testing when backend is not responding
-  const dummyGearCard: GearCard = useMemo(() => ({
-    gear: {
-      gear_id: 999,
-      gear_type_id: 1,
-      gear_usage: null,
-      gear_name: 'Firefighter Jacket',
-      current_inspection: {
-        inspection_id: 999,
-        inspection_date: '2024-01-15',
-        hydro_test_result: 'PASS',
-        hydro_test_performed: true,
-        inspection_cost: 150.00,
-        remarks: 'All checks passed. Gear is in excellent condition.',
-        service_type: { status: 'Cleaned and Inspected' },
-        gear_status: { status: 'Pass' },
-        tag_color: '#FF0000',
-        gear_size: 'Large',
-        hydrotest_remarks: null,
-        specialisedcleaning_remarks: null,
-      },
-      previous_inspection: null,
-    },
-    detail: {
-      gear_id: 999,
-      gear_name: 'Firefighter Jacket',
-      serial_number: 'FFJ-2024-001',
-      gear_size: 'Large',
-      manufacturer: { manufacturer_id: 1, manufacturer_name: 'FireGear Pro' },
-      gear_type: { gear_type_id: 1, gear_type: 'Jacket' },
-    } as Gear,
-    color: '#FF0000',
-    gearStatus: 'Pass',
-  }), []);
-
   const isLoading = (loading || inspectionLoading || buildingCards) && !refreshing;
 
-  // Add dummy card if no gears are available (for testing)
-  const gearsToDisplay = useMemo(() => {
-    if (filteredGears.length === 0 && !isLoading) {
-      return [dummyGearCard];
-    }
-    return filteredGears;
-  }, [filteredGears, isLoading, dummyGearCard]);
-
-  const totalItems = gearsToDisplay.length;
+  const totalItems = filteredGears.length;
   const from = page * numberOfItemsPerPage;
   const to = Math.min(from + numberOfItemsPerPage, totalItems);
-  const currentGears = gearsToDisplay.slice(from, to);
+  const currentGears = filteredGears.slice(from, to);
 
   const handleUpdateGear = (card: GearCard) => {
     const gearId = card.detail?.gear_id ?? card.gear.gear_id;
@@ -443,7 +412,7 @@ export default function FirefighterGearsScreen() {
         : '#9E9E9E';
 
       return (
-        <View style={styles.cardWrapper}>
+        <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => handleUpdateGear(item)}
@@ -540,7 +509,7 @@ export default function FirefighterGearsScreen() {
         </View>
       );
     },
-    [colors, navigation, renderInspectionDetails],
+    [colors, navigation, renderInspectionDetails, isMobile],
   );
 
   if (isLoading) {
@@ -606,7 +575,7 @@ export default function FirefighterGearsScreen() {
             <View style={styles.rightSection}>
               <View style={styles.gearCountContainer}>
                 {/* <Icon source="tools" size={p(20)} color={colors.primary} /> */}
-                <Text style={styles.gearCountText}>{gearsToDisplay.length}</Text>
+                <Text style={styles.gearCountText}>{gearsWithInspection.length}</Text>
                 <Text style={styles.gearLabel}>Total Scanned Gears</Text>
               </View>
             </View>
@@ -629,13 +598,15 @@ export default function FirefighterGearsScreen() {
 
       {/* Gears List - Single Column */}
       {isLoading ? (
-        <GearCardSkeleton count={3} />
+        <GearCardSkeleton count={3} isMobile={isMobile} numColumns={numColumns} />
       ) : (
         <FlatList
           data={currentGears}
           renderItem={renderGear}
           keyExtractor={(item) => item.gear.gear_id.toString()}
-          contentContainerStyle={styles.grid}
+          numColumns={numColumns}
+          contentContainerStyle={[styles.grid, isMobile ? styles.gridMobile : styles.gridTablet]}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
           refreshing={refreshing}
           onRefresh={handleRefresh}
@@ -657,13 +628,13 @@ export default function FirefighterGearsScreen() {
       )}
 
       {/* Pagination */}
-      {!isLoading && gearsToDisplay.length > 0 && (
+      {!isLoading && filteredGears.length > 0 && (
         <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
           <DataTable.Pagination
             page={page}
-            numberOfPages={Math.ceil(gearsToDisplay.length / numberOfItemsPerPage)}
+            numberOfPages={Math.ceil(filteredGears.length / numberOfItemsPerPage)}
             onPageChange={newPage => setPage(newPage)}
-            label={`${from + 1}-${to} of ${gearsToDisplay.length}`}
+            label={`${from + 1}-${to} of ${filteredGears.length}`}
             showFastPaginationControls
             numberOfItemsPerPageList={numberOfItemsPerPageList}
             numberOfItemsPerPage={numberOfItemsPerPage}
@@ -764,10 +735,18 @@ const styles = StyleSheet.create({
   },
   grid: {
     paddingBottom: p(100),
+  },
+  gridMobile: {
     paddingHorizontal: p(10),
   },
+  gridTablet: {
+    paddingHorizontal: p(12),
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: p(10),
+  },
   cardWrapper: {
-    width: '100%',
     marginBottom: p(12),
   },
   shadow: {

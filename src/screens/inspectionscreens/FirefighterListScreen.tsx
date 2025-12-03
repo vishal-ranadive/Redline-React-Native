@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import { Text, Icon, useTheme, TextInput, DataTable, ActivityIndicator, Card } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
 import { COLOR_MAP, getColorHex } from '../../constants/colors';
+import RosterCardSkeleton from '../skeleton/RosterCardSkeleton';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
 
@@ -74,15 +75,14 @@ export default function FirefighterListScreen() {
   const MANUAL_LEAD_ID = 101;
   const effectiveLeadId = currentLeadId ?? MANUAL_LEAD_ID;
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAllGears(effectiveLeadId);
-    }, [effectiveLeadId]),
-  );
+  // Track if this is the first mount
+  const isFirstMount = useRef(true);
 
-  const fetchAllGears = async (leadId: number) => {
+  const fetchAllGears = useCallback(async (leadId: number, showLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
 
       // First, fetch all rosters
@@ -145,7 +145,24 @@ export default function FirefighterListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  // Initial load on mount
+  useEffect(() => {
+    if (isFirstMount.current) {
+      fetchAllGears(effectiveLeadId, true);
+      isFirstMount.current = false;
+    }
+  }, [effectiveLeadId, fetchAllGears]);
+
+  // Refresh on focus (but don't show loading spinner)
+  useFocusEffect(
+    useCallback(() => {
+      if (!isFirstMount.current) {
+        fetchAllGears(effectiveLeadId, false);
+      }
+    }, [effectiveLeadId, fetchAllGears]),
+  );
 
   // Group gears by roster
   const rosterGroups = useMemo(() => {
@@ -205,7 +222,7 @@ export default function FirefighterListScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchAllGears(effectiveLeadId);
+    await fetchAllGears(effectiveLeadId, false);
   }, [effectiveLeadId]);
 
   const handleViewGears = (rosterGroup: RosterGroup) => {
@@ -296,18 +313,6 @@ export default function FirefighterListScreen() {
     );
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Firefighters" showBackButton={true} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text variant="bodyMedium" style={{ marginTop: p(16) }}>Loading firefighters...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="Firefighters" showBackButton={true} />
@@ -335,30 +340,34 @@ export default function FirefighterListScreen() {
       )}
 
       {/* Roster Groups List - Responsive Columns */}
-      <FlatList
-        data={currentRosterGroups}
-        renderItem={renderRosterGroup}
-        keyExtractor={(item) => item.roster_id.toString()}
-        numColumns={numColumns}
-        contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
-        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-        showsVerticalScrollIndicator={true}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <Icon source="account-search" size={64} color={colors.outline} />
-              <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-                {error ? 'No rosters available' : 'No Rosters Found'}
-              </Text>
-              <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-                {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
-              </Text>
-            </View>
-          ) : null
-        }
-      />
+      {loading && !refreshing ? (
+        <RosterCardSkeleton count={6} numColumns={numColumns} />
+      ) : (
+        <FlatList
+          data={currentRosterGroups}
+          renderItem={renderRosterGroup}
+          keyExtractor={(item) => item.roster_id.toString()}
+          numColumns={numColumns}
+          contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          showsVerticalScrollIndicator={true}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyContainer}>
+                <Icon source="account-search" size={64} color={colors.outline} />
+                <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
+                  {error ? 'No rosters available' : 'No Rosters Found'}
+                </Text>
+                <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
+                  {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
+                </Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
 
       {/* Pagination */}
       <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>

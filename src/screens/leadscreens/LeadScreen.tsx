@@ -284,7 +284,7 @@ const LeadScreen = () => {
         // styles.shadow,
         { 
           borderColor: colors.outline,
-          width: isMobile ? '100%' : '50%',
+          width: isMobile ? '100%' : '48%',
         }
       ]}
     > 
@@ -650,7 +650,7 @@ const LeadScreen = () => {
         {/* Loading State or Lead Grid */}
         {loading ? (
           <View >
-            <LeadCardSkeleton />
+            <LeadCardSkeleton isMobile={isMobile} numColumns={numColumns} count={6} />
           </View>
         ) : (
           <View style={[styles.leadsContainer, isMobile && styles.leadsContainerMobile]}>

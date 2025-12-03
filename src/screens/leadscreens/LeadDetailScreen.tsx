@@ -25,6 +25,7 @@ import { leadApi } from '../../services/leadApi';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import { printTable } from '../../utils/printTable';
 import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
+import LeadDetailSkeleton from '../skeleton/LeadDetailSkeleton';
 
 // Status management
 import { 
@@ -486,10 +487,7 @@ const LeadDetailScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.onSurface }}>Loading lead details...</Text>
-        </View>
+        <LeadDetailSkeleton />
       </SafeAreaView>
     );
   }

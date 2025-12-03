@@ -12,9 +12,15 @@ import { p } from "../../utils/responsive";
 
 interface GearCardSkeletonProps {
   count?: number;
+  isMobile?: boolean;
+  numColumns?: number;
 }
 
-const GearCardSkeleton: React.FC<GearCardSkeletonProps> = ({ count = 3 }) => {
+const GearCardSkeleton: React.FC<GearCardSkeletonProps> = ({ 
+  count = 3,
+  isMobile = false,
+  numColumns = 1
+}) => {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
 
@@ -31,19 +37,34 @@ const GearCardSkeleton: React.FC<GearCardSkeletonProps> = ({ count = 3 }) => {
     };
   });
 
+  // Group cards into rows for multi-column layout
+  const cards = Array.from({ length: count });
+  const rows = [];
+  for (let i = 0; i < cards.length; i += numColumns) {
+    rows.push(cards.slice(i, i + numColumns));
+  }
+
   return (
-    <View style={styles.container}>
-      {Array.from({ length: count }).map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.outline,
-            },
-          ]}
+    <View style={[styles.container, isMobile ? styles.containerMobile : styles.containerTablet]}>
+      {rows.map((row, rowIndex) => (
+        <View 
+          key={rowIndex} 
+          style={[styles.row, numColumns > 1 && styles.rowMultiColumn]}
         >
+          {row.map((_, cardIndex) => {
+            const index = rowIndex * numColumns + cardIndex;
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.card,
+                  { width: isMobile ? '100%' : '48%' },
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.outline,
+                  },
+                ]}
+              >
           {/* Moving shimmer band */}
           <Animated.View
             style={[
@@ -237,6 +258,9 @@ const GearCardSkeleton: React.FC<GearCardSkeletonProps> = ({ count = 3 }) => {
               { backgroundColor: colors.outline + "40" },
             ]}
           />
+              </View>
+            );
+          })}
         </View>
       ))}
     </View>
@@ -245,13 +269,25 @@ const GearCardSkeleton: React.FC<GearCardSkeletonProps> = ({ count = 3 }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: p(10),
     paddingTop: p(8),
+  },
+  containerMobile: {
+    paddingHorizontal: p(10),
+  },
+  containerTablet: {
+    paddingHorizontal: p(12),
+  },
+  row: {
+    marginBottom: p(12),
+  },
+  rowMultiColumn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: p(10),
   },
   card: {
     borderRadius: p(10),
     padding: p(12),
-    marginBottom: p(12),
     overflow: "hidden",
     elevation: 1,
     shadowColor: "#000",

@@ -158,24 +158,9 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
                 <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
                   {rosterName}
                 </Text>
-                <View style={styles.gearInfoRow}>
-                  <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
-                    {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
-                  </Text>
-                  <Button 
-                    mode="text" 
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleHistoryPress();
-                    }}
-                    icon="history"
-                    style={styles.mobileHistoryButton}
-                    compact
-                    labelStyle={{ fontSize: 12 }}
-                  >
-                    History
-                  </Button>
-                </View>
+                <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                  {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
+                </Text>
               </View>
 
               {/* Expand / Collapse Icon */}
@@ -187,15 +172,15 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
             </View>
           </TouchableOpacity>
 
-          {/* Color Button - Below Firefighter */}
-          <View style={styles.mobileColorButtonContainer}>
+          {/* Color Button and Gear History - Same Row Below Firefighter */}
+          <View style={styles.mobileBottomRow}>
             {tagColor ? (
               <Button
                 mode="outlined"
                 icon="pencil"
                 onPress={handleColorButtonPress}
                 disabled={isColorLocked}
-                style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
+                style={[styles.colorButton, { backgroundColor: getColorHex(tagColor), flex: 1, marginRight: 8 }]}
                 labelStyle={styles.colorButtonLabel}
                 contentStyle={styles.colorButtonContent}
               >
@@ -217,97 +202,105 @@ export const InspectionHeader: React.FC<InspectionHeaderProps> = ({
                 mode="outlined"
                 onPress={handleColorButtonPress}
                 icon="palette"
-                style={styles.colorButton}
+                style={[styles.colorButton, { flex: 1, marginRight: 8 }]}
                 labelStyle={styles.colorButtonLabel}
               >
                 Select Color
               </Button>
             )}
-          </View>
-        </>
-      ) : (
-        /* TABLET LAYOUT */
-        <>
-          {/* Firefighter and Gear History - Same Row */}
-          <View style={styles.tabletTopRow}>
-            <TouchableOpacity 
-              style={styles.tabletFirefighterSection} 
-              onPress={toggleCollapse} 
-              activeOpacity={0.8}
-            >
-              <View style={styles.firefighterInfo}>
-                <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
-                  <Icon source="account" size={26} color={colors.primary} />
-                </View>
-
-                <View style={styles.firefighterDetails}>
-                  <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
-                    {rosterName}
-                  </Text>
-                  <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
-                    {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
-                  </Text>
-                </View>
-
-                {/* Expand / Collapse Icon */}
-                <Icon
-                  source={isCollapsed ? "chevron-down" : "chevron-up"}
-                  size={26}
-                  color={colors.primary}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {/* Gear History Button */}
             <Button 
               mode="outlined" 
               onPress={handleHistoryPress}
               icon="history"
-              style={styles.tabletHistoryButton}
+              style={styles.mobileHistoryButton}
               compact
             >
               Gear History
             </Button>
           </View>
-
-          {/* Color Button - Below */}
-          <View style={styles.tabletColorButtonContainer}>
-            {tagColor ? (
-              <Button
-                mode="outlined"
-                icon="pencil"
-                onPress={handleColorButtonPress}
-                disabled={isColorLocked}
-                style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
-                labelStyle={styles.colorButtonLabel}
-                contentStyle={styles.colorButtonContent}
-              >
-                <Text
-                  style={{
-                    textShadowColor: 'rgba(0,0,0,0.3)',
-                    textShadowOffset: { width: 1, height: 1 },
-                    textShadowRadius: 2,
-                    fontWeight: '600',
-                    fontSize: 14,
-                    color: "white"
-                  }}
-                >
-                  {isColorLocked ? "Color Locked" : "Change Color"}
-                </Text>
-              </Button>
-            ) : (
-              <Button
-                mode="outlined"
-                onPress={handleColorButtonPress}
-                icon="palette"
-                style={styles.colorButton}
-                labelStyle={styles.colorButtonLabel}
-              >
-                Select Color
-              </Button>
-            )}
-          </View>
         </>
+      ) : (
+        /* TABLET/iPAD LAYOUT - All in one line */
+        <View style={styles.tabletSingleRow}>
+          {/* Firefighter Info */}
+          <TouchableOpacity 
+            style={styles.tabletFirefighterSection} 
+            onPress={toggleCollapse} 
+            activeOpacity={0.8}
+          >
+            <View style={styles.firefighterInfo}>
+              <View style={[styles.avatar, { backgroundColor: colors.primaryContainer }]}>
+                <Icon source="account" size={26} color={colors.primary} />
+              </View>
+
+              <View style={styles.firefighterDetails}>
+                <Text style={[styles.name, { color: colors.onSurface }]} numberOfLines={1}>
+                  {rosterName}
+                </Text>
+                <Text style={[styles.detail, { color: colors.onSurfaceVariant }]}>
+                  {gear?.gear_type?.gear_type ?? "-"} • {gear?.serial_number ?? "-"}
+                </Text>
+              </View>
+
+              {/* Expand / Collapse Icon */}
+              <Icon
+                source={isCollapsed ? "chevron-down" : "chevron-up"}
+                size={26}
+                color={colors.primary}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Spacer */}
+          <View style={styles.spacer} />
+
+          {/* Color Button */}
+          {tagColor ? (
+            <Button
+              mode="outlined"
+              icon="pencil"
+              onPress={handleColorButtonPress}
+              disabled={isColorLocked}
+              style={[styles.colorButton, { backgroundColor: getColorHex(tagColor) }]}
+              labelStyle={styles.colorButtonLabel}
+              contentStyle={styles.colorButtonContent}
+            >
+              <Text
+                style={{
+                  textShadowColor: 'rgba(0,0,0,0.3)',
+                  textShadowOffset: { width: 1, height: 1 },
+                  textShadowRadius: 2,
+                  fontWeight: '600',
+                  fontSize: 14,
+                  color: "white"
+                }}
+              >
+                {isColorLocked ? "Color Locked" : "Change Color"}
+              </Text>
+            </Button>
+          ) : (
+            <Button
+              mode="outlined"
+              onPress={handleColorButtonPress}
+              icon="palette"
+              style={styles.colorButton}
+              labelStyle={styles.colorButtonLabel}
+            >
+              Select Color
+            </Button>
+          )}
+
+          {/* Gear History Button */}
+          <Button 
+            mode="outlined" 
+            onPress={handleHistoryPress}
+            icon="history"
+            style={styles.tabletHistoryButton}
+            compact
+          >
+            Gear History
+          </Button>
+        </View>
       )}
 
       {/* EXPANDED CONTENT */}
@@ -447,37 +440,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  mobileColorButtonContainer: {
+  mobileBottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 14,
   },
   mobileHistoryButton: {
-    marginLeft: 8,
+    minWidth: 120,
   },
-  gearInfoRow: {
+  // Tablet/iPad Layout Styles
+  tabletSingleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-  // Tablet Layout Styles
-  tabletTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   tabletFirefighterSection: {
     flex: 1,
-    marginRight: 16,
+  },
+  spacer: {
+    flex: 1,
   },
   tabletHistoryButton: {
     minWidth: 140,
-  },
-  tabletColorButtonContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    marginLeft: 8,
   },
   tagColorBar: {
     paddingVertical: 6,
