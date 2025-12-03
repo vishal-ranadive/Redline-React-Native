@@ -111,7 +111,7 @@ const LeadDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
-  const { top } = useSafeAreaInsets();
+  const { top, bottom } = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { fetchLeadById, currentLead } = useLeadStore();
 
@@ -550,6 +550,7 @@ const LeadDetailScreen = () => {
       {/* Scrollable Content */}
       <ScrollView 
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottom + p(16) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -570,7 +571,7 @@ const LeadDetailScreen = () => {
           <View style={styles.bannerOverlayFull} />
           <View style={styles.bannerOverlay}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stationName, { color: '#fff', fontSize: p(40) }]}>
+              <Text style={[styles.stationName, { color: '#fff', fontSize: isMobile ? p(28) : p(40) }]}>
                 {lead?.firestation?.name}
               </Text>
               <Button
@@ -930,6 +931,8 @@ const LeadDetailScreen = () => {
             {
               backgroundColor: colors.surface,
               borderColor: colors.outline,
+              marginHorizontal: isMobile ? 0 : p(40),
+              marginBottom: isMobile ? 0 : p(46),
             },
           ]}
         >
