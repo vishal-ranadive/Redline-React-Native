@@ -174,12 +174,16 @@ useFocusEffect(
 
     if (firefighter) {
       handleFirefighterSelect(firefighter);
+    } else if (selectedFirefighter && currentLead) {
+      // Refresh gears when screen is focused and firefighter is already selected
+      console.log("🔥 Screen Focused – Refreshing gears for selected firefighter");
+      fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id || selectedFirefighter.id);
     }
 
     return () => {
       // optional cleanup if needed
     };
-  }, [firefighter])
+  }, [firefighter, selectedFirefighter, currentLead, fetchFirefighterGears])
 );
 
   // Effect for handling screen orientation changes

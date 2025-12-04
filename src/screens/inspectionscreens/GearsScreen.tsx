@@ -452,14 +452,12 @@ export default function GearsScreen() {
       <Card style={[styles.binInfoCard, { backgroundColor: colors.surface }]}>
         <Card.Content>
           <View style={styles.binCompactRow}>
-            <View style={{ flex: 1 }}>
-              <Text variant="titleSmall" style={{ fontWeight: '600' }}>
-                {load.name || 'Load Name'}
-              </Text>
-              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: p(2) }}>
-                {gearInspections.length} Gear Inspections
-              </Text>
-            </View>
+            <Text variant="titleSmall" style={{ fontWeight: '600' }}>
+              Load No {load.loadNumber}
+            </Text>
+            <Text variant="titleSmall" style={{ fontWeight: '600' }}>
+              {gearInspections.length} Gear Inspections
+            </Text>
           </View>
         </Card.Content>
       </Card>
@@ -569,13 +567,13 @@ const styles = StyleSheet.create({
   },
   binCompactRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   searchFilterContainer: {
-    paddingHorizontal: p(14),
-    paddingTop: p(8),
-    paddingBottom: p(12),
+    // padding: p(2),
+    padding: p(5),
+    // paddingBottom: p(12),
     borderRadius: p(8),
     marginHorizontal: p(6),
     marginBottom: p(8),

@@ -543,6 +543,7 @@ const GearDetailScreen = () => {
         {/* Inspection History */}
         <Card style={[styles.fullCard, { backgroundColor: colors.surface }]}>
           <Card.Content>
+            
             <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
               Gear History
             </Text>

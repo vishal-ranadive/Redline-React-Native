@@ -16,13 +16,13 @@ import {
   useTheme,
   Divider,
   ActivityIndicator,
-  DataTable,
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 import { useRosterStore } from '../../../store/rosterStore';
 import { useLeadStore } from '../../../store/leadStore';
 import useDebounce from '../../../hooks/useDebounce';
 import { getColorHex } from '../../../constants/colors';
+import Pagination from '../Pagination';
 
 interface RosterModalProps {
   visible: boolean;
@@ -229,29 +229,14 @@ const RosterModal: React.FC<RosterModalProps> = ({
               
               {/* Pagination Controls */}
               {totalFiltered > 0 && (
-                <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
-                  <DataTable.Pagination
-                    page={page - 1}
-                    numberOfPages={Math.ceil(totalFiltered / numberOfItemsPerPage)}
-                    onPageChange={(newPage) => setPage(newPage + 1)}
-                    label={`${from + 1}-${to} of ${totalFiltered}`}
-                    showFastPaginationControls
-                    numberOfItemsPerPageList={numberOfItemsPerPageList}
-                    numberOfItemsPerPage={numberOfItemsPerPage}
-                    onItemsPerPageChange={(newItemsPerPage) => {
-                      setNumberOfItemsPerPage(newItemsPerPage);
-                      setPage(1); // Reset to first page when page size changes
-                    }}
-                    selectPageDropdownLabel={'Rows per page'}
-                    theme={{
-                      colors: {
-                        primary: colors.primary,
-                        onSurface: colors.onSurface,
-                        surface: colors.surface,
-                      },
-                    }}
-                  />
-                </View>
+                <Pagination
+                  page={page}
+                  total={totalFiltered}
+                  itemsPerPage={numberOfItemsPerPage}
+                  itemsPerPageList={numberOfItemsPerPageList}
+                  onPageChange={setPage}
+                  onItemsPerPageChange={setNumberOfItemsPerPage}
+                />
               )}
             </>
           ) : (
@@ -380,10 +365,6 @@ const styles = StyleSheet.create({
   },
   addButton: {
     borderRadius: p(12),
-  },
-  paginationContainer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: p(8),
   },
 });
 

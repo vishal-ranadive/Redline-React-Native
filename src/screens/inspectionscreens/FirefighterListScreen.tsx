@@ -370,7 +370,7 @@ export default function FirefighterListScreen() {
       )}
 
       {/* Pagination */}
-      <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
+      {/* <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
         <DataTable.Pagination
           page={page}
           numberOfPages={totalPages}
@@ -389,7 +389,7 @@ export default function FirefighterListScreen() {
             },
           }}
         />
-      </View>
+      </View> */}
     </SafeAreaView>
   );
 }

@@ -587,7 +587,7 @@ export default function FirefighterGearsScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by gear name, serial number, or type"
+          placeholder="Search by gear name, serial number"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
@@ -628,7 +628,7 @@ export default function FirefighterGearsScreen() {
       )}
 
       {/* Pagination */}
-      {!isLoading && filteredGears.length > 0 && (
+      {/* {!isLoading && filteredGears.length > 0 && (
         <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
           <DataTable.Pagination
             page={page}
@@ -649,7 +649,7 @@ export default function FirefighterGearsScreen() {
             }}
           />
         </View>
-      )}
+      )} */}
     </SafeAreaView>
   );
 }
