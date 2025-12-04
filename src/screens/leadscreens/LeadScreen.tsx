@@ -249,9 +249,10 @@ const LeadScreen = () => {
   /**
    * Convert API lead data to frontend format
    * Adds missing fields and formats data for display
+   * Also filters by search term (lead ID) if provided
    */
   const filteredLeads = useMemo(() => {
-    return leads.map((lead: any) => ({
+    const mappedLeads = leads.map((lead: any) => ({
       lead_id: lead?.lead_id?.toString() || 'Unknown',
       name: lead?.lead?.salePersonName || 'Unknown Customer',
       // phone: '555-000-0000', // Placeholder - update with actual data if available
@@ -267,7 +268,19 @@ const LeadScreen = () => {
       // Include the full lead object for navigation
       ...lead
     }));
-  }, [leads]);
+
+    // Filter by search term if provided (search by lead ID)
+    if (search && search.trim()) {
+      const searchTerm = search.trim().toLowerCase();
+      return mappedLeads.filter((lead: any) => {
+        // Check if search matches lead_id
+        const leadId = lead.lead_id?.toString().toLowerCase() || '';
+        return leadId.includes(searchTerm);
+      });
+    }
+
+    return mappedLeads;
+  }, [leads, search]);
 
   /**
    * Clear all filters and reset to default state

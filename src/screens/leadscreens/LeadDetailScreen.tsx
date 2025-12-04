@@ -569,7 +569,7 @@ const LeadDetailScreen = () => {
           <View style={styles.bannerOverlayFull} />
           <View style={styles.bannerOverlay}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.stationName, { color: '#fff', fontSize: isMobile ? p(28) : p(40) }]}>
+              <Text style={[styles.stationName, { color: '#fff', fontSize: isMobile ? p(20) : p(40) }]}>
                 {lead?.firestation?.name}
               </Text>
               <Button
@@ -587,7 +587,7 @@ const LeadDetailScreen = () => {
                 {lead.type === 'REPAIR' ? 'Repair' : 'Inspection'}
               </Button>
             </View>
-            {lead.type === ('INSPECTION'.toLowerCase()) && (
+            
               <Button
                 mode="contained"
                 buttonColor="#10b981"
@@ -603,7 +603,7 @@ const LeadDetailScreen = () => {
               >
                 View Report
               </Button>
-            )}
+            
           </View>
         </View>
 
