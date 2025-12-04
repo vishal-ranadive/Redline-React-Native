@@ -982,6 +982,7 @@ const LeadDetailScreen = () => {
               backgroundColor: colors.surface,
               maxWidth: isTablet ? p(500) : '90%',
               maxHeight: isTablet ? p(600) : '80%',
+              height: isTablet ? p(600) : '80%', // Add explicit height
             }
           ]}>
             {/* Modal Header */}
@@ -1005,60 +1006,63 @@ const LeadDetailScreen = () => {
               </Button>
             </View>
 
-            {/* Modal Content - Scrollable for many statuses */}
-            <ScrollView
-              style={styles.statusModalContent}
-              contentContainerStyle={styles.statusModalContentContainer}
-              showsVerticalScrollIndicator={true}
-            >
+            {/* Modal Content */}
+            <View style={styles.statusModalContent}>
               {/* Dynamically generated status options based on lead type */}
-              {availableStatuses.map(({ status, icon, label }:any) => (
-                <TouchableOpacity
-                  key={status}
-                  activeOpacity={0.7}
-                  onPress={() => handleStatusUpdate(status)}
-                  style={[
-                    styles.statusOptionButton,
-                    {
-                      backgroundColor: currentStatus === status ? colors.primaryContainer : 'transparent',
-                      borderColor: currentStatus === status ? colors.primary : colors.outline,
-                      paddingVertical: isMobile ? p(12) : p(14),
-                      paddingHorizontal: isMobile ? p(12) : p(16),
-                    }
-                  ]}
-                >
-                  <View style={styles.statusOptionContent}>
-                    {icon && (
+              {availableStatuses.map(({ status, icon, label }:any) => {
+                // Normalize comparison (handle case differences: "scheduled" vs "Scheduled")
+                const isSelected = currentStatus?.toLowerCase() === status.toLowerCase();
+                
+                return (
+                  <TouchableOpacity
+                    key={status}
+                    activeOpacity={0.7}
+                    onPress={() => handleStatusUpdate(status)}
+                    style={[
+                      styles.statusOptionButton,
+                      {
+                        backgroundColor: isSelected ? colors.primaryContainer : colors.surface,
+                        borderColor: isSelected ? colors.primary : colors.outline,
+                        paddingVertical: isMobile ? p(14) : p(16),
+                        paddingHorizontal: p(20),
+                        marginHorizontal: p(16),
+                        marginBottom: p(8),
+                      }
+                    ]}
+                  >
+                    <View style={styles.statusOptionContent}>
+                      {icon && (
+                        <Icon
+                          source={icon}
+                          size={p(20)}
+                          color={isSelected ? colors.primary : colors.onSurface}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.statusOptionText,
+                          {
+                            color: isSelected ? colors.primary : colors.onSurface,
+                            fontSize: isMobile ? p(15) : p(16),
+                            fontWeight: isSelected ? '700' : '500',
+                            marginLeft: icon ? p(12) : 0,
+                          }
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </View>
+                    {isSelected && (
                       <Icon
-                        source={icon}
+                        source="check-circle"
                         size={p(20)}
-                        color={currentStatus === status ? colors.primary : colors.onSurface}
+                        color={colors.primary}
                       />
                     )}
-                    <Text
-                      style={[
-                        styles.statusOptionText,
-                        {
-                          color: currentStatus === status ? colors.primary : colors.onSurface,
-                          fontSize: isMobile ? p(15) : p(16),
-                          fontWeight: currentStatus === status ? '700' : '500',
-                          marginLeft: icon ? p(12) : 0,
-                        }
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                  </View>
-                  {currentStatus === status && (
-                    <Icon
-                      source="check-circle"
-                      size={p(20)}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {/* Modal Footer */}
             <View style={[
@@ -1471,11 +1475,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusModalContent: {
-    flex: 1,
-  },
-  statusModalContentContainer: {
-    padding: p(16),
-    gap: p(8),
+    paddingVertical: p(16),
   },
   statusOptionButton: {
     flexDirection: 'row',
@@ -1483,7 +1483,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: p(12),
     borderWidth: 1,
-    marginBottom: p(8),
   },
   statusOptionContent: {
     flexDirection: 'row',
