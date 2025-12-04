@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   Image,
 } from 'react-native';
+
 import {
   Text,
   Button,
@@ -25,6 +26,7 @@ import { leadApi } from '../../services/leadApi';
 import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
 import { checkStoragePermission, requestStoragePermission } from '../../utils/permissions';
 import { Alert, Platform } from 'react-native';
+import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PPEReportPreview'>;
 
@@ -319,11 +321,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#fff5f5',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👥</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👥</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total_fireFighters_Serviced'] || analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0}
                 </Text>
@@ -338,11 +342,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#fff5f5',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧰</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧰</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics['Total_Number_of_Gears'] || analytics['Total Number of Gears'] || analytics.total_gears || 0}
                 </Text>
@@ -357,11 +363,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#10b981', 
                   backgroundColor: '#d1fae5',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✓</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✓</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#059669', fontSize: p(22) }]}>
                   {analytics['Total_Gear_Passed'] || analytics['Total Gear Passed'] || analytics.total_passed || 0}
                 </Text>
@@ -376,11 +384,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ef4444', 
                   backgroundColor: '#fee2e2',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✗</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✗</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(22) }]}>
                   {analytics['Total_Gear_Fail'] || analytics['Total Gear Fail'] || analytics.total_failed || 0}
                 </Text>
@@ -395,11 +405,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#6b7280', 
                   backgroundColor: '#f3f4f6',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⊗</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⊗</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#4b5563', fontSize: p(22) }]}>
                   {analytics['Total_Gear_OOS'] || analytics['Total Gear OOS'] || analytics.total_oos || 0}
                 </Text>
@@ -414,11 +426,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#f97316', 
                   backgroundColor: '#fed7aa',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⏰</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⏰</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#ea580c', fontSize: p(22) }]}>
                   {analytics['Total_Gear_Expired'] || analytics['Total Gear Expired'] || analytics.total_expired || 0}
                 </Text>
@@ -433,11 +447,13 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#eab308', 
                   backgroundColor: '#fef3c7',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⚠</Text>
+                <View style={styles.iconContainer}>
+                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⚠</Text>
+                </View>
                 <Text style={[styles.summaryValue, { color: '#ca8a04', fontSize: p(22) }]}>
                   {analytics['Total_Gear_ActionRequired'] || analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0}
                 </Text>
@@ -460,11 +476,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧥</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.jacket }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {(analytics.jacket_shell || 0) + (analytics.jacket_liner || 0) || analytics['Total jackets'] || analytics.total_jackets || 0}
                 </Text>
@@ -479,11 +495,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👖</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.pants }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {(analytics.pant_shell || 0) + (analytics.pant_liner || 0) || analytics['Total pants'] || analytics.total_pants || 0}
                 </Text>
@@ -498,11 +514,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⛑️</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.helmet }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics.total_helmet || analytics['Total helmet'] || analytics.total_helmet || 0}
                 </Text>
@@ -517,11 +533,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧢</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.hood }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics.total_hoods || analytics['Total hoods'] || analytics.total_hoods || 0}
                 </Text>
@@ -536,11 +552,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧤</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.gloves }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics.total_gloves || analytics['Total gloves'] || analytics.total_gloves || 0}
                 </Text>
@@ -555,11 +571,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👢</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.boots }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics.total_boots || analytics['Total boots'] || analytics.total_boots || 0}
                 </Text>
@@ -574,11 +590,11 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '30%' : '13.5%',
+                  width: isPortrait ? '48%' : '13.5%',
                   maxWidth: isPortrait ? '48%' : p(120),
                 }
               ]}>
-                <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>📦</Text>
+                <Image source={{ uri: GEAR_IMAGE_URLS.other }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
                   {analytics.total_other || analytics['Total other'] || analytics.total_other || 0}
                 </Text>
@@ -713,7 +729,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   summaryRowPortrait: {
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   summaryCard: {
     minWidth: p(95),
@@ -738,8 +754,23 @@ const styles = StyleSheet.create({
   gearCard: {
     minHeight: p(110),
   },
+  gearImage: {
+    width: p(50),
+    height: p(50),
+    borderRadius: p(25),
+    marginBottom: p(8),
+    overflow: 'hidden',
+  },
   summaryIcon: {
     marginBottom: p(4),
+  },
+  iconContainer: {
+    width: p(50),
+    height: p(50),
+    borderRadius: p(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: p(8),
   },
   summaryValue: {
     fontSize: p(22),

@@ -1,6 +1,7 @@
 // src/utils/pdfGenerator.ts
 import { Platform, PermissionsAndroid, Share } from 'react-native';
 import { requestStoragePermission } from './permissions';
+import { GEAR_IMAGE_URLS } from '../constants/gearImages';
 
 /**
  * Generate HTML content from template and data
@@ -52,6 +53,26 @@ export const generateReportHTML = (
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  };
+
+  // Helper to get gear image path (for PDF, we'll use base64 or file paths)
+  // Note: For PDF generation, images need to be base64 encoded or use absolute paths
+  const getGearImageSrc = (gearType: string): string => {
+    // Map gear types to image file names
+    const imageMap: { [key: string]: string } = {
+      'jacket': 'jacket.jpg',
+      'pants': 'pants.jpg',
+      'helmet': 'helmet.jpg',
+      'hood': 'hood.jpg',
+      'gloves': 'gloves.jpg',
+      'boots': 'boots.jpg',
+      'other': 'jacket.jpg', // fallback
+    };
+    
+    const imageName = imageMap[gearType.toLowerCase()] || 'jacket.jpg';
+    // For PDF generation, we'll need to use base64 or absolute paths
+    // This is a placeholder - in production, convert images to base64
+    return `file:///android_asset/${imageName}`;
   };
 
   // Generate roster sections HTML
@@ -205,12 +226,12 @@ export const generateReportHTML = (
 
         /* Section Title */
         .section-title {
-            font-size: 13pt;
+            font-size: 11pt;
             font-weight: 700;
             color: #ed2c2a;
-            margin: 20px 0 12px 0;
-            padding: 8px 0;
-            border-bottom: 2px solid #e2e8f0;
+            margin: 10px 0 6px 0;
+            padding: 4px 0;
+            border-bottom: 1.5px solid #e2e8f0;
         }
 
         /* Details Table */
@@ -339,53 +360,61 @@ export const generateReportHTML = (
 
         /* Summary Row Containers */
         .summary-row-container {
-            padding: 16px;
-            border-radius: 12px;
-            border: 2.5px solid;
-            margin-bottom: 16px;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            page-break-inside: avoid;
         }
 
         .row-title {
-            font-size: 14pt;
+            font-size: 10pt;
             font-weight: 700;
-            margin-bottom: 14px;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            padding-bottom: 8px;
-            border-bottom: 1.5px solid;
+            letter-spacing: 0.5px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid;
         }
 
-        /* Summary Cards Rows */
+        /* Summary Cards Rows - 3 Column Layout */
         .summary-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            justify-content: flex-start;
+            gap: 6px;
+            justify-content: space-between;
         }
 
         .summary-card {
-            width: 13.5%;
-            min-width: 95px;
-            max-width: 120px;
+            width: calc((100% - 12px) / 3);
+            min-width: 0;
             background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.12);
-            min-height: 110px;
-            margin-bottom: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            min-height: 70px;
+            margin-bottom: 4px;
         }
 
         .summary-card .card-icon {
-            font-size: 32pt;
+            font-size: 20pt;
             line-height: 1;
-            margin-bottom: 8px;
+            margin-bottom: 2px;
+        }
+
+        .summary-card .gear-image {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            margin-bottom: 2px;
+            border-radius: 16px;
         }
 
         .summary-card .card-content {
@@ -393,18 +422,19 @@ export const generateReportHTML = (
         }
 
         .summary-card .card-value {
-            font-size: 22pt;
+            font-size: 16pt;
             font-weight: 700;
-            line-height: 1.2;
-            margin: 6px 0 4px 0;
+            line-height: 1.1;
+            margin: 2px 0 1px 0;
         }
 
         .summary-card .card-label {
-            font-size: 9pt;
+            font-size: 7pt;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             font-weight: 600;
-            margin-top: 4px;
+            margin-top: 1px;
+            line-height: 1.1;
         }
 
         /* Primary Cards (Red Theme) */
@@ -534,8 +564,9 @@ export const generateReportHTML = (
             }
             
             .summary-card {
-                min-width: 13%;
-                max-width: 14%;
+                width: calc((100% - 12px) / 3);
+                min-width: 0;
+                max-width: none;
             }
 
             .page-break-after {
@@ -606,8 +637,7 @@ export const generateReportHTML = (
         </table>
 
         <!-- Summary Statistics Cards -->
-        <div style="page-break-before: always;">
-        <h2 class="section-title">Inspection Summary</h2>
+        <h2 class="section-title" style="margin-top: 8px;">Inspection Summary</h2>
         
         <!-- First Row Container - Primary Stats -->
         <div class="summary-row-container" style="background-color: #fff5f5; border-color: #ed2c2a;">
@@ -674,13 +704,14 @@ export const generateReportHTML = (
         </div>
 
         <!-- Second Row Container - Gear Types -->
-        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 16px;">
+        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 8px;">
             <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
                 Gear Type Breakdown
             </div>
             <div class="summary-row">
             <div class="summary-card gear-type">
-                <div class="card-icon">🧥</div>
+                <img src="${GEAR_IMAGE_URLS.jacket}" alt="Jackets" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧥</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml((analytics.jacket_shell || 0) + (analytics.jacket_liner || 0) || analytics['Total jackets'] || analytics.total_jackets || 0)}</div>
                     <div class="card-label">Jackets</div>
@@ -688,7 +719,8 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">👖</div>
+                <img src="${GEAR_IMAGE_URLS.pants}" alt="Pants" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">👖</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml((analytics.pant_shell || 0) + (analytics.pant_liner || 0) || analytics['Total pants'] || analytics.total_pants || 0)}</div>
                     <div class="card-label">Pants</div>
@@ -696,7 +728,8 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">⛑️</div>
+                <img src="${GEAR_IMAGE_URLS.helmet}" alt="Helmets" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">⛑️</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics.total_helmet || analytics['Total helmet'] || analytics.total_helmet || 0)}</div>
                     <div class="card-label">Helmets</div>
@@ -704,7 +737,8 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">🧢</div>
+                <img src="${GEAR_IMAGE_URLS.hood}" alt="Hoods" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧢</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics.total_hoods || analytics['Total hoods'] || analytics.total_hoods || 0)}</div>
                     <div class="card-label">Hoods</div>
@@ -712,7 +746,8 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">🧤</div>
+                <img src="${GEAR_IMAGE_URLS.gloves}" alt="Gloves" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧤</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics.total_gloves || analytics['Total gloves'] || analytics.total_gloves || 0)}</div>
                     <div class="card-label">Gloves</div>
@@ -720,7 +755,8 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">👢</div>
+                <img src="${GEAR_IMAGE_URLS.boots}" alt="Boots" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">👢</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics.total_boots || analytics['Total boots'] || analytics.total_boots || 0)}</div>
                     <div class="card-label">Boots</div>
@@ -728,13 +764,13 @@ export const generateReportHTML = (
             </div>
 
             <div class="summary-card gear-type">
-                <div class="card-icon">📦</div>
+                <img src="${GEAR_IMAGE_URLS.other}" alt="Other Gear" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">📦</div>
                 <div class="card-content">
                     <div class="card-value">${escapeHtml(analytics.total_other || analytics['Total other'] || analytics.total_other || 0)}</div>
                     <div class="card-label">Other Gear</div>
                 </div>
             </div>
-        </div>
         </div>
         </div>
 
