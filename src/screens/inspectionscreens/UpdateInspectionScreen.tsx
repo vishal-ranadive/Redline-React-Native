@@ -32,6 +32,7 @@ import { useLeadStore } from '../../store/leadStore';
 import { printTable } from '../../utils/printTable';
 import ImageSourcePickerModal from '../../components/common/Modal/ImageSourcePickerModal';
 import CameraCaptureModal from '../../components/common/Modal/CameraCaptureModal';
+import ImageEditor from '../../components/common/ImageEditor';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useGearStore } from '../../store/gearStore';
 import { 
@@ -285,6 +286,8 @@ export default function UpdateInspectionScreen() {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [imageEditorVisible, setImageEditorVisible] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState<string>('');
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -700,8 +703,24 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
-    setSelectedImage(imageUri);
-    setImagePreviewVisible(true);
+    // Open image editor instead of just preview
+    setImageToEdit(imageUri);
+    setImageEditorVisible(true);
+  };
+
+  const handleImageEditorSave = (editedImageUri: string) => {
+    // Replace the original image with the edited one
+    setImages(prev => {
+      const index = prev.findIndex(img => img === imageToEdit);
+      if (index !== -1) {
+        const newImages = [...prev];
+        newImages[index] = editedImageUri;
+        return newImages;
+      }
+      return prev;
+    });
+    setImageEditorVisible(false);
+    setImageToEdit('');
   };
 
   const addNewImage = () => {
@@ -1088,6 +1107,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                           numberOfLines={3}
                           style={{ minHeight: 80, fontSize: p(14) }}
                           containerStyle={{ alignItems: 'flex-start' }}
+                          enableVoice={true}
                         />
                       </View>
                     )}
@@ -1207,6 +1227,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                   numberOfLines={4}
                   style={{ minHeight: 90, fontSize: p(14) }}
                   containerStyle={{ alignItems: 'flex-start' }}
+                  enableVoice={true}
                 />
               </View>
             </View>
@@ -1283,6 +1304,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                   numberOfLines={4}
                   style={{ minHeight: 90, fontSize: p(14) }}
                   containerStyle={{ alignItems: 'flex-start' }}
+                  enableVoice={true}
                 />
               </View>
             </View>
@@ -1497,6 +1519,17 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         visible={showCameraModal}
         onClose={() => setShowCameraModal(false)}
         onPhotoCaptured={handleCameraCaptured}
+      />
+
+      {/* Image Editor Modal */}
+      <ImageEditor
+        visible={imageEditorVisible}
+        imageUri={imageToEdit}
+        onClose={() => {
+          setImageEditorVisible(false);
+          setImageToEdit('');
+        }}
+        onSave={handleImageEditorSave}
       />
 
       {/* Image Preview Modal */}

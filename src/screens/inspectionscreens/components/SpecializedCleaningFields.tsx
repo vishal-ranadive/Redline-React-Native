@@ -29,6 +29,7 @@ export const SpecializedCleaningFields: React.FC<SpecializedCleaningFieldsProps>
         numberOfLines={4}
         style={{ minHeight: 100, fontSize: 14 }}
         containerStyle={{ alignItems: 'flex-start' }}
+        enableVoice={true}
       />
     </View>
   );

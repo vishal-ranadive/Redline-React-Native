@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { PaperProvider, adaptNavigationTheme, MD3LightTheme, MD3DarkTheme, MD3Th
 import { useThemeStore } from './src/store/themeStore';
 import AppNavigator from './src/navigation/AppNavigator'; // ✅ use only this
 import Toast from 'react-native-toast-message'; // ✅ Import here
+import { setNavigationRef } from './src/services/api';
 
 
 import {
@@ -60,12 +61,19 @@ const CustomDarkTheme: MD3Theme = {
 function App() {
   const theme = useThemeStore(state => state.theme);
   const paperTheme = theme === 'dark' ? CustomDarkTheme : CustomLightTheme;
+  const navigationRef = useRef<any>(null);
 
   return (
     <PaperProvider theme={paperTheme}>
       <SafeAreaProvider>
         <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
-        <NavigationContainer theme={paperTheme as any}>
+        <NavigationContainer 
+          ref={(ref) => {
+            navigationRef.current = ref;
+            setNavigationRef(ref);
+          }}
+          theme={paperTheme as any}
+        >
           <AppNavigator /> {/* ✅ your single source of navigation */}
         </NavigationContainer>
         <Toast />

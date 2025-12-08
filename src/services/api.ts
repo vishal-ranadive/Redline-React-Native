@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import { BASE_URL } from '@env';
+import Toast from 'react-native-toast-message';
 
 // Create axios instance
 export const axiosInstance = axios.create({
@@ -14,10 +15,17 @@ export const axiosInstance = axios.create({
 
 // Store reference to auth store functions
 let authStore: any = null;
+// Store reference to navigation
+let navigationRef: any = null;
 
 // Function to set auth store after it's created
 export const setAuthStore = (store: any) => {
   authStore = store;
+};
+
+// Function to set navigation ref
+export const setNavigationRef = (ref: any) => {
+  navigationRef = ref;
 };
 
 // Request interceptor to add auth token
@@ -49,10 +57,43 @@ axiosInstance.interceptors.response.use(
       message: error.message,
     });
 
-    // Handle token refresh if needed
+    // Handle 401 unauthorized errors
     if (error.response?.status === 401 && authStore) {
-      // You can implement token refresh logic here
       authStore.getState().logout();
+      if (navigationRef) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
+    }
+
+    // Handle 403 forbidden errors with expired token
+    if (
+      error.response?.status === 403 &&
+      authStore &&
+      (error.response?.data?.detail === 'Token has expired' ||
+        error.response?.data?.message === 'Token has expired' ||
+        error.message?.includes('Token has expired'))
+    ) {
+      // Logout the user
+      authStore.getState().logout();
+      
+      // Show toast message
+      Toast.show({
+        type: 'error',
+        text1: 'Session Expired',
+        text2: 'Your session has expired. Please login again.',
+        visibilityTime: 4000,
+      });
+
+      // Navigate to login screen
+      if (navigationRef) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
     }
 
     return Promise.reject(error);
