@@ -1,4 +1,4 @@
-# Add Fire fighter 
+# Add Fire fighter [Done]
 - no email 
 - no phone 
 - rank optional (New Field)
@@ -10,13 +10,13 @@ Q) how are we recongnize the if we get last name same
 - custom color (which will be different from existing one)
 - Need color of list from steve 
 
-# Scan gear 
+# Scan gear [Done]
 - if we don't found gear then go to add gear by passing (serial_number)
 
 # Add gear page [need to check on ipad]
 - manufacture date is not appearing [Keep showind Dec on ipad]
 
-# Service Type 
+# Service Type [Done]
 - inspected and cleaned   (Default)
 
 # Gear Findings (Need to discuss)
@@ -42,8 +42,17 @@ without assigning to myself i can able to start inspection , it should not allow
 
 Android storage permission to download reports
 Fix draw on photos
+
 Voice to text on iPhone
+
 Voice to text on Android
+
+
+Add images 
+- from camera 
+- from gallery 
+- remove images 
+
 
 -----------------------------
 

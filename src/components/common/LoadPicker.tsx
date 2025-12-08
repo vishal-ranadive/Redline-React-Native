@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Modal, View, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import { p } from '../../utils/responsive';
@@ -20,9 +20,32 @@ const LoadPicker: React.FC<LoadPickerProps> = ({
 }) => {
   const { colors } = useTheme();
   const [visible, setVisible] = useState(false);
+  const [visibleLoadCount, setVisibleLoadCount] = useState(10);
 
-  const openModal = () => setVisible(true);
+  const openModal = () => {
+    // Reset to 10 when opening modal
+    setVisibleLoadCount(10);
+    setVisible(true);
+  };
   const closeModal = () => setVisible(false);
+
+  // Get visible loads based on visibleLoadCount
+  const visibleOptions = useMemo(() => {
+    return options.slice(0, visibleLoadCount);
+  }, [options, visibleLoadCount]);
+
+  // Calculate highest load number from visible options
+  const highestLoadNumber = useMemo(() => {
+    if (visibleOptions.length === 0) return 0;
+    const loadNumbers = visibleOptions.map(opt => parseInt(opt.value, 10));
+    return Math.max(...loadNumbers);
+  }, [visibleOptions]);
+
+  const handleAddMore = () => {
+    setVisibleLoadCount(prev => Math.min(prev + 5, options.length));
+  };
+
+  const canAddMore = visibleLoadCount < options.length;
 
   const renderItem = ({ item }: { item: { value: string; label: string } }) => {
     const isSelected = value === item.value;
@@ -86,16 +109,31 @@ const LoadPicker: React.FC<LoadPickerProps> = ({
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
           >
-            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Select Load</Text>
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+              Select Load {highestLoadNumber > 0 ? `(Up to Load ${highestLoadNumber})` : ''}
+            </Text>
 
             <FlatList
-              data={options}
+              data={visibleOptions}
               keyExtractor={(item) => item.value}
               numColumns={4}
               columnWrapperStyle={styles.gridRow}
               contentContainerStyle={styles.gridContent}
               renderItem={renderItem}
             />
+
+            {canAddMore && (
+              <View style={styles.addMoreContainer}>
+                <Button 
+                  onPress={handleAddMore} 
+                  mode="outlined"
+                  style={[styles.addMoreButton, { borderColor: colors.primary }]}
+                  textColor={colors.primary}
+                >
+                  Add 5 More Loads
+                </Button>
+              </View>
+            )}
 
             <View style={styles.modalActions}>
               <Button onPress={closeModal} mode="text" textColor={colors.error}>
@@ -167,6 +205,14 @@ const styles = StyleSheet.create({
   gridButtonText: {
     fontSize: p(14),
     fontWeight: '600',
+  },
+  addMoreContainer: {
+    marginVertical: p(12),
+    alignItems: 'center',
+  },
+  addMoreButton: {
+    borderWidth: 1,
+    borderRadius: p(8),
   },
   modalActions: {
     flexDirection: 'row',

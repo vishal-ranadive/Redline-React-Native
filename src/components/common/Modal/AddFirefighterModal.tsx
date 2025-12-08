@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import {
   Text,
@@ -25,6 +26,18 @@ interface AddFirefighterModalProps {
   onSuccess: () => void;
 }
 
+const RANK_OPTIONS = [
+  'Firefighter',
+  'Crew Manager',
+  'Watch Manager',
+  'Station Manager',
+  'Group Manager',
+  'Area Manager',
+  'Assistant Chief Fire Officer',
+  'Deputy Chief',
+  'Chief Fire Officer',
+];
+
 const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
   visible,
   onClose,
@@ -39,9 +52,11 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
     last_name: '',
     email: '',
     phone: '',
+    rank: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rankPickerVisible, setRankPickerVisible] = useState(false);
   const [supportedOrientations, setSupportedOrientations] = useState<
     ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
   >(['portrait', 'landscape']);
@@ -101,7 +116,7 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       return;
     }
 
-    const rosterData = {
+    const rosterData: any = {
       firestation_id: currentLead.firestation.id,
       franchise_id: currentLead.franchise.id,
       first_name: formData.first_name.trim(),
@@ -110,6 +125,11 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       phone: formData.phone.trim(),
       active_status: true,
     };
+
+    // Only include rank if it has a value (backend support pending)
+    if (formData.rank.trim()) {
+      rosterData.rank = formData.rank.trim();
+    }
 
     const success = await createRoster(rosterData);
     
@@ -129,8 +149,10 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       last_name: '',
       email: '',
       phone: '',
+      rank: '',
     });
     setErrors({});
+    setRankPickerVisible(false);
   };
 
   const handleClose = () => {
@@ -211,6 +233,22 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
               left={<TextInput.Icon icon="phone" />}
             />
 
+            <TextInput
+              label="Rank"
+              value={formData.rank}
+              onChangeText={(value) => handleInputChange('rank', value)}
+              onFocus={() => setRankPickerVisible(true)}
+              style={styles.input}
+              mode="outlined"
+              left={<TextInput.Icon icon="account-star" />}
+              right={
+                <TextInput.Icon
+                  icon="menu-down"
+                  onPress={() => setRankPickerVisible(true)}
+                />
+              }
+            />
+
             <Text style={[styles.noteText, { color: colors.onSurfaceVariant }]}>
               * Required fields
             </Text>
@@ -220,6 +258,80 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
             </Text>
           </View>
         </ScrollView>
+
+        {/* Rank Picker Modal */}
+        <Modal
+          transparent
+          visible={rankPickerVisible}
+          animationType="fade"
+          onRequestClose={() => setRankPickerVisible(false)}
+          supportedOrientations={supportedOrientations}
+          statusBarTranslucent={true}
+        >
+          <TouchableOpacity
+            style={styles.rankPickerOverlay}
+            activeOpacity={1}
+            onPress={() => setRankPickerVisible(false)}
+          >
+            <View
+              style={[styles.rankPickerModal, { backgroundColor: colors.surface }]}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+            >
+              <View style={[styles.rankPickerHeader, { borderBottomColor: colors.outline }]}>
+                <Text style={[styles.rankPickerTitle, { color: colors.onSurface }]}>
+                  Select Rank
+                </Text>
+                <Button mode="text" onPress={() => setRankPickerVisible(false)}>
+                  <Icon source="close" size={p(22)} color={colors.onSurface} />
+                </Button>
+              </View>
+
+              <ScrollView style={styles.rankPickerScroll}>
+                {RANK_OPTIONS.map((rank) => (
+                  <TouchableOpacity
+                    key={rank}
+                    style={[
+                      styles.rankOption,
+                      {
+                        backgroundColor:
+                          formData.rank === rank
+                            ? colors.primaryContainer
+                            : 'transparent',
+                        borderBottomColor: colors.outline,
+                      },
+                    ]}
+                    onPress={() => {
+                      handleInputChange('rank', rank);
+                      setRankPickerVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.rankOptionText,
+                        {
+                          color:
+                            formData.rank === rank
+                              ? colors.onPrimaryContainer
+                              : colors.onSurface,
+                        },
+                      ]}
+                    >
+                      {rank}
+                    </Text>
+                    {formData.rank === rank && (
+                      <Icon
+                        source="check"
+                        size={p(20)}
+                        color={colors.onPrimaryContainer}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Footer */}
         <View style={[styles.modalFooter, { backgroundColor: colors.surface }]}>
@@ -312,6 +424,46 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: p(14),
     fontWeight: '600',
+  },
+  rankPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: p(16),
+  },
+  rankPickerModal: {
+    width: '100%',
+    maxWidth: p(400),
+    borderRadius: p(12),
+    maxHeight: '80%',
+  },
+  rankPickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(16),
+    paddingVertical: p(12),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  rankPickerTitle: {
+    fontSize: p(18),
+    fontWeight: '700',
+  },
+  rankPickerScroll: {
+    maxHeight: p(400),
+  },
+  rankOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: p(16),
+    paddingVertical: p(14),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  rankOptionText: {
+    fontSize: p(15),
+    flex: 1,
   },
 });
 
