@@ -139,7 +139,7 @@ export const getStatusColor = (status: LeadStatus): string => {
  */
 export const formatStatus = (status: LeadStatus): string => {
   
-  printTable("status", status)
+  // printTable("status", status)
   return status
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase())

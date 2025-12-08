@@ -298,7 +298,7 @@ const LeadScreen = () => {
    */
   const renderLead = useCallback(({ item }: { item: any }) => {
 
-    printTable("renderLead-item", item)
+    // printTable("renderLead-item", item)
     return (
     <TouchableOpacity
       activeOpacity={0.8}

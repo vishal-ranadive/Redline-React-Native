@@ -118,7 +118,7 @@ const LeadDetailScreen = () => {
 
   
   const { lead: initialLead } = route.params as any;
-  printTable("initialLead",initialLead)
+  // printTable("initialLead",initialLead)
   const [lead, setLead] = useState<LeadDetail>(initialLead);
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
@@ -221,7 +221,7 @@ const LeadDetailScreen = () => {
         setLoading(true);
       }
       const leadDetail:any = await fetchLeadById(leadId);
-      printTable('Lead Details', leadDetail);
+      // printTable('Lead Details', leadDetail);
       if(leadDetail){
         setLead(leadDetail);
         setCurrentStatus(leadDetail?.lead_status);
