@@ -548,7 +548,7 @@ const LeadDetailScreen = () => {
       {/* Scrollable Content */}
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottom + p(16) }}
+        contentContainerStyle={{ paddingBottom: bottom + p(80) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

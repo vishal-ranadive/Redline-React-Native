@@ -10,6 +10,9 @@ export const COLOR_MAP: { [key: string]: string } = {
   cyan: '#44FFFF',
   lime: '#88FF44',
   teal: '#44FF88',
+  grey: '#888888',
+  gray: '#888888', // Alternative spelling
+  gold: '#FFD700',
 };
 
 // Helper to get hex color from color name for UI display

@@ -36,7 +36,7 @@ export type RootStackParamList = {
 
   GearScan: undefined;
   GearSearch: undefined;
-  AddGear: { presetRoster?: any } | undefined;
+  AddGear: { presetRoster?: any; serialNumber?: string } | undefined;
 
   GearDetail: {gear_id:any};
     FirefighterFlow: {firefighter?:any};

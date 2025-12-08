@@ -237,7 +237,9 @@ const stopScanning = () => {
 
   const handleAddNewGear = () => {
     setShowNotFoundModal(false);
-    navigation.navigate('AddGear');
+    navigation.navigate('AddGear', {
+      serialNumber: scannedData || undefined,
+    });
   };
 
   const handleSearchGear = () => {

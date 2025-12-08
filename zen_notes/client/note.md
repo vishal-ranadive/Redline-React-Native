@@ -5,7 +5,7 @@
 Q) how are we recongnize the if we get last name same 
 
 
-# Color modal 
+# Color modal - [Forntend-Done]
 - no tag color (another option)
 - custom color (which will be different from existing one)
 - Need color of list from steve 
@@ -13,11 +13,11 @@ Q) how are we recongnize the if we get last name same
 # Scan gear 
 - if we don't found gear then go to add gear by passing (serial_number)
 
-# Add gear page 
+# Add gear page [need to check on ipad]
 - manufacture date is not appearing [Keep showind Dec on ipad]
 
 # Service Type 
-- cleaned and inspected (Default)
+- inspected and cleaned   (Default)
 
 # Gear Findings (Need to discuss)
 - Approx. costing for each findings 

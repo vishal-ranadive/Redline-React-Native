@@ -228,7 +228,7 @@ export default function UpdateInspectionScreen() {
   // Form state
   const [formData, setFormData] = useState({
     status: '',
-    serviceType: '',
+    serviceType: 'INSPECTED_AND_CLEANED', // Default: Inspected and Cleaned
     harnessType: false,
     size: '',
     selectedGearFindings: [] as string[],
@@ -288,6 +288,28 @@ export default function UpdateInspectionScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  // Helper function to check if gear is expired (10+ years old)
+  const isGearExpired = (manufacturingDate: string | null | undefined): boolean => {
+    if (!manufacturingDate) return false;
+    
+    try {
+      const manufactureDate = new Date(manufacturingDate);
+      if (isNaN(manufactureDate.getTime())) return false;
+      
+      const today = new Date();
+      const yearsDiff = today.getFullYear() - manufactureDate.getFullYear();
+      const monthsDiff = today.getMonth() - manufactureDate.getMonth();
+      
+      // Calculate exact age in years (considering months)
+      const ageInYears = yearsDiff + (monthsDiff < 0 ? -1 : 0) + (today.getDate() < manufactureDate.getDate() ? -1/12 : 0);
+      
+      return ageInYears >= 10;
+    } catch (error) {
+      console.error('Error calculating gear expiry:', error);
+      return false;
+    }
+  };
+
   // Fetch gear types on mount
   useEffect(() => {
     fetchGearTypes();
@@ -312,13 +334,23 @@ export default function UpdateInspectionScreen() {
         if (gearResponse) {
           printTable("responsefetchGearById", gearResponse);
           setGear(gearResponse);
+          
+          // Check if gear is expired (10+ years old) and set status to EXPIRED for new inspections
+          const isExpired = isGearExpired(gearResponse.manufacturing_date);
+          const initialStatus = isExpired && !inspectionId ? 'EXPIRED' : '';
+          
           // Initialize form with gear data
           setFormData(prev => ({
             ...prev,
             // size: gearResponse.gear_size || '',
             serialNumber: gearResponse.serial_number || '',
             // remarks: gearResponse.remarks || '',
+            status: initialStatus || prev.status, // Only set if new inspection and expired
           }));
+          
+          if (isExpired && !inspectionId) {
+            console.log("⚠️ Gear is expired (10+ years old), status set to EXPIRED");
+          }
         } else {
           setError('Failed to fetch gear data');
         }
@@ -332,6 +364,23 @@ export default function UpdateInspectionScreen() {
 
     fetchGearAndStatus();
   }, [gearId]);
+
+  // Check gear expiry status when gear data changes (for new inspections only)
+  useEffect(() => {
+    if (!gear || inspectionId) return; // Only check for new inspections
+    
+    const isExpired = isGearExpired(gear.manufacturing_date);
+    if (isExpired) {
+      setFormData(prev => {
+        // Only set to EXPIRED if status is not already set
+        if (!prev.status) {
+          console.log("⚠️ Gear is expired (10+ years old), status set to EXPIRED");
+          return { ...prev, status: 'EXPIRED' };
+        }
+        return prev;
+      });
+    }
+  }, [gear, inspectionId]);
 
   // Load gear findings and images
   useEffect(() => {
@@ -414,10 +463,22 @@ export default function UpdateInspectionScreen() {
           // Get gear_size from inspection data (directly on inspection) or fallback to gear.gear_size
           const gearSize = inspectionData.gear_size || '';
 
+          // Get status from inspection, but check if gear is expired and override if needed
+          let statusToSet = getStatusValue(inspectionData.gear_status?.status) || '';
+          const gearData = inspectionData.gear || gear;
+          if (gearData?.manufacturing_date) {
+            const isExpired = isGearExpired(gearData.manufacturing_date);
+            if (isExpired && !statusToSet) {
+              // Only override if no status is set (shouldn't happen for existing inspections, but safety check)
+              statusToSet = 'EXPIRED';
+              console.log("⚠️ Gear is expired (10+ years old), status set to EXPIRED");
+            }
+          }
+
           setFormData(prev => ({
             ...prev,
-            status: getStatusValue(inspectionData.gear_status?.status) || '',
-            serviceType: getServiceTypeValue(inspectionData.service_type?.status) || '',
+            status: statusToSet,
+            serviceType: getServiceTypeValue(inspectionData.service_type?.status) || 'INSPECTED_AND_CLEANED', // Default to Inspected and Cleaned if not found
             harnessType: inspectionData.is_harness === true || inspectionData.is_harness === "YES" || inspectionData.harness_type || false,
             size: gearSize,
             selectedGearFindings: gearFindings,
@@ -789,7 +850,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
       'SPECIALIZED_CLEANING': 4,
       'OTHER': 5
     };
-    return serviceMap[serviceType] || 1;
+    // Default to INSPECTED_AND_CLEANED (3) if serviceType is empty or not found
+    return serviceMap[serviceType] || 3;
   };
 
   // Show loading state with skeleton

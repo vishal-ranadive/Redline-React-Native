@@ -180,12 +180,19 @@ const AddGearScreen = () => {
   }, []);
 
   const presetRoster = route.params?.presetRoster as RosterItem | undefined;
+  const presetSerialNumber = route.params?.serialNumber as string | undefined;
 
   useEffect(() => {
     if (presetRoster) {
       setAssignedRoster(presetRoster);
     }
   }, [presetRoster]);
+
+  useEffect(() => {
+    if (presetSerialNumber) {
+      setSerialNumber(presetSerialNumber);
+    }
+  }, [presetSerialNumber]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () =>
