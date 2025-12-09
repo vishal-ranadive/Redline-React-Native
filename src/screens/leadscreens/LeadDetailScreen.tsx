@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl, Dimensions, Share } from 'react-native';
 import Pdf from 'react-native-pdf';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -62,7 +62,13 @@ interface LeadDetail {
   firestation: {
     id: number;
     name: string;
-    address?: string
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip_code?: string;
+    latitude?: string;
+    longitude?: string;
   };
   assigned_technicians: Technician[];
   type: 'REPAIR' | 'INSPECTION';
@@ -115,7 +121,6 @@ const LeadDetailScreen = () => {
   const { top, bottom } = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { fetchLeadById, currentLead } = useLeadStore();
-
   
   const { lead: initialLead } = route.params as any;
   // printTable("initialLead",initialLead)
@@ -475,13 +480,160 @@ const LeadDetailScreen = () => {
     // Reset to previous value if needed, or keep current
   };
 
+  /**
+   * Generate full address string from firestation data
+   * Combines: name, address, city, state, zip_code, country
+   */
+  const generateFullAddress = (): string => {
+    const firestation = lead?.firestation;
+    if (!firestation) return '';
+
+    const addressParts: string[] = [];
+    
+    // Add station name (optional, for better context)
+    if (firestation.name) {
+      addressParts.push(firestation.name);
+    }
+    
+    // Add street address
+    if (firestation.address) {
+      addressParts.push(firestation.address);
+    }
+    
+    // Add city
+    if (firestation.city) {
+      addressParts.push(firestation.city);
+    }
+    
+    // Add state
+    if (firestation.state) {
+      addressParts.push(firestation.state);
+    }
+    
+    // Add zip code
+    if (firestation.zip_code) {
+      addressParts.push(firestation.zip_code);
+    }
+    
+    // Add country
+    if (firestation.country) {
+      addressParts.push(firestation.country);
+    }
+    
+    // Join all parts with comma and space, or fallback to name if no address parts
+    return addressParts.length > 0 
+      ? addressParts.join(', ') 
+      : firestation.name || '';
+  };
+
+  /**
+   * Open address in Apple Maps
+   */
+  const handleOpenAppleMaps = (): void => {
+    const address = generateFullAddress();
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(address);
+    const url = `http://maps.apple.com/?q=${encodedAddress}`;
+    
+    Linking.openURL(url).catch((err) => {
+      console.error('Error opening Apple Maps:', err);
+      Alert.alert('Error', 'Failed to open Apple Maps');
+    });
+  };
+
+  /**
+   * Open address in Google Maps
+   */
+  const handleOpenGoogleMaps = (): void => {
+    const address = generateFullAddress();
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(address);
+    const url = Platform.OS === 'ios' 
+      ? `comgooglemaps://?q=${encodedAddress}`
+      : `geo:0,0?q=${encodedAddress}`;
+    
+    Linking.openURL(url).catch((err) => {
+      // Fallback to web version if app is not installed
+      const webUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      Linking.openURL(webUrl).catch((webErr) => {
+        console.error('Error opening Google Maps:', webErr);
+        Alert.alert('Error', 'Failed to open Google Maps');
+      });
+    });
+  };
+
+  /**
+   * Share address with a single map link (platform-specific)
+   */
+  const handleShareAddress = async (): Promise<void> => {
+    const address = generateFullAddress();
+    const stationName = lead?.firestation?.name || 'Fire Station';
+    
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    try {
+      const encodedQuery = encodeURIComponent(address);
+      
+      // Platform-specific map link (only one link will be shared)
+      const mapUrl =
+        Platform.OS === 'ios'
+          ? `http://maps.apple.com/?q=${encodedQuery}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+      
+      // Share a single link plus the station name
+      const shareContent = `${stationName}\n${mapUrl}`;
+      
+      await Share.share({
+        message: shareContent,
+        title: 'Fire Station Location',
+        url: mapUrl,
+      });
+    } catch (error: any) {
+      console.error('Error sharing address:', error);
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', 'Failed to share address');
+      }
+    }
+  };
+
   // Check if current user is already assigned as technician
-  const isCurrentUserAssigned = lead.assigned_technicians?.some(
-    tech => tech.id === user?.id
-  );
+  // Check both assigned_technicians array and Odoo technicianId
+  const isCurrentUserAssigned = useMemo(() => {
+    if (!user?.id) return false;
+    
+    // Check if user is in assigned_technicians array
+    const isInAssignedTechnicians = lead.assigned_technicians?.some(
+      tech => tech.id === user.id
+    );
+    
+    // Check if user matches Odoo technician ID
+    const isOdooTechnician = lead?.lead?.technicianId === user.id;
+    
+    return isInAssignedTechnicians || isOdooTechnician;
+  }, [user?.id, lead.assigned_technicians, lead?.lead?.technicianId]);
 
   // Check if current user can assign themselves (not already assigned and has technician role)
   const canAssignSelf = user && !isCurrentUserAssigned;
+  const actionButtonsDisabled = !isCurrentUserAssigned;
+
+  useEffect(() => {
+    console.log('[LeadDetail] Auth store user', user);
+    console.log('[LeadDetail] Lead assigned technicians', lead?.assigned_technicians);
+    console.log('[LeadDetail] Odoo technician ID', lead?.lead?.technicianId);
+    console.log('[LeadDetail] Is current user assigned?', isCurrentUserAssigned);
+    console.log('[LeadDetail] Action buttons disabled?', actionButtonsDisabled);
+  }, [user, lead?.assigned_technicians, lead?.lead?.technicianId, isCurrentUserAssigned, actionButtonsDisabled]);
 
   // Loading state
   if (loading) {
@@ -589,15 +741,22 @@ const LeadDetailScreen = () => {
             </View>
             
               <Button
-                mode="contained"
-                buttonColor="#10b981"
+                mode={actionButtonsDisabled ? "outlined" : "contained"}
+                buttonColor={actionButtonsDisabled ? "#E0E0E0" : "#10b981"}
                 onPress={handleCompleteInspection}
-                style={styles.completeButton}
+                disabled={actionButtonsDisabled}
+                style={[
+                  styles.completeButton,
+                  {
+                    opacity: actionButtonsDisabled ? 0.6 : 1,
+                    borderColor: actionButtonsDisabled ? "#BDBDBD" : "#10b981",
+                  }
+                ]}
                 contentStyle={{ paddingHorizontal: p(16), paddingVertical: p(4) }}
                 labelStyle={{
                   fontSize: p(14),
                   fontWeight: '600',
-                  color: '#fff',
+                  color: actionButtonsDisabled ? '#9E9E9E' : '#fff',
                 }}
                 icon="check-circle"
               >
@@ -630,30 +789,69 @@ const LeadDetailScreen = () => {
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
-                { icon: 'map-marker', label: 'Address', value: lead?.firestation?.address },
+                { icon: 'map-marker', label: 'Address', value: generateFullAddress(), isAddress: true },
               ].map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <View style={styles.tableCellLeft}>
-                    <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                <View key={index}>
+                  <View style={styles.tableRow}>
+                    <View style={styles.tableCellLeft}>
+                      <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                      <Text
+                        style={[
+                          styles.tableLabel,
+                          { color: colors.onSurface, fontSize: p(14)},
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
                     <Text
                       style={[
-                        styles.tableLabel,
-                        { color: colors.onSurface, fontSize: p(14)},
+                        styles.tableValue,
+                        { color: colors.onSurface, fontSize: p(14) },
                       ]}
                       numberOfLines={1}
                     >
-                      {item.label}
+                      {item.value || 'N/A'}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.tableValue,
-                      { color: colors.onSurface, fontSize: p(14) },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.value}
-                  </Text>
+                  {/* Map Action Buttons for Address */}
+                  {item.isAddress && generateFullAddress() && (
+                    <View style={styles.mapActionsContainer}>
+                      <TouchableOpacity
+                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        onPress={handleShareAddress}
+                        activeOpacity={0.7}
+                      >
+                        <Icon source="share" size={p(18)} color={colors.primary} />
+                        <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                          Share
+                        </Text>
+                      </TouchableOpacity>
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                          onPress={handleOpenAppleMaps}
+                          activeOpacity={0.7}
+                        >
+                          <Icon source="map" size={p(18)} color={colors.primary} />
+                          <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                            Apple Maps
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        onPress={handleOpenGoogleMaps}
+                        activeOpacity={0.7}
+                      >
+                        <Icon source="map-marker" size={p(18)} color={colors.primary} />
+                        <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                          Google Maps
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -945,21 +1143,25 @@ const LeadDetailScreen = () => {
           ].map((action, i) => (
             <Button
               key={i}
-              mode="outlined"
+              mode={actionButtonsDisabled ? "outlined" : "contained"}
               onPress={() => action.action && action.action()}
-              buttonColor={colors.primary}
-              textColor={colors.onSurface}
+              buttonColor={actionButtonsDisabled ? '#E0E0E0' : colors.primary}
+              textColor={actionButtonsDisabled ? '#9E9E9E' : '#FFFFFF'}
+              disabled={actionButtonsDisabled}
               labelStyle={{
                 fontSize: p(14),
                 fontWeight: '600',
-                color: '#fff',
+                color: actionButtonsDisabled ? '#9E9E9E' : '#FFFFFF',
               }}
               style={{
-                      flex: 1,             // ← Makes buttons wider automatically
+                flex: 1,             // ← Makes buttons wider automatically
                 marginHorizontal: p(6), // ← Keeps them close, not too wide
-                 borderColor: colors.outline, borderRadius: p(10), elevation: 12 }}
+                borderColor: actionButtonsDisabled ? '#BDBDBD' : colors.primary, 
+                borderRadius: p(10), 
+                opacity: actionButtonsDisabled ? 0.6 : 1,
+                elevation: actionButtonsDisabled ? 0 : 4
+              }}
               icon={action.icon}
-              elevation={4}
             >
               {action.label}
             </Button>
@@ -1501,6 +1703,26 @@ const styles = StyleSheet.create({
   },
   statusModalCancelButton: {
     minWidth: p(100),
+  },
+  mapActionsContainer: {
+    flexDirection: 'row',
+    gap: p(8),
+    marginTop: p(8),
+    marginLeft: p(24),
+    flexWrap: 'wrap',
+  },
+  mapActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(6),
+    paddingHorizontal: p(12),
+    paddingVertical: p(8),
+    borderRadius: p(8),
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  mapActionText: {
+    fontWeight: '600',
   },
 });
 

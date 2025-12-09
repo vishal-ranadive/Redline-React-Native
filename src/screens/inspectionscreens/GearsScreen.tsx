@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text, Card, Button, Icon, useTheme, Chip, TextInput } from 'react-native-paper';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -130,6 +130,7 @@ export default function GearsScreen() {
   
   const [gearInspections, setGearInspections] = useState<GearInspection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GearStatus | 'All'>('All');
 
@@ -145,15 +146,21 @@ export default function GearsScreen() {
     return () => subscription.remove();
   }, []);
 
-  const fetchGearInspections = useCallback(async () => {
+  const fetchGearInspections = useCallback(async (options?: { skipLoader?: boolean }) => {
+    const useLoader = !options?.skipLoader;
+
     if (!load?.loadNumber || !currentLead?.lead_id) {
       console.log('Missing loadId or leadId');
-      setLoading(false);
+      if (useLoader) {
+        setLoading(false);
+      }
       return;
     }
 
     try {
-      setLoading(true);
+      if (useLoader) {
+        setLoading(true);
+      }
       const response = await inspectionApi.getGearInspectionsLoadwise(load.loadNumber, currentLead.lead_id);
       
       if (response?.gear_inspections) {
@@ -165,7 +172,9 @@ export default function GearsScreen() {
       console.error('Error fetching gear inspections:', error);
       setGearInspections([]);
     } finally {
-      setLoading(false);
+      if (useLoader) {
+        setLoading(false);
+      }
     }
   }, [load?.loadNumber, currentLead?.lead_id]);
 
@@ -325,7 +334,8 @@ export default function GearsScreen() {
    * Render individual gear inspection card
    */
   const renderGear = useCallback(({ item }: { item: GearInspection }) => {
-    const tagColor = normalizeTagColor(item.roster.tag_color) || colors.primary;
+
+    const tagColor = normalizeTagColor(item.roster.tag_color) || "";
     const statusColor = getGearStatusColor(item.gear_status.status);
     const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
 
@@ -441,6 +451,15 @@ export default function GearsScreen() {
     );
   }, [colors, navigation, renderInspectionDetails, isMobile]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchGearInspections({ skipLoader: true });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header 
@@ -513,6 +532,14 @@ export default function GearsScreen() {
           contentContainerStyle={[styles.grid, isMobile ? styles.gridMobile : styles.gridTablet]}
           columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Icon source="package-variant-closed" size={64} color={colors.outline} />

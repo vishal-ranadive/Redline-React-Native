@@ -190,6 +190,13 @@ const PPEReportPreviewScreen: React.FC = () => {
 
   const firestation = ppeData?.firestation || {};
   const analytics = analyticsData || {};
+  const rosters = ppeData?.roster || [];
+  const assignedTechnicians = ppeData?.assigned_technicians || [];
+  
+  // Get technician names
+  const technicianNames = assignedTechnicians
+    .map((tech: any) => tech.name)
+    .join(', ') || 'N/A';
 
   // Parse address
   const address = firestation?.location || '';
@@ -287,6 +294,7 @@ const PPEReportPreviewScreen: React.FC = () => {
                     month: 'long',
                     day: 'numeric'
                   }) : 'N/A') },
+                { label: 'Assigned Technicians', value: technicianNames },
               ].map((item, index) => (
                 <View key={index} style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.onSurface, fontSize: p(14) }]}>
@@ -607,6 +615,148 @@ const PPEReportPreviewScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
+        {/* Roster & Gear Assignments Section */}
+        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Card.Content>
+            <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
+              Roster & Gear Assignments
+            </Text>
+            <Divider style={{ marginVertical: p(10) }} />
+            
+            {rosters.length === 0 ? (
+              <View style={styles.emptyRosterContainer}>
+                <Icon source="account-group" size={p(48)} color={colors.outline} />
+                <Text style={[styles.emptyRosterText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
+                  No rosters available
+                </Text>
+              </View>
+            ) : (
+              rosters.map((roster: any, rosterIndex: number) => {
+                const gears = roster.gears || [];
+                
+                return (
+                  <View key={rosterIndex} style={styles.rosterSection}>
+                    <View style={[styles.rosterHeader, { backgroundColor: '#fee2e2', borderLeftColor: '#ed2c2a' }]}>
+                      <View style={styles.rosterHeaderContent}>
+                        <Text style={[styles.rosterNameLabel, { color: '#991b1b', fontSize: p(11) }]}>
+                          ROSTER NAME:
+                        </Text>
+                        <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(15), fontWeight: '700' }]}>
+                          {roster.name || 'N/A'}
+                        </Text>
+                      </View>
+                      {roster.operation_type && (
+                        <View style={[styles.operationBadge, { backgroundColor: '#fee2e2' }]}>
+                          <Text style={[styles.operationBadgeText, { color: '#991b1b', fontSize: p(10) }]}>
+                            {roster.operation_type.toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    {gears.length === 0 ? (
+                      <View style={styles.emptyGearsContainer}>
+                        <Text style={[styles.emptyGearsText, { color: colors.onSurfaceVariant, fontSize: p(13) }]}>
+                          No gears assigned to this roster member
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.gearsTableContainer}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                          <View style={styles.gearsTable}>
+                            {/* Table Header */}
+                            <View style={[styles.gearsTableHeader, { backgroundColor: '#ed2c2a' }]}>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnName]}>Name</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnSerial]}>Serial #</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnManufacturer]}>Manufacturer</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnDate]}>Date of Mfg.</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnStatus]}>Status</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnService]}>Service Type</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnHydroPerformed]}>HydroTest Performed</Text>
+                              <Text style={[styles.gearsTableHeaderText, styles.columnHydroStatus]}>HydroTest Status</Text>
+                            </View>
+                            
+                            {/* Table Rows */}
+                            {gears.map((gear: any, gearIndex: number) => (
+                              <View 
+                                key={gearIndex} 
+                                style={[
+                                  styles.gearsTableRow, 
+                                  { 
+                                    backgroundColor: gearIndex % 2 === 0 ? '#fef2f2' : '#ffffff',
+                                    borderBottomColor: colors.outline 
+                                  }
+                                ]}
+                              >
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnName]}
+                                  numberOfLines={2}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.name || gear.gear_name || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnSerial]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.serial_number || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnManufacturer]}
+                                  numberOfLines={2}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.manufacturer || gear.manufacturer_name || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnDate]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.date_of_mfg || gear.manufacturing_date || gear.date_of_manufacture || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnStatus]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.gear_status || gear.status || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnService]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.service_type || gear.serviceType || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnHydroPerformed]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.hydrotest_performed || gear.hydrotestPerformed || gear.hydro_test_performed || 'N/A'}
+                                </Text>
+                                <Text 
+                                  style={[styles.gearsTableCell, styles.columnHydroStatus]}
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {gear.hydrotest_status || gear.hydrotestStatus || gear.hydro_test_status || 'N/A'}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </Card.Content>
+        </Card>
+
         {/* Footer Spacing */}
         <View style={{ height: p(100) }} />
       </ScrollView>
@@ -784,6 +934,157 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  rosterSection: {
+    marginBottom: p(24),
+  },
+  rosterHeader: {
+    padding: p(12),
+    borderLeftWidth: 4,
+    marginBottom: p(12),
+    borderRadius: p(6),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rosterHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(8),
+    flex: 1,
+  },
+  rosterNameLabel: {
+    fontSize: p(11),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rosterName: {
+    fontSize: p(15),
+    fontWeight: '700',
+  },
+  operationBadge: {
+    paddingHorizontal: p(8),
+    paddingVertical: p(4),
+    borderRadius: p(4),
+  },
+  operationBadgeText: {
+    fontSize: p(10),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  emptyRosterContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: p(40),
+  },
+  emptyRosterText: {
+    marginTop: p(12),
+    textAlign: 'center',
+  },
+  emptyGearsContainer: {
+    padding: p(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+    borderRadius: p(6),
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#fca5a5',
+  },
+  emptyGearsText: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  gearsTableContainer: {
+    marginTop: p(8),
+    borderRadius: p(6),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: p(8),
+  },
+  gearsTable: {
+    width: 'auto',
+  },
+  gearsTableHeader: {
+    flexDirection: 'row',
+    paddingVertical: p(10),
+    paddingHorizontal: 0,
+    alignItems: 'center',
+  },
+  gearsTableHeaderText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    paddingHorizontal: p(8),
+    fontSize: p(11),
+    flexShrink: 1,
+  },
+  gearsTableRow: {
+    flexDirection: 'row',
+    paddingVertical: p(9),
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  gearsTableCell: {
+    color: '#2d3748',
+    paddingHorizontal: p(8),
+    textAlign: 'left',
+    fontSize: p(12),
+    flexShrink: 1,
+  },
+  // Column widths based on content
+  columnName: {
+    width: p(140),
+    minWidth: p(140),
+    maxWidth: p(140),
+    flexShrink: 0,
+  },
+  columnSerial: {
+    width: p(120),
+    minWidth: p(120),
+    maxWidth: p(120),
+    flexShrink: 0,
+  },
+  columnManufacturer: {
+    width: p(130),
+    minWidth: p(130),
+    maxWidth: p(130),
+    flexShrink: 0,
+  },
+  columnDate: {
+    width: p(110),
+    minWidth: p(110),
+    maxWidth: p(110),
+    flexShrink: 0,
+  },
+  columnStatus: {
+    width: p(100),
+    minWidth: p(100),
+    maxWidth: p(100),
+    flexShrink: 0,
+  },
+  columnService: {
+    width: p(120),
+    minWidth: p(120),
+    maxWidth: p(120),
+    flexShrink: 0,
+  },
+  columnHydroPerformed: {
+    width: p(150),
+    minWidth: p(150),
+    maxWidth: p(150),
+    flexShrink: 0,
+  },
+  columnHydroStatus: {
+    width: p(140),
+    minWidth: p(140),
+    maxWidth: p(140),
+    flexShrink: 0,
   },
 });
 

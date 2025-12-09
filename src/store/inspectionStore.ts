@@ -21,10 +21,22 @@ export type FirefighterRoster = {
 };
 
 interface GearInspection {
-  gear_id: number;
-  gear_type_id: number;
-  gear_usage: any;
-  gear_name: string;
+  gear: {
+    gear_id: number;
+    gear_name: string;
+    gear_type: {
+      gear_type_id: number;
+      gear_type: string;
+    };
+    serial_number?: string;
+    manufacturer?: {
+      manufacturer_id: number;
+      manufacturer_name: string;
+    };
+    gear_size?: string;
+    [key: string]: any;
+  };
+  gear_usage?: any;
   current_inspection: any | null;
   previous_inspection: any | null;
 }

@@ -165,6 +165,25 @@ const RosterModal: React.FC<RosterModalProps> = ({
              (item.first_name && item.last_name ? `${item.first_name} ${item.last_name}`.trim() : '') ||
              'Unknown Firefighter'}
           </Text>
+
+          {/* Rank Pill */}
+          {item.rank && item.rank.trim() && (
+            <View
+              style={[
+                styles.rankPill,
+                { backgroundColor: colors.primaryContainer, marginLeft: p(8) }
+              ]}
+            >
+              <Text
+                style={[
+                  styles.rankPillText,
+                  { color: colors.primary }
+                ]}
+              >
+                {item.rank}
+              </Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.rosterDetail, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
           {item.firestation?.name || 'Unknown Station'}
@@ -336,6 +355,19 @@ const styles = StyleSheet.create({
     height: p(12),
     borderRadius: p(6),
     marginRight: p(8),
+  },
+  rankPill: {
+    paddingHorizontal: p(10),
+    paddingVertical: p(4),
+    borderRadius: p(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: p(24),
+  },
+  rankPillText: {
+    fontSize: p(11),
+    fontWeight: '600',
+    lineHeight: p(16),
   },
   rosterName: {
     fontWeight: '600',

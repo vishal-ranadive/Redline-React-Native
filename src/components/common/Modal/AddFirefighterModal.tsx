@@ -124,12 +124,8 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       active_status: true,
+      rank: formData.rank.trim(),
     };
-
-    // Only include rank if it has a value (backend support pending)
-    if (formData.rank.trim()) {
-      rosterData.rank = formData.rank.trim();
-    }
 
     const success = await createRoster(rosterData);
     

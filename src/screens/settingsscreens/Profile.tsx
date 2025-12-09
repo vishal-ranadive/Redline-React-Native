@@ -62,6 +62,16 @@ const ProfileScreen = () => {
         <Surface style={[styles.card, { backgroundColor: colors.surface }]}>
 
           <Divider />
+          {(user as any).rank && (
+            <>
+              <List.Item
+                title="Rank"
+                description={(user as any).rank || '—'}
+                left={(props) => <List.Icon {...props} icon="account-star" />}
+              />
+              <Divider />
+            </>
+          )}
           <List.Item
             title="Role"
             description={user.role || '—'}
