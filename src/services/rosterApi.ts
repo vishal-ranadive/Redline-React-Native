@@ -24,7 +24,9 @@ export const rosterApi = {
 
   // Create new roster
   createRoster: async (rosterData: any): Promise<any> => {
+    console.log('➡️ API CALL POST /roster/ with', rosterData);
     const response = await axiosInstance.post(`/roster/`, rosterData);
+    console.log('✅ API Response POST /roster/ with', response.data);
     return response.data;
   },
 

@@ -1089,9 +1089,29 @@ const handleGearPress = (gear: any) => {
                     </Text>
                   </View>
                   <View style={styles.firefighterDetails}>
-                    <Text style={[styles.firefighterName, { color: colors.onSurface }]}>
-                      {[selectedFirefighter?.first_name, selectedFirefighter?.middle_name, selectedFirefighter?.last_name].filter(Boolean).join(' ') || 'Unknown Firefighter'}
-                    </Text>
+                    <View style={styles.firefighterNameContainer}>
+                      <Text style={[styles.firefighterName, { color: colors.onSurface }]}>
+                        {[selectedFirefighter?.first_name, selectedFirefighter?.middle_name, selectedFirefighter?.last_name].filter(Boolean).join(' ') || 'Unknown Firefighter'}
+                      </Text>
+                      {/* Rank Pill */}
+                      {selectedFirefighter?.rank && selectedFirefighter.rank.trim() && (
+                        <View
+                          style={[
+                            styles.rankPill,
+                            { backgroundColor: colors.primaryContainer, marginLeft: p(8) }
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.rankPillText,
+                              { color: colors.primary }
+                            ]}
+                          >
+                            {selectedFirefighter.rank}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={[styles.firefighterInfoText, { color: colors.onSurfaceVariant }]}>
                       {selectedFirefighter?.email || 'No email'}
                     </Text>
@@ -1396,10 +1416,28 @@ const styles = StyleSheet.create({
   firefighterDetails: {
     flex: 1,
   },
+  firefighterNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(4),
+    flexWrap: 'wrap',
+  },
   firefighterName: {
     fontSize: p(16),
     fontWeight: '600',
-    marginBottom: p(4),
+  },
+  rankPill: {
+    paddingHorizontal: p(10),
+    paddingVertical: p(4),
+    borderRadius: p(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: p(24),
+  },
+  rankPillText: {
+    fontSize: p(11),
+    fontWeight: '600',
+    lineHeight: p(16),
   },
   firefighterInfoText: {
     fontSize: p(12),
