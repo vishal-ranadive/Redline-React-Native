@@ -62,7 +62,13 @@ interface LeadDetail {
   firestation: {
     id: number;
     name: string;
-    address?: string
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip_code?: string;
+    latitude?: string;
+    longitude?: string;
   };
   assigned_technicians: Technician[];
   type: 'REPAIR' | 'INSPECTION';
@@ -475,10 +481,56 @@ const LeadDetailScreen = () => {
   };
 
   /**
+   * Generate full address string from firestation data
+   * Combines: name, address, city, state, zip_code, country
+   */
+  const generateFullAddress = (): string => {
+    const firestation = lead?.firestation;
+    if (!firestation) return '';
+
+    const addressParts: string[] = [];
+    
+    // Add station name (optional, for better context)
+    if (firestation.name) {
+      addressParts.push(firestation.name);
+    }
+    
+    // Add street address
+    if (firestation.address) {
+      addressParts.push(firestation.address);
+    }
+    
+    // Add city
+    if (firestation.city) {
+      addressParts.push(firestation.city);
+    }
+    
+    // Add state
+    if (firestation.state) {
+      addressParts.push(firestation.state);
+    }
+    
+    // Add zip code
+    if (firestation.zip_code) {
+      addressParts.push(firestation.zip_code);
+    }
+    
+    // Add country
+    if (firestation.country) {
+      addressParts.push(firestation.country);
+    }
+    
+    // Join all parts with comma and space, or fallback to name if no address parts
+    return addressParts.length > 0 
+      ? addressParts.join(', ') 
+      : firestation.name || '';
+  };
+
+  /**
    * Open address in Apple Maps
    */
   const handleOpenAppleMaps = (): void => {
-    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    const address = generateFullAddress();
     if (!address) {
       Alert.alert('Error', 'Address not available');
       return;
@@ -497,7 +549,7 @@ const LeadDetailScreen = () => {
    * Open address in Google Maps
    */
   const handleOpenGoogleMaps = (): void => {
-    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    const address = generateFullAddress();
     if (!address) {
       Alert.alert('Error', 'Address not available');
       return;
@@ -522,7 +574,7 @@ const LeadDetailScreen = () => {
    * Share address with a single map link (platform-specific)
    */
   const handleShareAddress = async (): Promise<void> => {
-    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    const address = generateFullAddress();
     const stationName = lead?.firestation?.name || 'Fire Station';
     
     if (!address) {
@@ -531,9 +583,7 @@ const LeadDetailScreen = () => {
     }
 
     try {
-      // Include station name in the query so the link is clearer
-      const query = `${stationName} ${address}`.trim();
-      const encodedQuery = encodeURIComponent(query);
+      const encodedQuery = encodeURIComponent(address);
       
       // Platform-specific map link (only one link will be shared)
       const mapUrl =
@@ -718,7 +768,7 @@ const LeadDetailScreen = () => {
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
-                { icon: 'map-marker', label: 'Address', value: lead?.firestation?.address, isAddress: true },
+                { icon: 'map-marker', label: 'Address', value: generateFullAddress(), isAddress: true },
               ].map((item, index) => (
                 <View key={index}>
                   <View style={styles.tableRow}>
@@ -745,7 +795,7 @@ const LeadDetailScreen = () => {
                     </Text>
                   </View>
                   {/* Map Action Buttons for Address */}
-                  {item.isAddress && (lead?.firestation?.address || lead?.firestation?.name) && (
+                  {item.isAddress && generateFullAddress() && (
                     <View style={styles.mapActionsContainer}>
                       <TouchableOpacity
                         style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}

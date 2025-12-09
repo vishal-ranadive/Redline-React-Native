@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useGearStore, type Gear } from '../../store/gearStore';
 import { useInspectionStore } from '../../store/inspectionStore';
 import { getColorHex } from '../../constants/colors';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
@@ -61,17 +60,28 @@ const getGearTypeIcon = (gearType: string | null) => {
 
 // Types based on API response
 type ApiGearInspection = {
-  gear_id: number;
-  gear_type_id: number;
-  gear_usage: any;
-  gear_name: string;
+  gear: {
+    gear_id: number;
+    gear_name: string;
+    gear_type: {
+      gear_type_id: number;
+      gear_type: string;
+    };
+    serial_number?: string;
+    manufacturer?: {
+      manufacturer_id: number;
+      manufacturer_name: string;
+    };
+    gear_size?: string;
+    [key: string]: any;
+  };
+  gear_usage?: any;
   current_inspection: any | null;
   previous_inspection: any | null;
 };
 
 type GearCard = {
   gear: ApiGearInspection;
-  detail: Gear | null;
   color: string | null;
   gearStatus?: string;
 };
@@ -97,7 +107,6 @@ export default function FirefighterGearsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'FirefighterGearsScreen'>>();
   const { roster, leadId } = route.params;
-  const { fetchGearById } = useGearStore();
   const { fetchFirefighterGears, firefighterGears, loading: inspectionLoading, error } = useInspectionStore();
 
   const [gearCards, setGearCards] = useState<GearCard[]>([]);
@@ -171,62 +180,40 @@ export default function FirefighterGearsScreen() {
   );
 
   useEffect(() => {
-    let isMounted = true;
-    const buildCards = async () => {
-      if (!firefighterGears.length) {
-        if (isMounted) {
-          setGearCards([]);
-          setBuildingCards(false);
+    if (!firefighterGears.length) {
+      setGearCards([]);
+      setBuildingCards(false);
+      return;
+    }
+
+    setBuildingCards(true);
+
+    try {
+      const cards = firefighterGears.map((gear) => {
+        let gearStatus = '';
+        if (gear.current_inspection?.gear_status) {
+          gearStatus = gear.current_inspection.gear_status.status;
         }
-        return;
-      }
 
-      if (isMounted) {
-        setBuildingCards(true);
-      }
-
-      try {
-        const cards = await Promise.all(
-          firefighterGears.map(async (gear) => {
-            const detail = await fetchGearById(gear.gear_id);
-
-            let gearStatus = '';
-            if (gear.current_inspection?.gear_status) {
-              gearStatus = gear.current_inspection.gear_status.status;
-            }
-
-            let tagColor = null;
-            if (gear.current_inspection?.tag_color) {
-              tagColor = normalizeTagColor(gear.current_inspection.tag_color);
-            }
-
-            return {
-              gear,
-              detail,
-              color: tagColor,
-              gearStatus,
-            } as GearCard;
-          }),
-        );
-
-        if (isMounted) {
-          setGearCards(cards);
-          setBuildingCards(false);
+        let tagColor = null;
+        if (gear.current_inspection?.tag_color) {
+          tagColor = normalizeTagColor(gear.current_inspection.tag_color);
         }
-      } catch (err) {
-        console.error('Error building gear cards:', err);
-        if (isMounted) {
-          setBuildingCards(false);
-        }
-      }
-    };
 
-    buildCards();
+        return {
+          gear,
+          color: tagColor,
+          gearStatus,
+        } as GearCard;
+      });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [firefighterGears, fetchGearById]);
+      setGearCards(cards);
+      setBuildingCards(false);
+    } catch (err) {
+      console.error('Error building gear cards:', err);
+      setBuildingCards(false);
+    }
+  }, [firefighterGears]);
 
   useEffect(() => {
     setPage(0);
@@ -243,12 +230,12 @@ export default function FirefighterGearsScreen() {
       return gearsWithInspection;
     }
     const query = searchQuery.toLowerCase();
-    return gearsWithInspection.filter(({ detail, gear }) => {
-      const name = (detail?.gear_name ?? gear.gear_name ?? '').toLowerCase();
-      const serial = (detail?.serial_number ?? '').toLowerCase();
+    return gearsWithInspection.filter(({ gear }) => {
+      const name = (gear.gear?.gear_name ?? '').toLowerCase();
+      const serial = (gear.gear?.serial_number ?? '').toLowerCase();
       const type = (
-        detail?.gear_type?.gear_type ??
-        gear.gear_name ??
+        gear.gear?.gear_type?.gear_type ??
+        gear.gear?.gear_name ??
         ''
       ).toLowerCase();
       return name.includes(query) || serial.includes(query) || type.includes(query);
@@ -263,7 +250,7 @@ export default function FirefighterGearsScreen() {
   const currentGears = filteredGears.slice(from, to);
 
   const handleUpdateGear = (card: GearCard) => {
-    const gearId = card.detail?.gear_id ?? card.gear.gear_id;
+    const gearId = card.gear.gear?.gear_id;
     const inspectionId = card.gear.current_inspection?.inspection_id;
     
     navigation.navigate('UpadateInspection', {
@@ -396,15 +383,15 @@ export default function FirefighterGearsScreen() {
    */
   const renderGear = useCallback(
     ({ item }: { item: GearCard }) => {
-      const detail = item.detail;
       const gear = item.gear;
-      const tagColor = item.color ?? colors.primary;
-      const gearId = detail?.gear_id ?? gear.gear_id;
-      const gearName = detail?.gear_name ?? gear.gear_name ?? 'Gear';
-      const serialNumber = detail?.serial_number ?? 'N/A';
+      const gearDetail = gear.gear;
+      const tagColor = item.color ?? "";
+      const gearId = gearDetail?.gear_id;
+      const gearName = gearDetail?.gear_name ?? 'Gear';
+      const serialNumber = gearDetail?.serial_number ?? 'N/A';
       const manufacturerName =
-        detail?.manufacturer?.manufacturer_name ?? 'Unknown manufacturer';
-      const gearTypeName = detail?.gear_type?.gear_type ?? gear.gear_name ?? 'Other';
+        gearDetail?.manufacturer?.manufacturer_name ?? 'Unknown manufacturer';
+      const gearTypeName = gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? 'Other';
       const isOtherType = gearTypeName.toLowerCase().trim() === 'other';
       const displayTypeOrName = isOtherType ? gearName : gearTypeName;
       const statusColor = item.gearStatus
@@ -451,7 +438,7 @@ export default function FirefighterGearsScreen() {
                 {/* Gear Emoji */}
                 <View style={styles.gearImageContainer}>
                   <Text style={styles.gearEmoji}>
-                    {getGearEmoji(detail?.gear_type?.gear_type ?? gear.gear_name ?? null)}
+                    {getGearEmoji(gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? null)}
                   </Text>
                 </View>
 
@@ -482,7 +469,7 @@ export default function FirefighterGearsScreen() {
                   <View style={styles.detailRow}>
                     <Icon source="ruler" size={14} color="#666" />
                     <Text style={styles.detailLabel}>Size:</Text>
-                    <Text style={styles.detailValue}>{gear.current_inspection?.gear_size || detail?.gear_size || 'N/A'}</Text>
+                    <Text style={styles.detailValue}>{gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A'}</Text>
                   </View>
                 </View>
 
@@ -603,7 +590,7 @@ export default function FirefighterGearsScreen() {
         <FlatList
           data={currentGears}
           renderItem={renderGear}
-          keyExtractor={(item) => item.gear.gear_id.toString()}
+          keyExtractor={(item) => item.gear.gear?.gear_id?.toString() ?? ''}
           numColumns={numColumns}
           contentContainerStyle={[styles.grid, isMobile ? styles.gridMobile : styles.gridTablet]}
           columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}

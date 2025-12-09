@@ -122,8 +122,8 @@ export default function FirefighterListScreen() {
               const tagColor = gear.current_inspection?.tag_color || roster.tag_color;
 
               allGearCards.push({
-                gear_id: gear.gear_id,
-                gear_name: gear.gear_name || 'Unknown Gear',
+                gear_id: gear.gear?.gear_id,
+                gear_name: gear.gear?.gear_name || 'Unknown Gear',
                 gear_status: gearStatus,
                 roster_id: roster.id,
                 roster_name: roster.name,

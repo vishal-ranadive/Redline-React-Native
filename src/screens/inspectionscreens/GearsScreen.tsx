@@ -334,7 +334,8 @@ export default function GearsScreen() {
    * Render individual gear inspection card
    */
   const renderGear = useCallback(({ item }: { item: GearInspection }) => {
-    const tagColor = normalizeTagColor(item.roster.tag_color) || colors.primary;
+
+    const tagColor = normalizeTagColor(item.roster.tag_color) || "";
     const statusColor = getGearStatusColor(item.gear_status.status);
     const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
 

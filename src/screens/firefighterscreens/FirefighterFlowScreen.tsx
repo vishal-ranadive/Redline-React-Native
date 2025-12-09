@@ -146,7 +146,6 @@ const FirefighterFlowScreen = () => {
     fetchFirefighterGears, 
     clearFirefighterGears 
   } = useInspectionStore();
-  const { fetchGearById } = useGearStore();
 
   const [selectedFirefighter, setSelectedFirefighter] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -164,8 +163,6 @@ const FirefighterFlowScreen = () => {
   const [isTablet, setIsTablet] = useState<boolean>(
     Math.min(Dimensions.get('window').width, Dimensions.get('window').height) >= 600
   );
-  // Store gear details for gears without current_inspection
-  const [gearDetailsCache, setGearDetailsCache] = useState<Record<number, any>>({});
 
 
 useFocusEffect(
@@ -242,47 +239,12 @@ useFocusEffect(
   useEffect(() => {
     if (!selectedFirefighter) {
       clearFirefighterGears();
-      setGearDetailsCache({});
       // Clear color state when firefighter is deselected
       setRosterColor("");
       setColorLocked(false);
       AsyncStorage.removeItem(TAG_COLOR_STORAGE_KEY);
     }
   }, [selectedFirefighter]);
-
-  // Fetch gear details for gears without current_inspection
-  useEffect(() => {
-    const fetchMissingGearDetails = async () => {
-      if (!firefighterGears || firefighterGears.length === 0) return;
-
-      const gearsToFetch = firefighterGears.filter(
-        gear => !gear.current_inspection && gear.gear_id && !gearDetailsCache[gear.gear_id]
-      );
-
-      if (gearsToFetch.length === 0) return;
-
-      const fetchedDetails: Record<number, any> = {};
-      
-      await Promise.all(
-        gearsToFetch.map(async (gear) => {
-          try {
-            const gearDetail = await fetchGearById(gear.gear_id);
-            if (gearDetail) {
-              fetchedDetails[gear.gear_id] = gearDetail;
-            }
-          } catch (error) {
-            console.error(`Error fetching gear details for gear_id ${gear.gear_id}:`, error);
-          }
-        })
-      );
-
-      if (Object.keys(fetchedDetails).length > 0) {
-        setGearDetailsCache(prev => ({ ...prev, ...fetchedDetails }));
-      }
-    };
-
-    fetchMissingGearDetails();
-  }, [firefighterGears, fetchGearById]);
 
 useEffect(() => {
   if (!firefighterGears || firefighterGears.length === 0) {
@@ -370,14 +332,14 @@ useEffect(() => {
     
     return firefighterGears.filter(gear => {
       // Check direct gear_type_id mapping first
-      const mappedCategories = gearTypeIdToCategory[gear.gear_type_id];
+      const mappedCategories = gearTypeIdToCategory[gear.gear?.gear_type?.gear_type_id];
       if (mappedCategories && mappedCategories.includes(categoryId)) {
         return true;
       }
       
       // Find the gear type name from gearTypes store using gear_type_id
-      const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id);
-      const gearTypeName = gearType?.gear_type || gear.gear_name;
+      const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id);
+      const gearTypeName = gearType?.gear_type || gear.gear?.gear_name;
       
       return gearMatchesCategory(gearTypeName, category.gearTypes);
     });
@@ -395,13 +357,13 @@ const getCategoryInspectionSummary = (categoryId:string) => {
   // Build summary for each gear
   const summary = categoryGears.map(gear => {
     const usage = gear.gear_usage || "PRIMARY";
-    const name = gear.gear_name;
+    const name = gear.gear?.gear_name;
 
     const currentStatus = gear.current_inspection?.gear_status?.status || "No Current Inspection";
     const previousStatus = gear.previous_inspection?.gear_status?.status || "No Previous Inspection";
 
     return {
-      gear_id: gear.gear_id,
+      gear_id: gear.gear?.gear_id,
       gear_name: name,
       gear_usage: usage,
       current_status: currentStatus,
@@ -544,7 +506,7 @@ const handleGearPress = (gear: any) => {
 
   // Navigate WITHOUT tagColor - it will be loaded from AsyncStorage in UpdateInspectionScreen
   navigation.navigate("UpadateInspection", {
-    gearId: gear.gear_id,
+    gearId: gear.gear?.gear_id,
     inspectionId: gear.current_inspection?.inspection_id,
     mode: gear.current_inspection ? "update" : "create",
     firefighter: roster,
@@ -762,10 +724,10 @@ const handleGearPress = (gear: any) => {
       const statusColor = statusColorMap[gearStatus] || '#9E9E9E';
       const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
       const tagColor = tagColorName ? getColorHex(tagColorName) : "";
-      const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear_type_id)?.gear_type || gear.gear_name || 'Other';
+      const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id)?.gear_type || gear.gear?.gear_name || 'Other';
       
-      // Get gear details from current_inspection or from fetched gear details cache
-      const gearDetail = gear.current_inspection?.gear || gearDetailsCache[gear.gear_id];
+      // Get gear details from top-level gear object (now always available in API response)
+      const gearDetail = gear.gear;
       const serialNumber = gearDetail?.serial_number || 'N/A';
       const manufacturerName = gearDetail?.manufacturer?.manufacturer_name || 'N/A';
       const gearSize = gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A';
@@ -868,7 +830,7 @@ const handleGearPress = (gear: any) => {
         </View>
       );
     },
-    [colors, navigation, renderInspectionDetails, gearTypes, gearDetailsCache, isTablet],
+    [colors, navigation, renderInspectionDetails, gearTypes, isTablet],
   );
 
   // Render category gears in 2-column grid
@@ -891,7 +853,7 @@ const handleGearPress = (gear: any) => {
     return (
       <View style={styles.gearsGridContainer}>
         {categoryGears.map((gear) => (
-          <React.Fragment key={gear.gear_id}>
+          <React.Fragment key={gear.gear?.gear_id}>
             {renderGearCard(gear)}
           </React.Fragment>
         ))}
