@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadDetailScreen.tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, LayoutAnimation, Modal, Linking, Platform, RefreshControl, Dimensions, Share } from 'react-native';
 import Pdf from 'react-native-pdf';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -475,6 +475,89 @@ const LeadDetailScreen = () => {
     // Reset to previous value if needed, or keep current
   };
 
+  /**
+   * Open address in Apple Maps
+   */
+  const handleOpenAppleMaps = (): void => {
+    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(address);
+    const url = `http://maps.apple.com/?q=${encodedAddress}`;
+    
+    Linking.openURL(url).catch((err) => {
+      console.error('Error opening Apple Maps:', err);
+      Alert.alert('Error', 'Failed to open Apple Maps');
+    });
+  };
+
+  /**
+   * Open address in Google Maps
+   */
+  const handleOpenGoogleMaps = (): void => {
+    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(address);
+    const url = Platform.OS === 'ios' 
+      ? `comgooglemaps://?q=${encodedAddress}`
+      : `geo:0,0?q=${encodedAddress}`;
+    
+    Linking.openURL(url).catch((err) => {
+      // Fallback to web version if app is not installed
+      const webUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      Linking.openURL(webUrl).catch((webErr) => {
+        console.error('Error opening Google Maps:', webErr);
+        Alert.alert('Error', 'Failed to open Google Maps');
+      });
+    });
+  };
+
+  /**
+   * Share address with a single map link (platform-specific)
+   */
+  const handleShareAddress = async (): Promise<void> => {
+    const address = lead?.firestation?.address || lead?.firestation?.name || '';
+    const stationName = lead?.firestation?.name || 'Fire Station';
+    
+    if (!address) {
+      Alert.alert('Error', 'Address not available');
+      return;
+    }
+
+    try {
+      // Include station name in the query so the link is clearer
+      const query = `${stationName} ${address}`.trim();
+      const encodedQuery = encodeURIComponent(query);
+      
+      // Platform-specific map link (only one link will be shared)
+      const mapUrl =
+        Platform.OS === 'ios'
+          ? `http://maps.apple.com/?q=${encodedQuery}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+      
+      // Share a single link plus the station name
+      const shareContent = `${stationName}\n${mapUrl}`;
+      
+      await Share.share({
+        message: shareContent,
+        title: 'Fire Station Location',
+        url: mapUrl,
+      });
+    } catch (error: any) {
+      console.error('Error sharing address:', error);
+      if (error.message !== 'User did not share') {
+        Alert.alert('Error', 'Failed to share address');
+      }
+    }
+  };
+
   // Check if current user is already assigned as technician
   const isCurrentUserAssigned = lead.assigned_technicians?.some(
     tech => tech.id === user?.id
@@ -630,30 +713,69 @@ const LeadDetailScreen = () => {
                 { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
-                { icon: 'map-marker', label: 'Address', value: lead?.firestation?.address },
+                { icon: 'map-marker', label: 'Address', value: lead?.firestation?.address, isAddress: true },
               ].map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <View style={styles.tableCellLeft}>
-                    <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                <View key={index}>
+                  <View style={styles.tableRow}>
+                    <View style={styles.tableCellLeft}>
+                      <Icon source={item.icon} size={p(16)} color={colors.primary} />
+                      <Text
+                        style={[
+                          styles.tableLabel,
+                          { color: colors.onSurface, fontSize: p(14)},
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
                     <Text
                       style={[
-                        styles.tableLabel,
-                        { color: colors.onSurface, fontSize: p(14)},
+                        styles.tableValue,
+                        { color: colors.onSurface, fontSize: p(14) },
                       ]}
                       numberOfLines={1}
                     >
-                      {item.label}
+                      {item.value || 'N/A'}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.tableValue,
-                      { color: colors.onSurface, fontSize: p(14) },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.value}
-                  </Text>
+                  {/* Map Action Buttons for Address */}
+                  {item.isAddress && (lead?.firestation?.address || lead?.firestation?.name) && (
+                    <View style={styles.mapActionsContainer}>
+                      <TouchableOpacity
+                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        onPress={handleShareAddress}
+                        activeOpacity={0.7}
+                      >
+                        <Icon source="share" size={p(18)} color={colors.primary} />
+                        <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                          Share
+                        </Text>
+                      </TouchableOpacity>
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                          onPress={handleOpenAppleMaps}
+                          activeOpacity={0.7}
+                        >
+                          <Icon source="map" size={p(18)} color={colors.primary} />
+                          <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                            Apple Maps
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        onPress={handleOpenGoogleMaps}
+                        activeOpacity={0.7}
+                      >
+                        <Icon source="map-marker" size={p(18)} color={colors.primary} />
+                        <Text style={[styles.mapActionText, { color: colors.primary, fontSize: p(12) }]}>
+                          Google Maps
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -1501,6 +1623,26 @@ const styles = StyleSheet.create({
   },
   statusModalCancelButton: {
     minWidth: p(100),
+  },
+  mapActionsContainer: {
+    flexDirection: 'row',
+    gap: p(8),
+    marginTop: p(8),
+    marginLeft: p(24),
+    flexWrap: 'wrap',
+  },
+  mapActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(6),
+    paddingHorizontal: p(12),
+    paddingVertical: p(8),
+    borderRadius: p(8),
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  mapActionText: {
+    fontWeight: '600',
   },
 });
 
