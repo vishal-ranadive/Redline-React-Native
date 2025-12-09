@@ -115,7 +115,6 @@ const LeadDetailScreen = () => {
   const { top, bottom } = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { fetchLeadById, currentLead } = useLeadStore();
-
   
   const { lead: initialLead } = route.params as any;
   // printTable("initialLead",initialLead)
@@ -565,6 +564,12 @@ const LeadDetailScreen = () => {
 
   // Check if current user can assign themselves (not already assigned and has technician role)
   const canAssignSelf = user && !isCurrentUserAssigned;
+  const actionButtonsDisabled = !isCurrentUserAssigned;
+
+  useEffect(() => {
+    console.log('[LeadDetail] Auth store user', user);
+    console.log('[LeadDetail] Lead assigned technicians', lead?.assigned_technicians);
+  }, [user, lead?.assigned_technicians]);
 
   // Loading state
   if (loading) {
@@ -1069,19 +1074,22 @@ const LeadDetailScreen = () => {
               key={i}
               mode="outlined"
               onPress={() => action.action && action.action()}
-              buttonColor={colors.primary}
-              textColor={colors.onSurface}
+              buttonColor={actionButtonsDisabled ? '#9E9E9E' : colors.primary}
+              textColor={actionButtonsDisabled ? '#FFFFFF' : colors.onSurface}
+              disabled={actionButtonsDisabled}
               labelStyle={{
                 fontSize: p(14),
                 fontWeight: '600',
-                color: '#fff',
+                color: actionButtonsDisabled ? '#FFFFFF' : '#fff',
               }}
               style={{
                       flex: 1,             // ← Makes buttons wider automatically
                 marginHorizontal: p(6), // ← Keeps them close, not too wide
-                 borderColor: colors.outline, borderRadius: p(10), elevation: 12 }}
+                 borderColor: actionButtonsDisabled ? '#9E9E9E' : colors.outline, 
+                 borderRadius: p(10), 
+                 elevation: actionButtonsDisabled ? 0 : 12 }}
               icon={action.icon}
-              elevation={4}
+              elevation={actionButtonsDisabled ? 0 : 4}
             >
               {action.label}
             </Button>
