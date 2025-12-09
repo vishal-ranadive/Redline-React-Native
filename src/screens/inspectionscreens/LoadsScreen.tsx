@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text, Card, Icon, useTheme, Portal, Dialog, TextInput, DataTable, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -39,6 +39,7 @@ export default function LoadsScreen() {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -73,15 +74,21 @@ export default function LoadsScreen() {
     setPage(0);
   }, [numberOfItemsPerPage, filteredLoads.length]);
 
-  const fetchLoads = async () => {
+  const fetchLoads = async (options?: { skipLoader?: boolean }) => {
+    const useLoader = !options?.skipLoader;
+
     if (!currentLead?.lead_id) {
       console.log('Missing lead_id for loads API');
-      setLoading(false);
+      if (useLoader) {
+        setLoading(false);
+      }
       return;
     }
 
     try {
-      setLoading(true);
+      if (useLoader) {
+        setLoading(true);
+      }
       const response = await inspectionApi.getLeadLoads(currentLead.lead_id);
 
       // Handle API response structure: { status, message, lead_id, loads }
@@ -113,7 +120,18 @@ export default function LoadsScreen() {
       console.error('Error fetching loads:', error);
       setLoads([]);
     } finally {
-      setLoading(false);
+      if (useLoader) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchLoads({ skipLoader: true });
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -229,6 +247,14 @@ export default function LoadsScreen() {
           contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
           columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
 
