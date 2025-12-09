@@ -608,9 +608,20 @@ const LeadDetailScreen = () => {
   };
 
   // Check if current user is already assigned as technician
-  const isCurrentUserAssigned = lead.assigned_technicians?.some(
-    tech => tech.id === user?.id
-  );
+  // Check both assigned_technicians array and Odoo technicianId
+  const isCurrentUserAssigned = useMemo(() => {
+    if (!user?.id) return false;
+    
+    // Check if user is in assigned_technicians array
+    const isInAssignedTechnicians = lead.assigned_technicians?.some(
+      tech => tech.id === user.id
+    );
+    
+    // Check if user matches Odoo technician ID
+    const isOdooTechnician = lead?.lead?.technicianId === user.id;
+    
+    return isInAssignedTechnicians || isOdooTechnician;
+  }, [user?.id, lead.assigned_technicians, lead?.lead?.technicianId]);
 
   // Check if current user can assign themselves (not already assigned and has technician role)
   const canAssignSelf = user && !isCurrentUserAssigned;
@@ -619,7 +630,10 @@ const LeadDetailScreen = () => {
   useEffect(() => {
     console.log('[LeadDetail] Auth store user', user);
     console.log('[LeadDetail] Lead assigned technicians', lead?.assigned_technicians);
-  }, [user, lead?.assigned_technicians]);
+    console.log('[LeadDetail] Odoo technician ID', lead?.lead?.technicianId);
+    console.log('[LeadDetail] Is current user assigned?', isCurrentUserAssigned);
+    console.log('[LeadDetail] Action buttons disabled?', actionButtonsDisabled);
+  }, [user, lead?.assigned_technicians, lead?.lead?.technicianId, isCurrentUserAssigned, actionButtonsDisabled]);
 
   // Loading state
   if (loading) {
@@ -727,15 +741,22 @@ const LeadDetailScreen = () => {
             </View>
             
               <Button
-                mode="contained"
-                buttonColor="#10b981"
+                mode={actionButtonsDisabled ? "outlined" : "contained"}
+                buttonColor={actionButtonsDisabled ? "#E0E0E0" : "#10b981"}
                 onPress={handleCompleteInspection}
-                style={styles.completeButton}
+                disabled={actionButtonsDisabled}
+                style={[
+                  styles.completeButton,
+                  {
+                    opacity: actionButtonsDisabled ? 0.6 : 1,
+                    borderColor: actionButtonsDisabled ? "#BDBDBD" : "#10b981",
+                  }
+                ]}
                 contentStyle={{ paddingHorizontal: p(16), paddingVertical: p(4) }}
                 labelStyle={{
                   fontSize: p(14),
                   fontWeight: '600',
-                  color: '#fff',
+                  color: actionButtonsDisabled ? '#9E9E9E' : '#fff',
                 }}
                 icon="check-circle"
               >
@@ -1122,24 +1143,25 @@ const LeadDetailScreen = () => {
           ].map((action, i) => (
             <Button
               key={i}
-              mode="outlined"
+              mode={actionButtonsDisabled ? "outlined" : "contained"}
               onPress={() => action.action && action.action()}
-              buttonColor={actionButtonsDisabled ? '#9E9E9E' : colors.primary}
-              textColor={actionButtonsDisabled ? '#FFFFFF' : colors.onSurface}
+              buttonColor={actionButtonsDisabled ? '#E0E0E0' : colors.primary}
+              textColor={actionButtonsDisabled ? '#9E9E9E' : '#FFFFFF'}
               disabled={actionButtonsDisabled}
               labelStyle={{
                 fontSize: p(14),
                 fontWeight: '600',
-                color: actionButtonsDisabled ? '#FFFFFF' : '#fff',
+                color: actionButtonsDisabled ? '#9E9E9E' : '#FFFFFF',
               }}
               style={{
-                      flex: 1,             // ← Makes buttons wider automatically
+                flex: 1,             // ← Makes buttons wider automatically
                 marginHorizontal: p(6), // ← Keeps them close, not too wide
-                 borderColor: actionButtonsDisabled ? '#9E9E9E' : colors.outline, 
-                 borderRadius: p(10), 
-                 elevation: actionButtonsDisabled ? 0 : 12 }}
+                borderColor: actionButtonsDisabled ? '#BDBDBD' : colors.primary, 
+                borderRadius: p(10), 
+                opacity: actionButtonsDisabled ? 0.6 : 1,
+                elevation: actionButtonsDisabled ? 0 : 4
+              }}
               icon={action.icon}
-              elevation={actionButtonsDisabled ? 0 : 4}
             >
               {action.label}
             </Button>

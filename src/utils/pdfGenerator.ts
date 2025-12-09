@@ -76,8 +76,6 @@ export const generateReportHTML = (
   };
 
   // Generate roster sections HTML
-  // COMMENTED OUT: Roster assignment section - can be uncommented if needed in the future
-  /*
   const generateRosterSections = (): string => {
     if (!rosters || rosters.length === 0) {
       return `
@@ -160,7 +158,6 @@ export const generateReportHTML = (
       `;
     }).join('');
   };
-  */
 
   // Get technician names
   const technicianNames = assignedTechnicians
@@ -634,6 +631,10 @@ export const generateReportHTML = (
                 <td>Inspection Date</td>
                 <td>${escapeHtml(inspectionDate)}</td>
             </tr>
+            <tr>
+                <td>Assigned Technicians</td>
+                <td>${escapeHtml(technicianNames)}</td>
+            </tr>
         </table>
 
         <!-- Summary Statistics Cards -->
@@ -775,11 +776,8 @@ export const generateReportHTML = (
         </div>
 
         <!-- Roster and Gears Section -->
-        <!-- COMMENTED OUT: Roster assignment section - can be uncommented if needed in the future -->
-        <!--
         <h2 class="section-title">Roster & Gear Assignments</h2>
-        Note: Uncomment generateRosterSections() function above and use it here
-        -->
+        ${generateRosterSections()}
 
         <!-- Footer -->
         <div class="report-footer">
