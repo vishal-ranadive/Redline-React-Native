@@ -140,8 +140,6 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
       >
         <View 
           style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
         >
           {/* Header with Cancel and Done */}
           <View style={styles.colorPickerHeader}>
