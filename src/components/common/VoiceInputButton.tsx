@@ -102,6 +102,11 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   const [isListening, setIsListening] = useState(false);
   const blinkOpacity = useRef(new Animated.Value(1)).current;
   
+  // Track lifecycle of a listening session
+  const waitingForResults = useRef(false);
+  const resultsTimeoutRef = useRef<number | null>(null);
+  const lastError11Time = useRef<number>(0);
+  
   // Alexa-style pulsing wave animations
   const wave1 = useRef(new Animated.Value(0)).current;
   const wave2 = useRef(new Animated.Value(0)).current;
@@ -113,24 +118,47 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   );
 
   const applyResultToInput = useCallback((text: string) => {
+    console.log('🔊 applyResultToInput called with text:', text);
+    console.log('🔊 Current value:', value);
+    console.log('🔊 onChangeText exists:', !!onChangeText);
+    console.log('🔊 appendResults:', appendResults);
+    
     if (!text.trim()) {
+      console.warn('⚠️ Empty text received');
       return;
     }
 
     onSpeechResult?.(text);
 
     if (!onChangeText) {
+      console.error('❌ onChangeText is not defined!');
       return;
     }
 
+    let newText: string;
     if (appendResults && value) {
       const separator = value.trim().length === 0 ? '' : value.endsWith(' ') ? '' : ' ';
-      onChangeText(`${value}${separator}${text}`.trimStart());
-      return;
+      newText = `${value}${separator}${text}`.trimStart();
+    } else {
+      newText = text;
     }
-
-    onChangeText(text);
+    
+    console.log('🔊 Calling onChangeText with:', newText);
+    onChangeText(newText);
+    console.log('✅ onChangeText called successfully');
   }, [appendResults, onChangeText, onSpeechResult, value]);
+
+  const cleanupListening = useCallback(() => {
+    console.log('🧹 Cleaning up listening state');
+    waitingForResults.current = false;
+    setIsListening(false);
+    voiceInputManager.deactivate(instanceId);
+
+    if (resultsTimeoutRef.current) {
+      clearTimeout(resultsTimeoutRef.current);
+      resultsTimeoutRef.current = null;
+    }
+  }, [instanceId]);
 
   // Alexa-style pulsing wave animation
   useEffect(() => {
@@ -235,10 +263,11 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
       'onSpeechResults',
       (event: { value?: string }) => {
         console.log('Voice-to-text results received:', event);
-        
-        // Only process results if this instance is active
-        if (!voiceInputManager.isActive(instanceId)) {
-          console.log('Ignoring results - instance not active');
+
+        // Process results if we're waiting for them (even if instance was deactivated)
+        // This handles cases where results arrive after timeout/cleanup
+        if (!waitingForResults.current) {
+          console.log('Ignoring results - not waiting for results');
           return;
         }
 
@@ -246,10 +275,20 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         console.log('Processing speech text:', text);
         
         if (text && text.trim()) {
+          console.log('✅ Applying transcribed text to input');
           applyResultToInput(text);
         } else {
           console.warn('Empty speech result received');
         }
+
+        // Clear timeout since we got results
+        if (resultsTimeoutRef.current) {
+          clearTimeout(resultsTimeoutRef.current);
+          resultsTimeoutRef.current = null;
+        }
+
+        // Now we can safely deactivate after processing results
+        cleanupListening();
 
         // Single-shot recognizer: stop after first result.
         try {
@@ -272,6 +311,14 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         // Only update if this instance is active
         if (voiceInputManager.isActive(instanceId)) {
           setIsListening(true);
+
+          waitingForResults.current = true;
+          // Safety timeout: if no results, clean up to avoid stuck active state
+          // Increased to 12 seconds to handle delayed results
+          resultsTimeoutRef.current = setTimeout(() => {
+            console.warn('⚠️ No results received within 12s timeout, cleaning up');
+            cleanupListening();
+          }, 12000);
         }
       },
     );
@@ -280,10 +327,20 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
       'onSpeechEnd',
       () => {
         console.log('Speech recognition ended');
-        // Only update if this instance is active
-        if (voiceInputManager.isActive(instanceId)) {
+        // Do NOT deactivate here; wait for results or timeout
+        if (voiceInputManager.isActive(instanceId) || waitingForResults.current) {
           setIsListening(false);
-          voiceInputManager.deactivate(instanceId);
+          console.log('Waiting for results after end...');
+          
+          // Extend timeout when speech ends - give more time for results to arrive
+          // Clear existing timeout and set a new one (5 more seconds)
+          if (resultsTimeoutRef.current) {
+            clearTimeout(resultsTimeoutRef.current);
+          }
+          resultsTimeoutRef.current = setTimeout(() => {
+            console.warn('⚠️ No results received after speech end, cleaning up');
+            cleanupListening();
+          }, 5000); // 5 more seconds after speech ends
         }
       },
     );
@@ -292,13 +349,37 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
       'onSpeechError',
       (event: { message?: string; error?: any }) => {
         console.error('Speech recognition error:', event);
-        // Only handle errors if this instance is active
-        if (voiceInputManager.isActive(instanceId)) {
-          const message = event?.message ?? event?.error?.message ?? 'Voice recognition error';
+        const errorCode = (event as any)?.error?.code ?? (event as any)?.code ?? (event as any)?.error;
+        const message = event?.message ?? event?.error?.message ?? 'Voice recognition error';
+        
+        // Error code 7 = "No speech match found" - not fatal, just keep waiting
+        if (errorCode === 7 || errorCode === '7') {
+          console.log('ℹ️ Error 7: No speech match found - continuing to wait for results');
+          // Don't cleanup - keep waiting for results
+          return;
+        }
+        
+        // Error code 11 = "Recognizer busy" - stop and mark time
+        if (errorCode === 11 || errorCode === '11') {
+          console.warn('⚠️ Error 11: recognizer busy, stopping any active session');
+          lastError11Time.current = Date.now();
+          try {
+            VoiceToText.stopListening().catch(() => {});
+          } catch (e) {
+            console.warn('Error stopping busy recognizer:', e);
+          }
+          // Clean up this instance
+          if (voiceInputManager.isActive(instanceId) || waitingForResults.current) {
+            cleanupListening();
+          }
+          return;
+        }
+
+        // For other errors, only handle if this instance is active or waiting
+        if (voiceInputManager.isActive(instanceId) || waitingForResults.current) {
           console.error('Voice recognition error message:', message);
           onError?.(message);
-          setIsListening(false);
-          voiceInputManager.deactivate(instanceId);
+          cleanupListening();
           
           // Show user-friendly error on iOS
           if (Platform.OS === 'ios' && message) {
@@ -313,12 +394,9 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
       startListener.remove();
       endListener.remove();
       errorListener.remove();
-      // Clean up on unmount
-      if (voiceInputManager.isActive(instanceId)) {
-        voiceInputManager.deactivate(instanceId);
-      }
+      cleanupListening();
     };
-  }, [applyResultToInput, onError, instanceId]);
+  }, [applyResultToInput, onError, instanceId, cleanupListening]);
 
   const requestMicrophonePermission = async (): Promise<boolean> => {
     try {
@@ -413,9 +491,14 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         } catch (stopError) {
           console.warn('Error stopping listening:', stopError);
         }
-        setIsListening(false);
-        voiceInputManager.deactivate(instanceId);
+        cleanupListening();
         console.log('Voice recognition stopped');
+        return;
+      }
+
+      // Avoid starting if already active elsewhere
+      if (voiceInputManager.isActive(instanceId) || waitingForResults.current) {
+        console.warn('⚠️ Another voice session is active; ignoring start');
         return;
       }
 
@@ -442,10 +525,17 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         return;
       }
 
+      // Check if we recently had error 11 - wait a bit before retrying
+      const timeSinceError11 = Date.now() - lastError11Time.current;
+      if (timeSinceError11 < 1000) {
+        console.log('⏳ Waiting before retry after error 11...');
+        await new Promise<void>(resolve => setTimeout(resolve, 1000 - timeSinceError11));
+      }
+
       console.log('Starting voice recognition...');
       // Set this instance as active before starting
       voiceInputManager.setActive(instanceId, () => {
-        setIsListening(false);
+        cleanupListening();
       });
 
       // For iOS, we need to ensure the library is properly initialized
@@ -455,14 +545,14 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         // Note: setIsListening will be set by the onSpeechStart event
         // But we set it here as well for immediate feedback
         setIsListening(true);
+        waitingForResults.current = true;
       } catch (startError) {
         console.error('Error starting voice recognition:', startError);
         const errorMsg = startError instanceof Error 
           ? startError.message 
           : 'Failed to start voice recognition. Please try again.';
         onError?.(errorMsg);
-        voiceInputManager.deactivate(instanceId);
-        setIsListening(false);
+        cleanupListening();
         
         if (Platform.OS === 'ios') {
           Alert.alert('Voice Recognition Error', errorMsg, [{ text: 'OK' }]);
@@ -473,8 +563,7 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
       const message =
         error instanceof Error ? error.message : 'Failed to start microphone';
       onError?.(message);
-      voiceInputManager.deactivate(instanceId);
-      setIsListening(false);
+      cleanupListening();
       
       if (Platform.OS === 'ios') {
         Alert.alert('Error', message, [{ text: 'OK' }]);
@@ -511,60 +600,70 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   });
 
   return (
-    <View style={[style, { position: 'relative', alignItems: 'center', justifyContent: 'center' }]}>
-      {/* Alexa-style pulsing waves */}
-      {isListening && (
-        <>
-          <Animated.View
-            style={{
-              position: 'absolute',
-              width: size + 20,
-              height: size + 20,
-              borderRadius: (size + 20) / 2,
-              backgroundColor: '#ef1313ff',
-              opacity: wave1Opacity,
-              transform: [{ scale: wave1Scale }],
-            }}
+    <View style={[style, { alignItems: 'center', justifyContent: 'center' }]}>
+      <View
+        style={{
+          width: size + 32,
+          height: size + 32,
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
+        {/* Alexa-style pulsing waves */}
+        {isListening && (
+          <>
+            <Animated.View
+              style={{
+                position: 'absolute',
+                width: size + 20,
+                height: size + 20,
+                borderRadius: (size + 20) / 2,
+                backgroundColor: '#ef1313ff',
+                opacity: wave1Opacity,
+                transform: [{ scale: wave1Scale }],
+              }}
+            />
+            <Animated.View
+              style={{
+                position: 'absolute',
+                width: size + 20,
+                height: size + 20,
+                borderRadius: (size + 20) / 2,
+                backgroundColor: '#ef1313ff',
+                opacity: wave2Opacity,
+                transform: [{ scale: wave2Scale }],
+              }}
+            />
+            <Animated.View
+              style={{
+                position: 'absolute',
+                width: size + 20,
+                height: size + 20,
+                borderRadius: (size + 20) / 2,
+                backgroundColor: '#ef1313ff',
+                opacity: wave3Opacity,
+                transform: [{ scale: wave3Scale }],
+              }}
+            />
+          </>
+        )}
+        
+        <Animated.View style={isListening && { opacity: blinkOpacity }}>
+          <IconButton
+            icon={isListening ? 'stop-circle' : 'microphone'}
+            size={size}
+            mode="contained"
+            containerColor={isListening ? '#ef1313ff' : colors.secondaryContainer}
+            iconColor={isListening ? '#ffffff' : colors.onSurface}
+            onPress={toggleListening}
+            accessibilityRole="button"
+            accessibilityLabel={computedAccessibilityLabel}
+            disabled={disabled}
+            testID="voice-input-button"
           />
-          <Animated.View
-            style={{
-              position: 'absolute',
-              width: size + 20,
-              height: size + 20,
-              borderRadius: (size + 20) / 2,
-              backgroundColor: '#ef1313ff',
-              opacity: wave2Opacity,
-              transform: [{ scale: wave2Scale }],
-            }}
-          />
-          <Animated.View
-            style={{
-              position: 'absolute',
-              width: size + 20,
-              height: size + 20,
-              borderRadius: (size + 20) / 2,
-              backgroundColor: '#ef1313ff',
-              opacity: wave3Opacity,
-              transform: [{ scale: wave3Scale }],
-            }}
-          />
-        </>
-      )}
-      
-      <Animated.View style={isListening && { opacity: blinkOpacity }}>
-        <IconButton
-          icon={isListening ? 'stop-circle' : 'microphone'}
-          size={size}
-          mode="contained"
-          containerColor={isListening ? '#ef1313ff' : colors.secondaryContainer}
-          iconColor={isListening ? '#ffffff' : colors.onSurface}
-          onPress={toggleListening}
-          accessibilityRole="button"
-          accessibilityLabel={computedAccessibilityLabel}
-          disabled={disabled}
-          testID="voice-input-button"
-        />
-      </Animated.View>
+        </Animated.View>
+      </View>
       
       {/* Stop button label when listening */}
       {isListening && (

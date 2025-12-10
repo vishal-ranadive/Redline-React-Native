@@ -11,5 +11,9 @@ emulator-5554
 npx react-native run-android --deviceId 192.168.1.10:38899
 
 
+
+
 $ adb connect 10.0.3.125:37361
 connected to 10.0.3.125:37361
+
+ 799885
