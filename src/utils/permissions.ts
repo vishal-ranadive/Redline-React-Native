@@ -3,17 +3,30 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PERMISSION_ASKED_KEY = "@storage_permission_asked";
 
+// Android 13+ granular media permissions
+const MEDIA_DOCS = "android.permission.READ_MEDIA_DOCUMENTS" as any;
+const MEDIA_IMAGES = "android.permission.READ_MEDIA_IMAGES" as any;
+const MEDIA_VIDEO = "android.permission.READ_MEDIA_VIDEO" as any;
+const MEDIA_AUDIO = "android.permission.READ_MEDIA_AUDIO" as any;
+
 /**
  * Check if storage permission is already granted
  */
 export async function checkStoragePermission(): Promise<boolean> {
   if (Platform.OS === "android") {
     try {
+      // Pre-Marshmallow: granted at install time
+      if (Platform.Version < 23) {
+        return true;
+      }
+
       if (Platform.Version >= 33) {
-        // Android 13 and above
-        const permission = "android.permission.READ_MEDIA_DOCUMENTS" as any;
-        const result = await PermissionsAndroid.check(permission);
-        return result;
+        // Android 13+ — accept any of the media permissions
+        const grantedDocs = await PermissionsAndroid.check(MEDIA_DOCS);
+        const grantedImages = await PermissionsAndroid.check(MEDIA_IMAGES);
+        const grantedVideo = await PermissionsAndroid.check(MEDIA_VIDEO);
+        const grantedAudio = await PermissionsAndroid.check(MEDIA_AUDIO);
+        return grantedDocs || grantedImages || grantedVideo || grantedAudio;
       } else {
         // Android 12 and below
         const result = await PermissionsAndroid.check(
@@ -87,12 +100,21 @@ export async function requestStoragePermission(
 async function requestPermission(): Promise<boolean> {
   if (Platform.OS === "android") {
     try {
+      // Pre-Marshmallow: granted at install time
+      if (Platform.Version < 23) {
+        return true;
+      }
+
       if (Platform.Version >= 33) {
-        // Android 13 and above - use string literal for READ_MEDIA_DOCUMENTS
-        const result = await PermissionsAndroid.request(
-          "android.permission.READ_MEDIA_DOCUMENTS" as any
-        );
-        return result === PermissionsAndroid.RESULTS.GRANTED;
+        // Android 13+: request multiple media permissions; consider granted if any granted
+        const results = await PermissionsAndroid.requestMultiple([
+          MEDIA_DOCS,
+          MEDIA_IMAGES,
+          MEDIA_VIDEO,
+          MEDIA_AUDIO,
+        ]);
+        const values = Object.values(results);
+        return values.includes(PermissionsAndroid.RESULTS.GRANTED);
       } else {
         // Android 12 and below
         const result = await PermissionsAndroid.request(

@@ -70,3 +70,14 @@ Image upload functionality
 Temprary fix
 
 -
+
+
+# Issues 
+
+I am not shre what you changed here 
+but i think pdf is generated it just not saved the pdf in device that main issue 
+currenlty when we click on the PPEReportPreviewScreen 
+Download PDF button then it shows me that 
+Permission Reuired 
+sotrage permission is needed to save PDF 
+report. Please grant Storage permissions in app settings 

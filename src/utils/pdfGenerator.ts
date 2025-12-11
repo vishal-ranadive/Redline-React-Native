@@ -940,7 +940,7 @@ export const sharePDFOnIOS = async (filePath: string, fileName: string): Promise
 
 /**
  * Download PDF file
- * On Android: Saves to Downloads folder
+ * On Android: Saves to Downloads folder using MediaStore (Android 10+) or direct copy (Android 9-)
  * On iOS: Saves to Documents folder and returns path for sharing
  */
 export const downloadPDF = async (
@@ -957,12 +957,17 @@ export const downloadPDF = async (
     // For Android, verify permission is granted before proceeding
     if (Platform.OS === 'android') {
       const { checkStoragePermission } = require('./permissions');
-      const isGranted = await checkStoragePermission();
-      if (!isGranted) {
-        throw new Error('Storage permission is required to download PDF. Please grant storage permission first.');
+      try {
+        const isGranted = await checkStoragePermission();
+        console.log('Storage permission reported granted?', isGranted);
+        if (!isGranted) {
+          console.warn('Storage permission not reported as granted; attempting copy anyway.');
+        }
+      } catch (permErr) {
+        console.warn('Storage permission check failed; attempting copy anyway.', permErr);
       }
     }
-    console.log('Storage permission verified');
+    console.log('Storage permission check complete');
     
     // Dynamically require react-native-blob-util
     const ReactNativeBlobUtil = require('react-native-blob-util');
@@ -992,15 +997,66 @@ export const downloadPDF = async (
     let destPath: string;
     
     if (Platform.OS === 'android') {
-      // Android: Save to Downloads folder
-      const downloadDir = dirs.DownloadDir;
-      console.log('Download directory:', downloadDir);
+      // Android: Use MediaCollection API for Android 10+ to save to Downloads folder
+      console.log('Android detected, API level:', Platform.Version);
       
-      if (!downloadDir) {
-        throw new Error('Download directory not available for Android');
+      if (Platform.Version >= 29) {
+        // Android 10+ (API 29+): Use MediaCollection to add file to Downloads
+        console.log('Using MediaCollection API for Android 10+');
+        
+        try {
+          // Use MediaCollection to copy file to Downloads
+          const downloadPath = await RNFetchBlob.MediaCollection.copyToMediaStore(
+            {
+              name: fileName,
+              parentFolder: 'Download', // This is the Downloads folder
+              mimeType: 'application/pdf',
+            },
+            'Download', // Download folder
+            filePath // source file path
+          );
+          
+          console.log('PDF saved to Downloads via MediaCollection:', downloadPath);
+          destPath = downloadPath;
+        } catch (mediaError: any) {
+          console.error('MediaCollection failed, trying alternative method:', mediaError);
+          
+          // Fallback: Try using DownloadDir directly (might work on some devices)
+          const downloadDir = dirs.DownloadDir;
+          destPath = `${downloadDir}/${fileName}`;
+          await RNFetchBlob.fs.cp(filePath, destPath);
+          console.log('PDF saved using fallback method:', destPath);
+        }
+      } else {
+        // Android 9 and below: Direct copy to Downloads folder
+        console.log('Using direct copy for Android 9 and below');
+        const downloadDir = dirs.DownloadDir;
+        console.log('Download directory:', downloadDir);
+        
+        if (!downloadDir) {
+          throw new Error('Download directory not available for Android');
+        }
+        
+        destPath = `${downloadDir}/${fileName}`;
+        await RNFetchBlob.fs.cp(filePath, destPath);
+        console.log('PDF copied to:', destPath);
+        
+        // Register the file with Android's DownloadManager so it appears in Downloads
+        if (RNFetchBlob.android && RNFetchBlob.android.addCompleteDownload) {
+          try {
+            await RNFetchBlob.android.addCompleteDownload({
+              title: fileName,
+              description: 'PPE Inspection Report',
+              mime: 'application/pdf',
+              path: destPath,
+              showNotification: true,
+            });
+            console.log('File registered with DownloadManager');
+          } catch (dmError) {
+            console.warn('Failed to register with DownloadManager:', dmError);
+          }
+        }
       }
-      
-      destPath = `${downloadDir}/${fileName}`;
     } else {
       // iOS: Save to Documents folder
       const documentDir = dirs.DocumentDir;
@@ -1011,14 +1067,10 @@ export const downloadPDF = async (
       }
       
       destPath = `${documentDir}/${fileName}`;
+      await RNFetchBlob.fs.cp(filePath, destPath);
+      console.log('PDF copied to:', destPath);
     }
 
-    console.log('Destination path:', destPath);
-
-    // Copy file to destination
-    console.log('Copying file...');
-    await RNFetchBlob.fs.cp(filePath, destPath);
-    
     console.log('PDF saved successfully to:', destPath);
 
     return destPath;

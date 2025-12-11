@@ -24,7 +24,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import { leadApi } from '../../services/leadApi';
 import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
-import { checkStoragePermission, requestStoragePermission } from '../../utils/permissions';
+import { requestStoragePermission } from '../../utils/permissions';
 import { Alert, Platform } from 'react-native';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 
@@ -80,29 +80,15 @@ const PPEReportPreviewScreen: React.FC = () => {
 
     try {
       // iOS doesn't require storage permission - skip all checks
-      if (Platform.OS === 'ios') {
-        // iOS: No permission check needed, proceed directly
-      } else {
-        // Android: Check and request permission if needed
-        try {
-          const isGranted = await checkStoragePermission();
-          
-          // If permission is not granted, request it silently
-          if (!isGranted) {
-            const granted = await requestStoragePermission(false);
-            if (!granted) {
-              // Permission was denied - only show alert on Android
-              Alert.alert(
-                'Permission Required',
-                'Storage permission is needed to save PDF reports. Please grant storage permission in app settings.',
-                [{ text: 'OK' }]
-              );
-              return;
-            }
-          }
-        } catch (permissionError) {
-          console.error('Error checking storage permission:', permissionError);
-          // Don't block download if permission check fails - let it try anyway
+      if (Platform.OS === 'android') {
+        const granted = await requestStoragePermission(true); // show rationale dialog for Android 13+
+        if (!granted) {
+          Alert.alert(
+            'Permission Required',
+            'Storage permission is needed to save PDF reports. Please grant storage permission in app settings.',
+            [{ text: 'OK' }]
+          );
+          return;
         }
       }
 
@@ -140,7 +126,7 @@ const PPEReportPreviewScreen: React.FC = () => {
         // Android: Show success message
         Alert.alert(
           'Success',
-          `PDF downloaded successfully!\n\nSaved to: Downloads/${downloadFileName}`,
+          `PDF downloaded successfully!\n\nYou can find it in your device's Downloads folder.\n\nFile: ${downloadFileName}`,
           [{ text: 'OK' }]
         );
       }
