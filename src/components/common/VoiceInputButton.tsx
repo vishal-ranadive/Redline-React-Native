@@ -314,11 +314,12 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
 
           waitingForResults.current = true;
           // Safety timeout: if no results, clean up to avoid stuck active state
-          // Increased to 12 seconds to handle delayed results
+          // Increased to 60 seconds for iOS to handle longer speech recognition
+          const timeoutDuration = Platform.OS === 'ios' ? 60000 : 30000;
           resultsTimeoutRef.current = setTimeout(() => {
-            console.warn('⚠️ No results received within 12s timeout, cleaning up');
+            console.warn(`⚠️ No results received within ${timeoutDuration / 1000}s timeout, cleaning up`);
             cleanupListening();
-          }, 12000);
+          }, timeoutDuration);
         }
       },
     );
@@ -333,14 +334,15 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
           console.log('Waiting for results after end...');
           
           // Extend timeout when speech ends - give more time for results to arrive
-          // Clear existing timeout and set a new one (5 more seconds)
+          // Clear existing timeout and set a new one (15 more seconds for iOS, 10 for Android)
           if (resultsTimeoutRef.current) {
             clearTimeout(resultsTimeoutRef.current);
           }
+          const extendedTimeout = Platform.OS === 'ios' ? 15000 : 10000;
           resultsTimeoutRef.current = setTimeout(() => {
-            console.warn('⚠️ No results received after speech end, cleaning up');
+            console.warn(`⚠️ No results received after speech end, cleaning up (${extendedTimeout / 1000}s timeout)`);
             cleanupListening();
-          }, 5000); // 5 more seconds after speech ends
+          }, extendedTimeout);
         }
       },
     );
@@ -427,20 +429,7 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         }
         
         if (micStatus !== RESULTS.GRANTED) {
-          if (micStatus === RESULTS.BLOCKED) {
-            Alert.alert(
-              'Microphone Permission Required',
-              'Please enable microphone access in Settings > Privacy & Security > Microphone',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Open Settings', 
-                  onPress: () => Linking.openSettings(),
-                  style: 'default'
-                }
-              ]
-            );
-          }
+          // Don't show alert here - let the caller handle it to avoid duplicates
           return false;
         }
         
@@ -455,20 +444,7 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         }
         
         if (speechStatus !== RESULTS.GRANTED) {
-          if (speechStatus === RESULTS.BLOCKED) {
-            Alert.alert(
-              'Speech Recognition Permission Required',
-              'Please enable speech recognition in Settings > Privacy & Security > Speech Recognition',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Open Settings', 
-                  onPress: () => Linking.openSettings(),
-                  style: 'default'
-                }
-              ]
-            );
-          }
+          // Don't show alert here - let the caller handle it to avoid duplicates
           return false;
         }
         
@@ -508,20 +484,22 @@ const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         const errorMsg = 'Microphone permission denied. Please enable it in Settings.';
         console.error(errorMsg);
         onError?.(errorMsg);
-        if (Platform.OS === 'ios') {
-          Alert.alert(
-            'Permission Required', 
-            errorMsg,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Open Settings', 
-                onPress: () => Linking.openSettings(),
-                style: 'default'
-              }
-            ]
-          );
-        }
+        
+        // Show alert for both platforms with option to open settings
+        Alert.alert(
+          'Permission Required', 
+          Platform.OS === 'ios' 
+            ? 'Microphone and speech recognition permissions are required. Please enable them in Settings.'
+            : 'Microphone permission is required. Please enable it in Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Open Settings', 
+              onPress: () => Linking.openSettings(),
+              style: 'default'
+            }
+          ]
+        );
         return;
       }
 
