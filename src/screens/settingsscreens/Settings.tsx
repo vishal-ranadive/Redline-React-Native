@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
-import { Text, useTheme, IconButton, Switch, Divider, Card } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Modal } from 'react-native';
+import { Text, useTheme, IconButton, Divider, Card } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -10,15 +10,41 @@ import { p } from '../../utils/responsive';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
+type ThemePreference = 'light' | 'dark' | 'automatic';
+
+const themeOptions: { value: ThemePreference; label: string; icon: string }[] = [
+  { value: 'light', label: 'Light', icon: 'white-balance-sunny' },
+  { value: 'dark', label: 'Dark', icon: 'moon-waning-crescent' },
+  { value: 'automatic', label: 'Automatic', icon: 'theme-light-dark' },
+];
+
 export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const theme = useTheme();
-  const { theme: appTheme, toggleTheme } = useThemeStore();
+  const { themePreference, setThemePreference, loadThemePreference } = useThemeStore();
   const { user } = useAuthStore();
   const [permissionsExpanded, setPermissionsExpanded] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+
+  useEffect(() => {
+    loadThemePreference();
+  }, []);
 
   const handleOpenProfile = () => {
     navigation.navigate('Profile'); // 👈 navigate to Profile screen
+  };
+
+  const handleThemeSelect = async (preference: ThemePreference) => {
+    await setThemePreference(preference);
+    setThemeModalVisible(false);
+  };
+
+  const getCurrentThemeLabel = () => {
+    return themeOptions.find(opt => opt.value === themePreference)?.label || 'Automatic';
+  };
+
+  const getCurrentThemeIcon = () => {
+    return themeOptions.find(opt => opt.value === themePreference)?.icon || 'theme-light-dark';
   };
 
   return (
@@ -77,26 +103,87 @@ export default function SettingsScreen() {
               Preferences
             </Text>
             <Divider style={styles.divider} />
-            <View style={styles.preferenceRow}>
+            
+            {/* Theme Selector */}
+            <TouchableOpacity 
+              style={styles.preferenceRow}
+              onPress={() => setThemeModalVisible(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.preferenceLabelContainer}>
                 <IconButton
-                  icon={appTheme === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'}
+                  icon={getCurrentThemeIcon()}
                   iconColor={theme.colors.primary}
                   size={p(18)}
                 />
-                <Text style={[styles.preferenceLabel, { color: theme.colors.onSurface }]}>
-                  {appTheme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                </Text>
+                <View>
+                  <Text style={[styles.preferenceLabel, { color: theme.colors.onSurface }]}>
+                    Theme
+                  </Text>
+                  <Text style={[styles.preferenceValue, { color: theme.colors.onSurfaceVariant }]}>
+                    {getCurrentThemeLabel()}
+                  </Text>
+                </View>
               </View>
-              <Switch
-                value={appTheme === 'dark'}
-                onValueChange={toggleTheme}
-                color={theme.colors.primary}
+              <IconButton
+                icon="chevron-down"
+                iconColor={theme.colors.outline}
+                size={p(20)}
               />
-            </View>
+            </TouchableOpacity>
           </Card.Content>
         </Card>
       </ScrollView>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={themeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setThemeModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setThemeModalVisible(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.onSurface }]}>
+              Select Theme
+            </Text>
+            <Divider style={styles.modalDivider} />
+            
+            {themeOptions.map((option, index) => (
+              <React.Fragment key={option.value}>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => handleThemeSelect(option.value)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.modalOptionLeft}>
+                    <IconButton
+                      icon={option.icon}
+                      iconColor={theme.colors.primary}
+                      size={p(20)}
+                    />
+                    <Text style={[styles.modalOptionText, { color: theme.colors.onSurface }]}>
+                      {option.label}
+                    </Text>
+                  </View>
+                  {themePreference === option.value && (
+                    <IconButton
+                      icon="check"
+                      iconColor={theme.colors.primary}
+                      size={p(20)}
+                    />
+                  )}
+                </TouchableOpacity>
+                {index < themeOptions.length - 1 && <Divider />}
+              </React.Fragment>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -134,7 +221,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: p(4),
   },
-  preferenceLabelContainer: { flexDirection: 'row', alignItems: 'center' },
-  preferenceLabel: { fontSize: p(14), marginLeft: p(4) },
+  preferenceLabelContainer: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  preferenceLabel: { fontSize: p(14), marginLeft: p(4), fontWeight: '500' },
+  preferenceValue: { fontSize: p(12), marginLeft: p(4) },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: p(20),
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: p(400),
+    borderRadius: p(12),
+    padding: p(20),
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalTitle: {
+    fontSize: p(18),
+    fontWeight: '600',
+    marginBottom: p(8),
+  },
+  modalDivider: {
+    marginBottom: p(12),
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: p(8),
+  },
+  modalOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalOptionText: {
+    fontSize: p(16),
+    marginLeft: p(4),
+  },
 });

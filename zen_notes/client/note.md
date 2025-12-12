@@ -81,3 +81,33 @@ Download PDF button then it shows me that
 Permission Reuired 
 sotrage permission is needed to save PDF 
 report. Please grant Storage permissions in app settings 
+
+
+=========
+# 12-12-25
+Working on 
+
+- Device modes light | dark | automatic  
+- filter on schedule_date based ui added [Need from backend]
+- 
+
+
+Q) On leadsScreen
+
+- API Request: GET /leads/  -> is it correct or do we need fetch based on logged user firestation  and frenchise id 
+
+- @mitesh we need to filter schedule_date with backend as well 
+- I have added from frontend for now 
+
+Build 11 
+
+Android : 
+- we can download report in android
+- updated logo  on leads screen | PPE inspection screen | PDF generation page
+- Logo togle based on dark and light mode 
+
+Android + ios 
+Dark mode based on system default 
+
+
+
