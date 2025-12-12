@@ -563,8 +563,12 @@ const handleGearPress = (gear: any) => {
     setAddFirefighterModalVisible(false);
   };
 
-  const handleFirefighterAdded = () => {
-    console.log('Firefighter added successfully');
+  const handleFirefighterAdded = (roster: any) => {
+    console.log('Firefighter added successfully', roster);
+    if (roster) {
+      // Automatically select the newly added firefighter
+      handleFirefighterSelect(roster);
+    }
   };
 
   // Fetch used colors from other rosters

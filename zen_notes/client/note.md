@@ -94,6 +94,8 @@ Working on
 - View by load dark mode 
 
 
+
+============ problems ============
 Q) On leadsScreen
 
 - API Request: GET /leads/  -> is it correct or do we need fetch based on logged user firestation  and frenchise id 
@@ -101,6 +103,9 @@ Q) On leadsScreen
 - @mitesh we need to filter schedule_date with backend as well 
 - I have added from frontend for now 
 
+
+
+==================================
 Build 11 
 
 Android : 
@@ -110,6 +115,23 @@ Android :
 
 Android + ios 
 Dark mode based on system default 
+
+
+1. Date Filter Based on schedule_date.
+-  Leads are filtered by schedule_date on the frontend (backend filtering is commented out as requested)
+- Individual date chip can be cleared by clicking the X icon
+- Date filter count is included in the filter badge count
+
+2. Top Left Position: Added an absolute positioned button at the top left of the screen
+User Avatar: Displays the user's first name initial in a circular avatar
+
+
+3. Now when a user adds a new firefighter through the modal:
+✅ The firefighter is created
+✅ The modal closes with a success message
+✅ The newly added firefighter is automatically selected in the FirefighterFlowScreen
+✅ Their gears are fetched and displayed (if any)
+✅ User can immediately start working with the new firefighter without searching
 
 
 

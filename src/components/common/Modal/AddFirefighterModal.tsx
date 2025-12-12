@@ -23,19 +23,17 @@ import { useLeadStore } from '../../../store/leadStore';
 interface AddFirefighterModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (roster?: any) => void;
 }
 
 const RANK_OPTIONS = [
   'Firefighter',
-  'Crew Manager',
-  'Watch Manager',
-  'Station Manager',
-  'Group Manager',
-  'Area Manager',
-  'Assistant Chief Fire Officer',
+  'Lieutenant',
+  'Captain',
+  'Assistant Chief',
   'Deputy Chief',
-  'Chief Fire Officer',
+  'Chief',
+  'Other',
 ];
 
 const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
@@ -81,9 +79,7 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       newErrors.last_name = 'Last name is required';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
 
@@ -127,12 +123,12 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       rank: formData.rank.trim(),
     };
 
-    const success = await createRoster(rosterData);
+    const result = await createRoster(rosterData);
     
-    if (success) {
+    if (result.success) {
       Alert.alert('Success', 'Firefighter added successfully');
       resetForm();
-      onSuccess();
+      onSuccess(result.roster);
       onClose();
     } else {
       Alert.alert('Error', 'Failed to add firefighter');
@@ -203,7 +199,7 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
             )}
 
             <TextInput
-              label="Email *"
+              label="Email"
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
               style={styles.input}
@@ -233,10 +229,9 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
               label="Rank"
               value={formData.rank}
               onChangeText={(value) => handleInputChange('rank', value)}
-              onFocus={() => setRankPickerVisible(true)}
               style={styles.input}
               mode="outlined"
-              left={<TextInput.Icon icon="account-star" />}
+              left={<TextInput.Icon icon="account" />}
               right={
                 <TextInput.Icon
                   icon="menu-down"
@@ -298,7 +293,12 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
                       },
                     ]}
                     onPress={() => {
-                      handleInputChange('rank', rank);
+                      if (rank === 'Other') {
+                        // For "Other", clear the field and let user type
+                        handleInputChange('rank', '');
+                      } else {
+                        handleInputChange('rank', rank);
+                      }
                       setRankPickerVisible(false);
                     }}
                   >

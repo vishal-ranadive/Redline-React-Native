@@ -41,7 +41,7 @@ interface RosterState {
   // Actions
   fetchRosters: (params?: any) => Promise<void>;
   fetchRosterById: (id: number) => Promise<void>;
-  createRoster: (rosterData: any) => Promise<boolean>;
+  createRoster: (rosterData: any) => Promise<{ success: boolean; roster?: any }>;
   clearRosters: () => void;
   clearCurrentRoster: () => void;
   
@@ -117,20 +117,20 @@ export const useRosterStore = create<RosterState>()(
           const response = await rosterApi.createRoster(rosterData);
           if (response.status) {
             set({ loading: false, error: null });
-            return true;
+            return { success: true, roster: response.roster };
           } else {
             set({
               error: response.message || 'Failed to create roster',
               loading: false,
             });
-            return false;
+            return { success: false };
           }
         } catch (error: any) {
           set({
             error: error.message || 'Network error',
             loading: false,
           });
-          return false;
+          return { success: false };
         }
       },
       // Add to your store implementation
