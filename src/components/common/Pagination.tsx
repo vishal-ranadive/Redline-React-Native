@@ -99,7 +99,10 @@ const Pagination: React.FC<PaginationProps> = ({
                 {itemsPerPage}
               </Button>
             }
-            contentStyle={styles.pageSizeMenu}
+            contentStyle={[
+              styles.pageSizeMenu,
+              { backgroundColor: colors.surface }
+            ]}
           >
             {itemsPerPageList.map((size) => (
               <Menu.Item
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
     fontSize: p(14),
   },
   pageSizeMenu: {
-    backgroundColor: 'white',
+    // backgroundColor is set dynamically based on theme
   },
   pageSizeMenuItem: {
     fontSize: p(14),

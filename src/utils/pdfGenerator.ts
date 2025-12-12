@@ -4,6 +4,12 @@ import { requestStoragePermission } from './permissions';
 import { GEAR_IMAGE_URLS } from '../constants/gearImages';
 
 /**
+ * Redline logo URL and website
+ */
+const REDLINE_LOGO_URL = 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png';
+const REDLINE_WEBSITE = 'www.redlinegearcleaning.com';
+
+/**
  * Generate HTML content from template and data
  */
 export const generateReportHTML = (
@@ -203,13 +209,33 @@ export const generateReportHTML = (
         /* Header Section */
         .report-header {
             text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
             border-bottom: 3px solid #ed2c2a;
         }
 
+
+        .report-logo {
+            width: 300px;               /* whatever width you want */
+            height: 80px;               /* whatever height looks good */
+            margin: 0 auto 10px auto;
+            overflow: hidden;           /* hide the extra top/bottom */
+            position: relative;
+        }
+
+        .report-logo::before {
+            content: "";
+            position: absolute;
+            top: -38px;                 /* ↑ shift image up (crop top) */
+            left: 0;
+            width: 100%;
+            height: 200%;               /* enlarge so we can slide it */
+            background-image: url('https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png');
+            background-size: 300px auto; /* keep original ratio */
+            background-repeat: no-repeat;
+            background-position: center center;
+        }
+
         .report-title {
-            font-size: 22pt;
+            font-size: 12pt;
             font-weight: 700;
             color: #1a202c;
             margin-bottom: 8px;
@@ -329,12 +355,23 @@ export const generateReportHTML = (
 
         /* Footer */
         .report-footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 2px solid #e2e8f0;
-            font-size: 8pt;
-            color: #718096;
+            margin-top: 40px;
+            padding-top: 0;
             text-align: center;
+        }
+
+        .footer-divider {
+            width: 100%;
+            height: 1px;
+            background: #1a202c;
+            margin: 0 0 10px 0;
+        }
+
+        .footer-link {
+            color: #ed2c2a;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 10pt;
         }
 
         /* Utilities */
@@ -361,6 +398,7 @@ export const generateReportHTML = (
             border-radius: 8px;
             border: 2px solid;
             margin-bottom: 8px;
+            margin-top: 12px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             page-break-inside: avoid;
         }
@@ -541,6 +579,13 @@ export const generateReportHTML = (
             body {
                 background: white;
             }
+
+             @page {
+        margin-top: 20px;   /* ← gives the space you want */
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+    }
             
             .page-container {
                 width: 100%;
@@ -580,6 +625,7 @@ export const generateReportHTML = (
     <div class="page-container">
         <!-- Header -->
         <div class="report-header">
+            <div class="report-logo" aria-label="Redline Logo"></div>
             <h1 class="report-title">PPE INSPECTION REPORT</h1>
             <p class="report-subtitle">Appointment Information</p>
         </div>
@@ -705,7 +751,7 @@ export const generateReportHTML = (
         </div>
 
         <!-- Second Row Container - Gear Types -->
-        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 8px;">
+        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 16px;">
             <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
                 Gear Type Breakdown
             </div>
@@ -781,13 +827,18 @@ export const generateReportHTML = (
 
         <!-- Footer -->
         <div class="report-footer">
-            <p>Generated on ${escapeHtml(reportDate)} | Confidential - For Official Use Only</p>
-            <p>This report contains proprietary information. Unauthorized distribution is prohibited.</p>
+            <div class="footer-divider"></div>
+            <a href="https://${REDLINE_WEBSITE}" class="footer-link">${REDLINE_WEBSITE}</a>
         </div>
     </div>
 </body>
 </html>
   `;
+
+  // Log the final HTML for debugging
+  console.log('===== FINAL RENDERED HTML =====');
+  console.log(htmlTemplate);
+  console.log('===== END OF HTML =====');
 
   return htmlTemplate;
 };

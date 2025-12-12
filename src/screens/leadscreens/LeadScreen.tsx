@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadScreen.tsx
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList, ScrollView } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList, ScrollView, Image } from 'react-native';
 import {
   Text,
   TextInput,
@@ -22,6 +22,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // Store and custom hooks
 import { useLeadStore } from '../../store/leadStore';
+import { useThemeStore } from '../../store/themeStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import Pagination from '../../components/common/Pagination';
@@ -53,6 +54,7 @@ const LeadScreen = () => {
   
   // Zustand store for lead management
   const { leads, loading, error, pagination, fetchLeads } = useLeadStore();
+  const { theme } = useThemeStore();
   
   // State Hooks
   const [search, setSearch] = useState<string>(''); // Search query
@@ -356,13 +358,13 @@ const LeadScreen = () => {
 
               {/* Appointment Date */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <Icon source="calendar" size={18} color="#555"  />
+                <Icon source="calendar" size={18} color={colors.onSurfaceVariant}  />
                 <Text style={{ marginLeft: 6 }}>{item?.appointmentDate}</Text>
               </View>
 
               {/* Station/Department */}
               <View style={{ flexDirection: 'row', alignItems: 'center',marginBottom: 6, }}>
-                <Icon source='office-building' size={18} color="#555" />
+                <Icon source='office-building' size={18} color={colors.onSurfaceVariant} />
                 <Text style={{ marginLeft: 6 }} ellipsizeMode="tail"> 
                   {item.station?.length > 28
                   ? item.station.slice(0, 28) + '...'
@@ -371,14 +373,14 @@ const LeadScreen = () => {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <Icon source="map-marker" size={18} color="#555" />
+                <Icon source="map-marker" size={18} color={colors.onSurfaceVariant} />
                 <Text style={{ marginLeft: 6 }}>
                   {item.address}
                 </Text>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <Icon source="truck" size={18} color="#555" />
+                <Icon source="truck" size={18} color={colors.onSurfaceVariant} />
                 <Text style={{ marginLeft: 6 }}>
                   MEU : {item.lead.meu}
                 </Text>
@@ -453,12 +455,17 @@ const LeadScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.contentWrapper, isMobile && styles.contentWrapperMobile]}>
         {/* Header */}
-        <Text
-          variant="headlineMedium"
-          style={[styles.header, { color: colors.primary }]}
-        >
-          Redline Gear
-        </Text>
+        <View style={styles.headerContainer}>
+          <Image
+            source={{ 
+              uri: theme === 'dark'
+                ? 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765531884/RedLine/gdfwbzg3ejynlcu3kqk3.png'
+                : 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png'
+            }}
+            style={styles.headerLogo}
+            resizeMode="cover"
+          />
+        </View>
 
         {/* Search Input */}
         <View style={styles.searchContainer}>
@@ -733,7 +740,15 @@ const styles = StyleSheet.create({
   contentWrapperMobile: {
     flex: 1,
   },
-  header: { textAlign: 'center', marginVertical: p(15), fontSize: 24 },
+  headerContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    // marginVertical: p(15),
+  },
+  headerLogo: {
+    width: p(200),
+    height: p(60),
+  },
   searchContainer: {
     position: 'relative',
     marginBottom: p(10),
@@ -776,7 +791,6 @@ const styles = StyleSheet.create({
     marginVertical: p(4),
   },
   modalContainer: {
-    backgroundColor: 'white',
     margin: p(20),
     borderRadius: p(16),
     width: p(600),
@@ -940,9 +954,6 @@ const styles = StyleSheet.create({
     right: 0,
     marginInline:'auto',
     marginBottom:p(65), // Space for bottom bar on desktop
-    backgroundColor: '#f5f5f5',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     zIndex: 10,
   },
   paginationContainerMobile: {

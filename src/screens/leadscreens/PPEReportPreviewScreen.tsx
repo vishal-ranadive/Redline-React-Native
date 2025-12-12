@@ -25,6 +25,7 @@ import { p } from '../../utils/responsive';
 import { leadApi } from '../../services/leadApi';
 import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
 import { requestStoragePermission } from '../../utils/permissions';
+import { useThemeStore } from '../../store/themeStore';
 import { Alert, Platform } from 'react-native';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 
@@ -34,6 +35,7 @@ const PPEReportPreviewScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
+  const { theme } = useThemeStore();
   const { width } = useWindowDimensions();
   const isPortrait = width < 600; // Consider portrait if width < 600
   
@@ -208,17 +210,15 @@ const PPEReportPreviewScreen: React.FC = () => {
           compact
           onPress={handleDownloadPDF}
           disabled={isGeneratingPDF}
-          contentStyle={{ flexDirection: 'row' }}
+          contentStyle={{ flexDirection: 'row', gap: p(4) }}
         >
           {isGeneratingPDF ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <>
-              <Icon source="download" size={p(20)} color={colors.primary} />
-              <Text style={{ color: colors.primary, marginLeft: p(4), fontSize: p(14) }}>
-                Download PDF
-              </Text>
-            </>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(6) }}>
+              <Icon source="file-pdf-box" size={p(24)} color={colors.primary} />
+              <Icon source="download" size={p(22)} color={colors.primary} />
+            </View>
           )}
         </Button>
       </View>
@@ -227,9 +227,22 @@ const PPEReportPreviewScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
+        {/* Logo Header */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={{ 
+              uri: theme === 'dark'
+                ? 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765531884/RedLine/gdfwbzg3ejynlcu3kqk3.png'
+                : 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png'
+            }}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
+        </View>
+
         {/* Report Header */}
         <View style={styles.reportHeader}>
-          <Text style={[styles.reportTitle, { color: colors.onSurface, fontSize: p(24) }]}>
+          <Text style={[styles.reportTitle, { color: colors.onSurface, fontSize: p(18) }]}>
             PPE INSPECTION REPORT
           </Text>
           <Text style={[styles.reportSubtitle, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
@@ -776,6 +789,15 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    // paddingVertical: p(15),
+  },
+  logoImage: {
+    width: p(200),
+    height: p(60),
   },
   reportHeader: {
     alignItems: 'center',

@@ -7,6 +7,7 @@ import {
   Modal,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from 'react-native';
 import {
   Text,
@@ -112,6 +113,11 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
         >
           {/* Report Header */}
           <View style={styles.reportHeader}>
+            <Image
+              source={{ uri: 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png' }}
+              style={styles.reportLogo}
+              resizeMode="contain"
+            />
             <Text style={[styles.reportTitle, { color: colors.onSurface, fontSize: p(24) }]}>
               PPE INSPECTION REPORT
             </Text>
@@ -399,6 +405,17 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
             </Card.Content>
           </Card>
 
+          {/* Footer */}
+          <View style={[styles.reportFooter, { borderTopColor: colors.outline }]}>
+            <View style={[styles.footerDivider, { backgroundColor: colors.onSurface }]} />
+            <Text 
+              style={[styles.footerLink, { color: colors.primary }]}
+              onPress={() => {/* Could open browser to website */}}
+            >
+              www.redlinegearcleaning.com
+            </Text>
+          </View>
+
           {/* Footer Spacing */}
           <View style={{ height: p(100) }} />
         </ScrollView>
@@ -450,6 +467,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#ed2c2a',
     marginBottom: p(20),
+  },
+  reportLogo: {
+    width: p(200),
+    height: p(70),
+    marginBottom: p(12),
   },
   reportTitle: {
     fontSize: p(24),
@@ -592,6 +614,20 @@ const styles = StyleSheet.create({
   },
   generateButton: {
     borderRadius: p(8),
+  },
+  reportFooter: {
+    marginTop: p(40),
+    paddingTop: 0,
+    alignItems: 'center',
+  },
+  footerDivider: {
+    width: '100%',
+    height: 1,
+    marginBottom: p(10),
+  },
+  footerLink: {
+    fontSize: p(14),
+    fontWeight: '600',
   },
 });
 
