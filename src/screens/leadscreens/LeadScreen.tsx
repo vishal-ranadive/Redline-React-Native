@@ -23,9 +23,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 // Store and custom hooks
 import { useLeadStore } from '../../store/leadStore';
 import { useThemeStore } from '../../store/themeStore';
+import { useAuthStore } from '../../store/authStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import Pagination from '../../components/common/Pagination';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 // Status management
 import { 
@@ -38,6 +40,7 @@ import {
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import BottomNavBar from '../../navigation/BottomNavBar';
 import { printTable } from '../../utils/printTable';
+import { Avatar } from 'react-native-paper';
 
 // Responsive utility placeholder
 const p = (size: number): number => size;
@@ -55,6 +58,7 @@ const LeadScreen = () => {
   // Zustand store for lead management
   const { leads, loading, error, pagination, fetchLeads } = useLeadStore();
   const { theme } = useThemeStore();
+  const { user } = useAuthStore();
   
   // State Hooks
   const [search, setSearch] = useState<string>(''); // Search query
@@ -65,6 +69,8 @@ const LeadScreen = () => {
   const [screenWidth, setScreenWidth] = useState<number>(Dimensions.get('window').width); // Screen width for responsive design
   const [statusFilters, setStatusFilters] = useState<LeadStatus[]>([]); // Selected status filters
   const [statusModalVisible, setStatusModalVisible] = useState(false); // Modal visibility state
+  const [dateFilter, setDateFilter] = useState<string>(''); // Date filter
+  const [datePickerVisible, setDatePickerVisible] = useState(false); // Date picker modal visibility
   
   // Determine if device is mobile (typically < 600px width)
   const isMobile = screenWidth < 600;
@@ -195,6 +201,11 @@ const LeadScreen = () => {
         params.lead_status = statusFilters.join(',');
       }
 
+      // Add date filter if selected (COMMENTED FOR NOW - WILL FILTER ON FRONTEND)
+      // if (dateFilter) {
+      //   params.schedule_date = dateFilter;
+      // }
+
       // Add search query if provided
       if (search) {
         params.search = search;
@@ -245,13 +256,14 @@ const LeadScreen = () => {
     count += statusFilters.length; // Count of status filters
     if (orderTypeFilter) count += 1; // Order type filter
     if (search) count += 1; // Search filter
+    if (dateFilter) count += 1; // Date filter
     return count;
-  }, [statusFilters.length, orderTypeFilter, search]);
+  }, [statusFilters.length, orderTypeFilter, search, dateFilter]);
 
   /**
    * Convert API lead data to frontend format
    * Adds missing fields and formats data for display
-   * Also filters by search term (lead ID) if provided
+   * Also filters by search term (lead ID) and date if provided
    */
   const filteredLeads = useMemo(() => {
     const mappedLeads = leads.map((lead: any) => ({
@@ -267,22 +279,35 @@ const LeadScreen = () => {
       department: lead?.firestation?.name || 'Unknown Department',
       phWater: 5, // Placeholder - update with actual data if available
       appointmentDate: useFormattedDate(lead?.schedule_date),
+      schedule_date: lead?.schedule_date, // Keep raw date for filtering
       // Include the full lead object for navigation
       ...lead
     }));
 
+    let filtered = mappedLeads;
+
     // Filter by search term if provided (search by lead ID)
     if (search && search.trim()) {
       const searchTerm = search.trim().toLowerCase();
-      return mappedLeads.filter((lead: any) => {
+      filtered = filtered.filter((lead: any) => {
         // Check if search matches lead_id
         const leadId = lead.lead_id?.toString().toLowerCase() || '';
         return leadId.includes(searchTerm);
       });
     }
 
-    return mappedLeads;
-  }, [leads, search]);
+    // Filter by date if provided (FRONTEND FILTERING)
+    if (dateFilter) {
+      filtered = filtered.filter((lead: any) => {
+        if (!lead.schedule_date) return false;
+        // Compare dates (YYYY-MM-DD format)
+        const leadDate = lead.schedule_date.split('T')[0]; // Get date part only
+        return leadDate === dateFilter;
+      });
+    }
+
+    return filtered;
+  }, [leads, search, dateFilter]);
 
   /**
    * Clear all filters and reset to default state
@@ -291,8 +316,28 @@ const LeadScreen = () => {
     setStatusFilters([]);
     setOrderTypeFilter(null);
     setSearch('');
+    setDateFilter('');
     setPage(1);
   }, []);
+
+  /**
+   * Handle date picker confirmation
+   */
+  const handleDateConfirm = useCallback((date: Date) => {
+    const formatted = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    setDateFilter(formatted);
+    setDatePickerVisible(false);
+    setPage(1);
+  }, []);
+
+  /**
+   * Format date for display
+   */
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
 
 
   /**
@@ -453,7 +498,25 @@ const LeadScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* User Profile Button - Top Left */}
+
+
       <View style={[styles.contentWrapper, isMobile && styles.contentWrapperMobile]}>
+
+      {user && (
+        <TouchableOpacity
+          style={[styles.userProfileButton, { backgroundColor: colors.primaryContainer }]}
+          onPress={() => navigation.navigate('Profile' as any)}
+          activeOpacity={0.7}
+        >
+          <Avatar.Text
+            size={40}
+            label={user.firstName?.[0]?.toUpperCase() || '?'}
+            style={{ backgroundColor: colors.primary }}
+            labelStyle={{ color: colors.onPrimary }}
+          />
+        </TouchableOpacity>
+      )}
         {/* Header */}
         <View style={styles.headerContainer}>
           <Image
@@ -549,9 +612,21 @@ const LeadScreen = () => {
           >
             Status
           </Button>
+
+          <Button
+            mode="outlined"
+            onPress={() => setDatePickerVisible(true)}
+            style={styles.filterButton}
+            labelStyle={styles.filterLabel}
+            buttonColor={colors.surface}
+            textColor={dateFilter ? colors.primary : colors.onSurface}
+            icon="calendar"
+          >
+            Date
+          </Button>
         </View>
 
-        {/* Active Status Filter Chips */}
+        {/* Active Status & Date Filter Chips */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
           {statusFilters.map((status) => (
             <Button
@@ -573,6 +648,25 @@ const LeadScreen = () => {
               {formatStatus(status)}
             </Button>
           ))}
+          {dateFilter && (
+            <Button
+              mode="outlined"
+              icon="close"
+              onPress={() => {
+                setDateFilter('');
+                setPage(1);
+              }}
+              style={{
+                marginRight: 6,
+                marginBottom: 6,
+                borderColor: colors.primary,
+              }}
+              textColor={colors.primary}
+              labelStyle={{ fontSize: 12 }}
+            >
+              {formatDateForDisplay(dateFilter)}
+            </Button>
+          )}
         </View>
 
         {/* Loading State or Lead Grid */}
@@ -728,12 +822,34 @@ const LeadScreen = () => {
           </View>
         </Modal>
       </Portal>
+
+      {/* Date Picker Modal */}
+      <DateTimePickerModal
+        isVisible={datePickerVisible}
+        mode="date"
+        onConfirm={handleDateConfirm}
+        onCancel={() => setDatePickerVisible(false)}
+        date={dateFilter ? new Date(dateFilter) : new Date()}
+        themeVariant={theme === 'dark' ? 'dark' : 'light'}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: p(10),  },
+  userProfileButton: {
+    position: 'absolute',
+    top: p(10),
+    left: p(10),
+    zIndex: 1000,
+    borderRadius: 50,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   contentWrapper: {
     flex: 1,
   },

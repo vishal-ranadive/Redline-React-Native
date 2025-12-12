@@ -89,7 +89,9 @@ Working on
 
 - Device modes light | dark | automatic  
 - filter on schedule_date based ui added [Need from backend]
-- 
+- Leads screen filter based on schedule_date
+- logged in user on top left side  
+- View by load dark mode 
 
 
 Q) On leadsScreen
