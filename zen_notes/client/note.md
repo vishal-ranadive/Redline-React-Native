@@ -104,6 +104,12 @@ Q) On leadsScreen
 - I have added from frontend for now 
 
 
+Q) Add functionality to copy info of another gear entry (serial no mfg , date)
+Q) Load and tag color things on firefighter screen
+Q) Auto save indicator on screen - show last time stamp 
+Q) combine year and month in one menu  
+Q) @mitesh Are we storing history 
+
 
 ==================================
 Build 11 
@@ -114,7 +120,6 @@ Android :
 - Logo togle based on dark and light mode 
 
 Android + ios 
-Dark mode based on system default 
 
 
 1. Date Filter Based on schedule_date.
@@ -122,16 +127,25 @@ Dark mode based on system default
 - Individual date chip can be cleared by clicking the X icon
 - Date filter count is included in the filter badge count
 
-2. Top Left Position: Added an absolute positioned button at the top left of the screen
-User Avatar: Displays the user's first name initial in a circular avatar
+2. Current User who logged in Top Left Position : 
+- User Avatar: Displays the user's first name initial in a circular avatar
+- Added an Aavatar and when we click on it Goes to profile page 
 
 
 3. Now when a user adds a new firefighter through the modal:
-✅ The firefighter is created
-✅ The modal closes with a success message
-✅ The newly added firefighter is automatically selected in the FirefighterFlowScreen
-✅ Their gears are fetched and displayed (if any)
-✅ User can immediately start working with the new firefighter without searching
+- The firefighter is created
+- The modal closes with a success message
+- The newly added firefighter is automatically selected in the FirefighterFlowScreen
+- Their gears are fetched and displayed (if any)
+- User can immediately start working with the new firefighter without searching
 
 
+4. Added three theme options:
+- Light - Always light theme
+- Dark - Always dark theme
+- Automatic - Follows system theme
 
+5. Size 2 input box 
+- Display: Two input boxes side by side with "X" in between
+- Storage: Combines as "100-200" when saving to backend
+- Loading: Splits "100-200" back into two separate fields when loading existing data

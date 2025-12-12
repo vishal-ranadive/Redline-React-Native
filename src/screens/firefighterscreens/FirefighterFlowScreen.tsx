@@ -37,15 +37,16 @@ import { ColorPickerModal } from '../../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
+import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
-// Gear categories with emojis and matching gear types
+// Gear categories with images and matching gear types
 const GEAR_CATEGORIES = [
   {
     id: 'jackets',
     title: 'Jackets',
-    emoji: '🧥',
+    image: GEAR_IMAGE_URLS.jacket,
     color: '#FF6B6B',
     gearTypes: ['JACKET LINER', 'JACKET SHELL'],
     fields: ['Primary Liner', 'Primary Shell', 'Moisture Barrier']
@@ -53,7 +54,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'pants',
     title: 'Pants',
-    emoji: '👖',
+    image: GEAR_IMAGE_URLS.pants,
     color: '#4ECDC4',
     gearTypes: ['PANT LINER', 'PANT SHELL', 'PANTS LINER', 'PANTS SHELL'],
     fields: ['Primary Shell', 'Primary Liner', 'Moisture Barrier']
@@ -61,7 +62,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'helmets',
     title: 'Helmets',
-    emoji: '⛑️',
+    image: GEAR_IMAGE_URLS.helmet,
     color: '#45B7D1',
     gearTypes: ['HELMET'],
     fields: ['Helmet', 'Face Shield', 'Suspension System']
@@ -69,7 +70,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'gloves',
     title: 'Gloves',
-    emoji: '🧤',
+    image: GEAR_IMAGE_URLS.gloves,
     color: '#96CEB4',
     gearTypes: ['GLOVES'],
     fields: ['Gloves', 'Wristlets', 'Knit Wrist']
@@ -77,7 +78,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'boots',
     title: 'Boots',
-    emoji: '👢',
+    image: GEAR_IMAGE_URLS.boots,
     color: '#FFEAA7',
     gearTypes: ['BOOTS'],
     fields: ['Boots', 'Steel Toe', 'Outsole']
@@ -85,7 +86,7 @@ const GEAR_CATEGORIES = [
   {
     id: 'others',
     title: 'Others',
-    emoji: '📦',
+    image: GEAR_IMAGE_URLS.other,
     color: '#DDA0DD',
     gearTypes: ['HOOD', 'SCBA'],
     fields: ['Jump Suit', 'Hood', 'SCBA Harness']
@@ -94,18 +95,18 @@ const GEAR_CATEGORIES = [
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-// Different gear images for different gear types
-const GEAR_IMAGES = {
-  'Helmet': 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
-  'Gloves': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
-  'Boots': 'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
-  'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
-  'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
-  'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
-  'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
-  'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
-  'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
-};
+// Old gear images (deprecated - now using GEAR_IMAGE_URLS from constants)
+// const GEAR_IMAGES = {
+//   'Helmet': 'https://www.meslifesafety.com/ProductImages/fxtl-bulrd_orange!01.jpg',
+//   'Gloves': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
+//   'Boots': 'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
+//   'Jacket': 'https://images.unsplash.com/photo-1553062407-98cff3078e9a?w=400&h=400&fit=crop',
+//   'Mask': 'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
+//   'Harness': 'https://www.uviraj.com/images/FBH-EN/U222FBH.jpg',
+//   'Axe': 'https://png.pngtree.com/element_our/20190528/ourmid/pngtree-a-metal-axe-image_1161001.jpg',
+//   'Hose': 'https://tirupatiplasto.in/wp-content/upiVBORw0KGgoAAAANSUhEUgAAARMAAAC3CAMAAAAGjUrGAAACRlBMVEXloads/2023/06/fh1.jpg',
+//   'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
+// };
 
 const statusColorMap: { [key: string]: string } = {
   Pass: '#34A853',
@@ -128,6 +129,23 @@ const getGearEmoji = (gearType: string | null) => {
   if (type.includes('BOOT')) return '👢';
   
   return '📦'; // Default for others
+};
+
+// Function to get appropriate image URL based on gear type
+const getGearImageUrl = (gearType: string | null) => {
+  if (!gearType) return GEAR_IMAGE_URLS.other;
+  
+  const type = gearType.toUpperCase();
+  if (type.includes('JACKET') && type.includes('LINER')) return GEAR_IMAGE_URLS.jacket_liner;
+  if (type.includes('JACKET')) return GEAR_IMAGE_URLS.jacket;
+  if (type.includes('PANT') && type.includes('LINER')) return GEAR_IMAGE_URLS.pants_liner;
+  if (type.includes('PANT')) return GEAR_IMAGE_URLS.pants;
+  if (type.includes('HELMET')) return GEAR_IMAGE_URLS.helmet;
+  if (type.includes('GLOVE')) return GEAR_IMAGE_URLS.gloves;
+  if (type.includes('BOOT')) return GEAR_IMAGE_URLS.boots;
+  if (type.includes('HOOD')) return GEAR_IMAGE_URLS.hood;
+  
+  return GEAR_IMAGE_URLS.other; // Default for others
 };
 
 const FirefighterFlowScreen = () => {
@@ -773,11 +791,13 @@ const handleGearPress = (gear: any) => {
                   )}
                 </View>
 
-                {/* Gear Emoji */}
+                {/* Gear Image */}
                 <View style={styles.gearImageContainer}>
-                  <Text style={styles.gearEmoji}>
-                    {getGearEmoji(gearTypeName)}
-                  </Text>
+                  <Image 
+                    source={{ uri: getGearImageUrl(gearTypeName) }} 
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
                 </View>
 
                 {/* Gear Details */}
@@ -815,7 +835,7 @@ const handleGearPress = (gear: any) => {
                 {renderInspectionDetails(gear.current_inspection, false)}
 
                 {/* Previous Inspection Details */}
-                {gear.previous_inspection && renderInspectionDetails(gear.previous_inspection, true)}
+                {/* {gear.previous_inspection && renderInspectionDetails(gear.previous_inspection, true)} */}
 
                 {/* Update Button */}
                 <Button
@@ -897,9 +917,13 @@ const handleGearPress = (gear: any) => {
                 onPress={() => handleCategoryPress(category.id)}
               >
                 <Card.Content style={styles.categoryContent}>
-                  {/* Category Header with Emoji */}
+                  {/* Category Header with Image */}
                   <View style={styles.categoryHeader}>
-                    <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                    <Image 
+                      source={{ uri: category.image }} 
+                      style={styles.categoryImage}
+                      resizeMode="cover"
+                    />
                     <View style={styles.categoryHeaderText}>
                       <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
                         {category.title}
@@ -961,7 +985,7 @@ const handleGearPress = (gear: any) => {
                     )}
 
                     {/* Previous Inspection */}
-                    <Text
+                    {/* <Text
                       style={[
                         styles.sectionTitleInspection,
                         { color: colors.onSurface, marginTop: 16 }
@@ -1011,7 +1035,7 @@ const handleGearPress = (gear: any) => {
                       ))
                     ) : (
                       <Text style={{ color: colors.onSurfaceVariant, fontSize: p(12) }}>No previous inspections</Text>
-                    )}
+                    )} */}
                   </View>
                 </Card.Content>
               </Card>
@@ -1541,8 +1565,10 @@ const styles = StyleSheet.create({
     marginBottom: p(8),
     width: '100%',
   },
-  categoryEmoji: {
-    fontSize: p(32),
+  categoryImage: {
+    width: p(50),
+    height: p(50),
+    borderRadius: p(8),
     marginRight: p(12),
   },
   categoryHeaderText: {
@@ -1638,8 +1664,8 @@ const styles = StyleSheet.create({
     marginBottom: p(8),
   },
   gearImage: {
-    width: p(80),
-    height: p(80),
+    width: p(100),
+    height: p(100),
     borderRadius: p(8),
   },
   gearEmoji: {

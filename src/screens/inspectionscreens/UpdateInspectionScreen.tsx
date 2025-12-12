@@ -231,7 +231,8 @@ export default function UpdateInspectionScreen() {
     status: '',
     serviceType: 'INSPECTED_AND_CLEANED', // Default: Inspected and Cleaned
     harnessType: false,
-    size: '',
+    size1: '',
+    size2: '',
     selectedGearFindings: [] as string[],
     serialNumber: '',
     hydroPerformed: false,
@@ -465,6 +466,11 @@ export default function UpdateInspectionScreen() {
 
           // Get gear_size from inspection data (directly on inspection) or fallback to gear.gear_size
           const gearSize = inspectionData.gear_size || '';
+          
+          // Split size into two parts if it contains a hyphen
+          const sizeParts = gearSize.includes('-') ? gearSize.split('-') : ['', ''];
+          const size1 = sizeParts[0]?.trim() || '';
+          const size2 = sizeParts[1]?.trim() || '';
 
           // Get status from inspection, but check if gear is expired and override if needed
           let statusToSet = getStatusValue(inspectionData.gear_status?.status) || '';
@@ -483,7 +489,8 @@ export default function UpdateInspectionScreen() {
             status: statusToSet,
             serviceType: getServiceTypeValue(inspectionData.service_type?.status) || 'INSPECTED_AND_CLEANED', // Default to Inspected and Cleaned if not found
             harnessType: inspectionData.is_harness === true || inspectionData.is_harness === "YES" || inspectionData.harness_type || false,
-            size: gearSize,
+            size1: size1,
+            size2: size2,
             selectedGearFindings: gearFindings,
             serialNumber: inspectionData.gear?.serial_number || '',
             hydroPerformed: hydroPerformed,
@@ -804,6 +811,11 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         console.log('Using provided images:', images);
       }
 
+      // Combine size1 and size2 with hyphen
+      const combinedSize = formData.size1 && formData.size2 
+        ? `${formData.size1.trim()}-${formData.size2.trim()}`
+        : formData.size1.trim() || formData.size2.trim() || '';
+
       const inspectionData = {
         lead_id: currentLead?.lead_id,
         mu_id: 1,
@@ -833,7 +845,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         service_type_id: mapServiceTypeToId(formData.serviceType),
         tag_color: formData.selectedColor.toLowerCase().trim(),
         is_harness: formData.harnessType ? "YES" : "NO",
-        gear_size: formData.size,
+        gear_size: combinedSize,
       };
 
       console.log('Inspection Data:', inspectionData);
@@ -1118,14 +1130,25 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
             {/* Size and Gear Findings */}
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              {/* Size as Text Input */}
+              {/* Size as Two Text Inputs */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
-              <Input
-                placeholder="Enter gear size"
-                value={formData.size}
-                onChangeText={(text) => handleFieldChange('size', text)}
-                style={styles.textInput}
-              />
+              <View style={styles.sizeInputContainer}>
+                <Input
+                  placeholder="First"
+                  value={formData.size1}
+                  onChangeText={(text) => handleFieldChange('size1', text)}
+                  style={styles.sizeInput}
+                  containerStyle={styles.sizeInputBox}
+                />
+                <Text style={[styles.sizeXText, { color: colors.onSurface }]}>X</Text>
+                <Input
+                  placeholder="Second"
+                  value={formData.size2}
+                  onChangeText={(text) => handleFieldChange('size2', text)}
+                  style={styles.sizeInput}
+                  containerStyle={styles.sizeInputBox}
+                />
+              </View>
 
               {/* Gear Findings */}
               <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
@@ -1388,14 +1411,25 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
               {/* Gear Findings and Images */}
               <View style={[styles.card, { backgroundColor: colors.surface }]}>
-                {/* Size as Text Input */}
+                {/* Size as Two Text Inputs */}
                 <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Size</Text>
-                <Input
-                  placeholder="Enter gear size"
-                  value={formData.size}
-                  onChangeText={(text) => handleFieldChange('size', text)}
-                  style={styles.textInput}
-                />
+                <View style={styles.sizeInputContainer}>
+                  <Input
+                    placeholder="First"
+                    value={formData.size1}
+                    onChangeText={(text) => handleFieldChange('size1', text)}
+                    style={styles.sizeInput}
+                    containerStyle={styles.sizeInputBox}
+                  />
+                  <Text style={[styles.sizeXText, { color: colors.onSurface }]}>X</Text>
+                  <Input
+                    placeholder="Second"
+                    value={formData.size2}
+                    onChangeText={(text) => handleFieldChange('size2', text)}
+                    style={styles.sizeInput}
+                    containerStyle={styles.sizeInputBox}
+                  />
+                </View>
 
                 {/* Gear Findings */}
                 <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Gear Findings</Text>
@@ -1681,6 +1715,25 @@ const styles = StyleSheet.create({
   // Text input styles
   textInput: {
     marginBottom: 16,
+  },
+
+  // Size input styles
+  sizeInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sizeInputBox: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  sizeInput: {
+    marginBottom: 0,
+  },
+  sizeXText: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginHorizontal: 8,
   },
 
   // Dropdown styles

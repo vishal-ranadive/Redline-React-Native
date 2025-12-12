@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inspectionApi } from '../../services/inspectionApi';
 import { useLeadStore } from '../../store/leadStore';
 import { getColorHex } from '../../constants/colors';
+import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 
 type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
@@ -84,6 +85,23 @@ const getGearEmoji = (gearType: string | null) => {
   if (type.includes('BOOT')) return '👢';
   
   return '📦'; // Default for others
+};
+
+// Function to get appropriate image URL based on gear type
+const getGearImageUrl = (gearType: string | null) => {
+  if (!gearType) return GEAR_IMAGE_URLS.other;
+  
+  const type = gearType.toUpperCase();
+  if (type.includes('JACKET') && type.includes('LINER')) return GEAR_IMAGE_URLS.jacket_liner;
+  if (type.includes('JACKET')) return GEAR_IMAGE_URLS.jacket;
+  if (type.includes('PANT') && type.includes('LINER')) return GEAR_IMAGE_URLS.pants_liner;
+  if (type.includes('PANT')) return GEAR_IMAGE_URLS.pants;
+  if (type.includes('HELMET')) return GEAR_IMAGE_URLS.helmet;
+  if (type.includes('GLOVE')) return GEAR_IMAGE_URLS.gloves;
+  if (type.includes('BOOT')) return GEAR_IMAGE_URLS.boots;
+  if (type.includes('HOOD')) return GEAR_IMAGE_URLS.hood;
+  
+  return GEAR_IMAGE_URLS.other; // Default for others
 };
 
 // Function to get appropriate icon for gear type
@@ -376,11 +394,13 @@ export default function GearsScreen() {
                 )}
               </View>
 
-              {/* Gear Emoji */}
+              {/* Gear Image */}
               <View style={styles.gearImageContainer}>
-                <Text style={styles.gearEmoji}>
-                  {getGearEmoji(gearTypeName)}
-                </Text>
+                <Image 
+                  source={{ uri: getGearImageUrl(gearTypeName) }} 
+                  style={styles.gearImage}
+                  resizeMode="cover"
+                />
               </View>
 
               {/* Gear Details */}
@@ -676,8 +696,8 @@ const styles = StyleSheet.create({
     marginBottom: p(8),
   },
   gearImage: {
-    width: p(80),
-    height: p(80),
+    width: p(100),
+    height: p(100),
     borderRadius: p(8),
   },
   gearEmoji: {
