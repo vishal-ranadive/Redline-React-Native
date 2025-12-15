@@ -222,3 +222,5 @@ https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread
 # I-Phone 
 - Date selection in for Add new gear > manufacture date 
 - Date selection on leads screen (Landing screen)
+
+# when are we removing this tag colors 
