@@ -332,50 +332,50 @@ export default function FirefighterGearsScreen() {
           </Text>
           
           <View style={styles.detailRow}>
-            <Icon source="calendar" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Date:</Text>
-            <Text style={styles.detailValue}>{inspectionDate}</Text>
+            <Icon source="calendar" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Date:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{inspectionDate}</Text>
           </View>
 
           <View style={styles.detailRow}>
-            <Icon source="water" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Hydro Test:</Text>
-            <Text style={styles.detailValue}>{hydroTestResult}</Text>
+            <Icon source="water" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Test:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{hydroTestResult}</Text>
           </View>
 
           {hydroTestResult !== 'N/A' && (
             <View style={styles.detailRow}>
-              <Icon source="check-circle" size={14} color="#666" />
-              <Text style={styles.detailLabel}>Hydro Performed:</Text>
-              <Text style={styles.detailValue}>{hydroTestPerformed}</Text>
+              <Icon source="check-circle" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Performed:</Text>
+              <Text style={[styles.detailValue, { color: colors.onSurface }]}>{hydroTestPerformed}</Text>
             </View>
           )}
 
           <View style={styles.detailRow}>
-            <Icon source="currency-usd" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Cost:</Text>
-            <Text style={styles.detailValue}>{inspectionCost}</Text>
+            <Icon source="currency-usd" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{inspectionCost}</Text>
           </View>
 
           <View style={styles.detailRow}>
-            <Icon source="note-text" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Remarks:</Text>
-            <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+            <Icon source="note-text" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Remarks:</Text>
+            <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
               {remarks}
             </Text>
           </View>
 
           <View style={styles.detailRow}>
-            <Icon source="wrench" size={14} color="#666" />
-            <Text style={styles.detailLabel}>Service:</Text>
-            <Text style={styles.detailValue}>{serviceType}</Text>
+            <Icon source="wrench" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Service:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{serviceType}</Text>
           </View>
 
           {hydrotestRemarks && (
             <View style={styles.detailRow}>
-              <Icon source="water" size={14} color="#666" />
-              <Text style={styles.detailLabel}>Hydro Remarks:</Text>
-              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+              <Icon source="water" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
                 {hydrotestRemarks}
               </Text>
             </View>
@@ -383,9 +383,9 @@ export default function FirefighterGearsScreen() {
 
           {specialisedCleaningRemarks && (
             <View style={styles.detailRow}>
-              <Icon source="brush" size={14} color="#666" />
-              <Text style={styles.detailLabel}>Cleaning Remarks:</Text>
-              <Text style={[styles.detailValue, styles.remarksText]} numberOfLines={2}>
+              <Icon source="brush" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cleaning Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
                 {specialisedCleaningRemarks}
               </Text>
             </View>
@@ -465,31 +465,31 @@ export default function FirefighterGearsScreen() {
                 {/* Gear Details */}
                 <View style={styles.gearDetails}>
                   <View style={styles.detailRow}>
-                    <Icon source="barcode" size={14} color="#666" />
-                    <Text style={styles.detailLabel}>Serial:</Text>
-                    <Text style={styles.detailValue}>{serialNumber}</Text>
+                    <Icon source="barcode" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Serial:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{serialNumber}</Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Icon source="tag-outline" size={14} color="#666" />
-                    <Text style={styles.detailLabel}>Type:</Text>
-                    <Text style={[styles.detailValue]} numberOfLines={1}>
+                    <Icon source="tag-outline" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Type:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
                       {displayTypeOrName}
                     </Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Icon source="factory" size={14} color="#666" />
-                    <Text style={styles.detailLabel}>Manufacturer:</Text>
-                    <Text style={[styles.detailValue]} numberOfLines={1}>
+                    <Icon source="factory" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Manufacturer:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
                       {manufacturerName}
                     </Text>
                   </View>
 
                   <View style={styles.detailRow}>
-                    <Icon source="ruler" size={14} color="#666" />
-                    <Text style={styles.detailLabel}>Size:</Text>
-                    <Text style={styles.detailValue}>{gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A'}</Text>
+                    <Icon source="ruler" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Size:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A'}</Text>
                   </View>
                 </View>
 
@@ -835,21 +835,19 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: p(11),
-    color: '#666',
     marginLeft: p(6),
     marginRight: p(4),
-    fontWeight: '500',
+    fontWeight: '600',
   },
   detailValue: {
     fontSize: p(11),
-    color: '#333',
     flex: 1,
     flexWrap: 'wrap',
+    fontWeight: '500',
   },
   remarksText: {
     fontSize: p(10),
     fontStyle: 'italic',
-    color: '#555',
   },
   findingText: {
     color: '#d32f2f',

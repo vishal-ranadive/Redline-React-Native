@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
-import { Text, Card, Icon, useTheme, Portal, Dialog, TextInput, DataTable, Button } from 'react-native-paper';
+import { Text, Card, Icon, useTheme, Portal, Dialog, TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
+import Pagination from '../../components/common/Pagination';
 
 type ApiLoad = {
   load_number: number;
@@ -259,19 +260,20 @@ export default function LoadsScreen() {
       )}
 
       {/* Pagination at Bottom */}
-      <View style={styles.paginationContainer}>
-        <DataTable.Pagination
+      {filteredLoads.length > 0 && (
+        <Pagination
           page={page}
-          numberOfPages={Math.ceil(filteredLoads.length / numberOfItemsPerPage)}
-          onPageChange={page => setPage(page)}
-          label={`${from + 1}-${to} of ${filteredLoads.length}`}
-          showFastPaginationControls
-          numberOfItemsPerPageList={numberOfItemsPerPageList}
-          numberOfItemsPerPage={numberOfItemsPerPage}
+          total={filteredLoads.length}
+          itemsPerPage={numberOfItemsPerPage}
+          itemsPerPageList={numberOfItemsPerPageList}
+          onPageChange={setPage}
           onItemsPerPageChange={setNumberOfItemsPerPage}
-          selectPageDropdownLabel={'Rows per page'}
+          containerStyle={[
+            styles.paginationContainer,
+            isMobile && styles.paginationContainerMobile,
+          ]}
         />
-      </View>
+      )}
 
       {/* Add Load Dialog */}
       <Portal>
@@ -330,12 +332,12 @@ const styles = StyleSheet.create({
   },
   paginationContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: p(50), // Push above bottom nav bar
     left: 0,
     right: 0,
-    backgroundColor: '#f5f5f5',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  },
+  paginationContainerMobile: {
+    paddingHorizontal: p(8),
   },
   loadCard: {
     borderRadius: p(16),

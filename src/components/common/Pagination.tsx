@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import {
   Text,
-  Button,
   useTheme,
   IconButton,
-  Menu,
+  Surface,
 } from 'react-native-paper';
 
 // Responsive utility placeholder
@@ -84,38 +83,80 @@ const Pagination: React.FC<PaginationProps> = ({
 
         {/* Page Size Dropdown */}
         {onItemsPerPageChange && (
-          <Menu
-            visible={pageSizeMenuVisible}
-            onDismiss={() => setPageSizeMenuVisible(false)}
-            anchor={
-              <Button
-                mode="outlined"
-                onPress={() => setPageSizeMenuVisible(true)}
-                style={styles.pageSizeButton}
-                contentStyle={styles.pageSizeButtonContent}
-                labelStyle={[styles.pageSizeLabel, { color: colors.onSurface }]}
-                icon="chevron-down"
-              >
+          <View>
+            <TouchableOpacity
+              onPress={() => setPageSizeMenuVisible(true)}
+              style={[
+                styles.pageSizeButton,
+                { 
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                }
+              ]}
+            >
+              <Text style={[styles.pageSizeLabel, { color: colors.onSurface }]}>
                 {itemsPerPage}
-              </Button>
-            }
-            contentStyle={[
-              styles.pageSizeMenu,
-              { backgroundColor: colors.surface }
-            ]}
-          >
-            {itemsPerPageList.map((size) => (
-              <Menu.Item
-                key={size}
-                onPress={() => handlePageSizeChange(size)}
-                title={size.toString()}
-                titleStyle={[
-                  styles.pageSizeMenuItem,
-                  { color: itemsPerPage === size ? colors.primary : colors.onSurface },
-                ]}
+              </Text>
+              <IconButton
+                icon="chevron-down"
+                size={16}
+                iconColor={colors.onSurface}
+                style={styles.dropdownIcon}
               />
-            ))}
-          </Menu>
+            </TouchableOpacity>
+
+            {/* Custom Dropdown Modal */}
+            <Modal
+              visible={pageSizeMenuVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setPageSizeMenuVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setPageSizeMenuVisible(false)}
+              >
+                <View style={styles.dropdownContainer}>
+                  <Surface
+                    style={[
+                      styles.dropdownMenu,
+                      { backgroundColor: colors.surface }
+                    ]}
+                    elevation={4}
+                  >
+                    <Text style={[styles.dropdownTitle, { color: colors.onSurfaceVariant }]}>
+                      Items per page
+                    </Text>
+                    {itemsPerPageList.map((size) => (
+                      <TouchableOpacity
+                        key={size}
+                        onPress={() => handlePageSizeChange(size)}
+                        style={[
+                          styles.dropdownItem,
+                          itemsPerPage === size && {
+                            backgroundColor: colors.primaryContainer,
+                          }
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownItemText,
+                            {
+                              color: itemsPerPage === size ? colors.primary : colors.onSurface,
+                              fontWeight: itemsPerPage === size ? '600' : '400',
+                            }
+                          ]}
+                        >
+                          {size}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </Surface>
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          </View>
         )}
 
         {/* Pagination Text */}
@@ -169,20 +210,51 @@ const styles = StyleSheet.create({
     marginHorizontal: p(8),
   },
   pageSizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: p(4),
     minWidth: p(60),
-  },
-  pageSizeButtonContent: {
     paddingHorizontal: p(8),
+    paddingVertical: p(4),
+    borderRadius: p(8),
+    borderWidth: 1,
   },
   pageSizeLabel: {
     fontSize: p(14),
+    fontWeight: '500',
   },
-  pageSizeMenu: {
-    // backgroundColor is set dynamically based on theme
+  dropdownIcon: {
+    margin: 0,
+    marginLeft: p(-4),
   },
-  pageSizeMenuItem: {
-    fontSize: p(14),
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownContainer: {
+    minWidth: p(160),
+  },
+  dropdownMenu: {
+    borderRadius: p(12),
+    paddingVertical: p(8),
+    overflow: 'hidden',
+  },
+  dropdownTitle: {
+    fontSize: p(12),
+    fontWeight: '600',
+    paddingHorizontal: p(16),
+    paddingVertical: p(8),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dropdownItem: {
+    paddingHorizontal: p(16),
+    paddingVertical: p(12),
+  },
+  dropdownItemText: {
+    fontSize: p(16),
   },
 });
 
