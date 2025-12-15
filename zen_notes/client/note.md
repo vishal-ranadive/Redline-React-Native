@@ -149,3 +149,67 @@ Android + ios
 - Display: Two input boxes side by side with "X" in between
 - Storage: Combines as "100-200" when saving to backend
 - Loading: Splits "100-200" back into two separate fields when loading existing data
+
+6. For Gear images 
+- Using dummy but related for now we will add once ca
+
+=================================
+# 15-12-2025
+what's not wokring on iphone  
+
+[HIGH]
+# Update inspection page 
+- camera functionality to capture images and save them 
+- captured images and annoted images upload in s3 
+- when click on mic functionality the app got crashed 
+- gear findings increase size of line to avoid errorness selection 
+- Add checkbox in gear findings 
+- Roster unassigned on Inspection details page 
+
+# Dark Mode 
+- Firefighter Inpsection screen : 
+- Gear categories needs to fix colors are very light 
+- Gear cards  same icons needs to light as well 
+- PPE report : not entirely shows dark 
+- View inspection > firefighter > gear card fix 
+- View inspection > pagination fix > gear card fix 
+# Firefighter screen 
+- Allow users to proceed with entering gear without entering firefighter 
+- Add options for spare
+
+
+# Add new gear 
+- combine month and year menus into one 
+- [iOS] selected date does not reflectly accurately 
+
+[MEDIUM]
+- Status color coded  
+- Pass - green | Attention - yellow | Repair - blue | Expired- yellow | oos - red 
+
+
+[Needs Backend developer think with me ]
+[High]
+# update inspection screen 
+- uploaded images don't have access 
+# Add new gear 
+- Gear type should show these categories  
+- current gear type filed will be changed  to gear items and should not affect by this 
+
+# Login screen 
+- [iqbal]refresh token endpoint and guide to how to hit 
+
+# Lead Detail Page
+- Search on ipad Redline Gear screen is not searching correctly. Screenshot attached. Search for 1000 still all results will be displayed. Searching on frontend but need to work on backend as well 
+- pagination dropdown sometimes failes need to change it 
+
+# Leads screen 
+- Full Address is not displayed on Gear screen – city, state 
+    [Doubts]
+    - @mitesh & @akhil 
+    - Steves wants to pull service appointment type from oddo to replace job#
+    - EXP : Add functionality of copying  info for another gear entry (seri no , mfg,  date)
+    - 
+# PPE Report - insufficiant data 
+- we are not getting any inspection details currently this are just gear details and status 
+Can you please Mitesh Modha
+https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread.v2/1765534868079?context=%7B%22contextType%22%3A%22chat%22%7D

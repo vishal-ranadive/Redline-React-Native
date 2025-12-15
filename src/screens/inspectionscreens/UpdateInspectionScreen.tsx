@@ -49,10 +49,12 @@ import { inspectionApi } from '../../services/inspectionApi';
 import LoadPicker from '../../components/common/LoadPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InspectionFormSkeleton from '../skeleton/InspectionFormSkeleton';
+import { imageUploadApi } from '../../services/imageUploadApi';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
-// Default images for inspection (fallback)
+// COMMENTED OUT: Default images for inspection (fallback) - kept for potential future use
+/*
 const DEFAULT_IMAGES = [
   "https://5.imimg.com/data5/SELLER/Default/2022/5/LR/RI/XM/85900029/firefighter-safety-jacket-1000x1000.jpg",
   "https://5.imimg.com/data5/UU/UU/GLADMIN-/firefighter-jacket-250x250.jpg",
@@ -70,7 +72,6 @@ const GEAR_TYPE_IMAGES: { [key: string]: string[] } = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFDCux32MFLBioGWbYdOiDfJoCV4sko1-sSQ&s',
-
   ],
   'boots': [
     'https://www.hacsons.com/wp-content/uploads/2024/08/image-3-1.png',
@@ -96,7 +97,6 @@ const GEAR_TYPE_IMAGES: { [key: string]: string[] } = {
     'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
     'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
     'https://i.ebayimg.com/images/g/GiwAAOSw2OJh5tzf/s-l1600.jpg',
-
   ],
   'mask': [
     'https://multimedia.3m.com/mws/media/1927020O/3m-scott-av-3000-ht-facepiece-600x600p.jpg',
@@ -124,40 +124,35 @@ const GEAR_TYPE_IMAGES: { [key: string]: string[] } = {
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoNPxNoeS-CxmnYP81-KeCeqYfOH-4xIoLag&s'
   ]
 };
+*/
 
-/**
- * Normalize gear type name for matching
- * Handles variations like "JACKET LINER", "jacket linder", "Fire Jacket", etc.
- */
+// COMMENTED OUT: Normalize gear type name for matching - kept for potential future use
+/*
 const normalizeGearType = (gearType: string): string => {
   if (!gearType) return 'default';
   
-  // Convert to lowercase and trim
   const normalized = gearType.toLowerCase().trim();
   
-  // Handle common variations
   const variations: { [key: string]: string } = {
     'fire jacket': 'jacket',
     'jacket liner': 'jacket liner',
-    'jacket linder': 'jacket liner', // typo fix
-    'jacketliner': 'jacket liner', // no space
+    'jacket linder': 'jacket liner',
+    'jacketliner': 'jacket liner',
     'fire gloves': 'gloves',
     'fire boots': 'boots',
     'fire axe': 'axe',
     'fire hose': 'hose',
     'protective pants': 'pants',
     'pants liner': 'pants liner',
-    'pantsliner': 'pants liner', // no space
+    'pantsliner': 'pants liner',
     'respirator': 'mask',
     'thermal imaging camera': 'default',
   };
   
-  // Check for exact match in variations
   if (variations[normalized]) {
     return variations[normalized];
   }
   
-  // Check if gear type contains key words
   if (normalized.includes('helmet')) return 'helmet';
   if (normalized.includes('glove')) return 'gloves';
   if (normalized.includes('boot')) return 'boots';
@@ -173,9 +168,6 @@ const normalizeGearType = (gearType: string): string => {
   return 'default';
 };
 
-/**
- * Get default images for a gear type
- */
 const getDefaultImagesForGearType = (gearType: string | null | undefined): string[] => {
   if (!gearType) {
     return GEAR_TYPE_IMAGES['default'];
@@ -184,6 +176,7 @@ const getDefaultImagesForGearType = (gearType: string | null | undefined): strin
   const normalized = normalizeGearType(gearType);
   return GEAR_TYPE_IMAGES[normalized] || GEAR_TYPE_IMAGES['default'];
 };
+*/
 
 // Removed hardcoded HYDRO_TEST_GEAR_TYPES - now using API data
 
@@ -281,14 +274,20 @@ export default function UpdateInspectionScreen() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isColorLocked, setIsColorLocked] = useState(colorLocked || false);
   
-  // Images state
-  const [images, setImages] = useState<string[]>(DEFAULT_IMAGES);
+  // Images state - Now dynamic with upload support
+  // Track images with unique IDs to handle duplicate URLs
+  const [images, setImages] = useState<Array<{ id: string; uri: string }>>([]);
+  const [deletedImages, setDeletedImages] = useState<Array<{ id: string; uri: string }>>([]);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [imageEditorVisible, setImageEditorVisible] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string>('');
+  
+  // Image upload state
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, percentage: 0 });
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -386,30 +385,22 @@ export default function UpdateInspectionScreen() {
     }
   }, [gear, inspectionId]);
 
-  // Load gear findings and images
+  // Load gear findings
   useEffect(() => {
-    const loadFindingsAndImage = async () => {
+    const loadFindings = async () => {
       if (!gear) return;
 
       await fetchGearFindings(gear.gear_type.gear_type_id);
 
-      // For new inspections (no inspectionId), set gear-type-specific default images
-      if (!inspectionId) {
-        const gearTypeName = gear.gear_type?.gear_type || gear.gear_name || '';
-        const defaultImages = getDefaultImagesForGearType(gearTypeName);
-        
-        // If gear has a custom image URL, use it as the first image, otherwise use all defaults
-        if (gear.gear_image_url) {
-          setImages([gear.gear_image_url, ...defaultImages.slice(0, 2)]);
-        } else {
-          setImages(defaultImages);
-        }
-        
-        console.log(`Initialized images for gear type: "${gearTypeName}"`, defaultImages);
+      // For new inspections, initialize with empty images (user will add their own)
+      // Or optionally use gear's image if available
+      if (!inspectionId && gear.gear_image_url) {
+        setImages([{ id: `gear-${Date.now()}`, uri: gear.gear_image_url }]);
+        console.log('Initialized with gear image:', gear.gear_image_url);
       }
     };
 
-    loadFindingsAndImage();
+    loadFindings();
   }, [gear, inspectionId]);
 
   // Fetch inspection data when inspectionId is available
@@ -506,7 +497,10 @@ export default function UpdateInspectionScreen() {
 
           // Set images from inspection data
           if (inspectionData.inspection_images && inspectionData.inspection_images.length > 0) {
-            setImages(inspectionData.inspection_images);
+            setImages(inspectionData.inspection_images.map((uri: string, index: number) => ({
+              id: `inspection-${inspectionId}-${index}`,
+              uri: uri
+            })));
           }
 
           // Set gear data if not already set
@@ -718,10 +712,10 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   const handleImageEditorSave = (editedImageUri: string) => {
     // Replace the original image with the edited one
     setImages(prev => {
-      const index = prev.findIndex(img => img === imageToEdit);
+      const index = prev.findIndex(img => img.uri === imageToEdit);
       if (index !== -1) {
         const newImages = [...prev];
-        newImages[index] = editedImageUri;
+        newImages[index] = { ...newImages[index], uri: editedImageUri };
         return newImages;
       }
       return prev;
@@ -735,7 +729,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   };
 
   const handleCameraCaptured = (uri: string) => {
-    setImages(prev => [...prev, uri]);
+    setImages(prev => [...prev, { id: `camera-${Date.now()}`, uri }]);
   };
 
   const handlePickFromGallery = async () => {
@@ -752,14 +746,34 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
       const uri = response.assets?.[0]?.uri;
       if (uri) {
-        setImages(prev => [...prev, uri]);
+        setImages(prev => [...prev, { id: `gallery-${Date.now()}`, uri }]);
       }
     } catch (error) {
       Alert.alert('Image picker error', 'Unable to select image from gallery.');
     }
   };
 
-  // Save inspection data
+  // Remove image by ID (soft delete - move to deleted array)
+  const handleRemoveImage = (imageId: string) => {
+    const imageToRemove = images.find(img => img.id === imageId);
+    if (imageToRemove) {
+      setImages(prev => prev.filter(img => img.id !== imageId));
+      setDeletedImages(prev => [...prev, imageToRemove]);
+      console.log('Image marked for deletion:', imageToRemove.uri);
+    }
+  };
+
+  // Restore a deleted image by ID
+  const handleRestoreImage = (imageId: string) => {
+    const imageToRestore = deletedImages.find(img => img.id === imageId);
+    if (imageToRestore) {
+      setDeletedImages(prev => prev.filter(img => img.id !== imageId));
+      setImages(prev => [...prev, imageToRestore]);
+      console.log('Image restored:', imageToRestore.uri);
+    }
+  };
+
+  // Save inspection data with image upload
   const saveChanges = async () => {
     if (!gear) {
       Alert.alert('Error', 'No gear data available');
@@ -773,6 +787,58 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     });
 
     try {
+      setUploadingImages(true);
+      
+      // Step 1: Upload new images (local file URIs)
+      const localImages = images.filter(img => 
+        img.uri.startsWith('file://') || img.uri.startsWith('content://')
+      ).map(img => img.uri);
+      
+      const alreadyUploadedImages = images.filter(img => 
+        img.uri.startsWith('http://') || img.uri.startsWith('https://')
+      ).map(img => img.uri);
+
+      let uploadedImageUrls: string[] = [...alreadyUploadedImages];
+
+      if (localImages.length > 0) {
+        console.log(`📤 Uploading ${localImages.length} new images...`);
+        
+        const uploadResults = await imageUploadApi.uploadMultipleImages(
+          localImages,
+          gear.gear_id,
+          (current, total, progress) => {
+            setUploadProgress({
+              current,
+              total,
+              percentage: progress.percentage
+            });
+            console.log(`Uploading image ${current}/${total} - ${progress.percentage}%`);
+          }
+        );
+
+        // Collect successfully uploaded image URLs
+        uploadResults.forEach((result, index) => {
+          if (result.status && result.data?.url) {
+            uploadedImageUrls.push(result.data.url);
+            console.log(`✅ Image ${index + 1} uploaded:`, result.data.url);
+          } else {
+            console.error(`❌ Failed to upload image ${index + 1}:`, result.message);
+            Alert.alert('Upload Warning', `Failed to upload image ${index + 1}: ${result.message}`);
+          }
+        });
+
+        if (uploadedImageUrls.length === 0) {
+          Alert.alert('Upload Error', 'No images were uploaded successfully. Please try again.');
+          setUploadingImages(false);
+          return;
+        }
+      }
+
+      console.log('📷 Final image URLs to save:', uploadedImageUrls);
+      
+      setUploadingImages(false);
+
+      // Step 2: Prepare inspection data
       // Get the correct status ID from API data
       const gearStatusId = mapStatusToId(formData.status);
       console.log("Using gear_status_id:", gearStatusId);
@@ -780,36 +846,6 @@ const handleFieldChange = useCallback((field: string, value: any) => {
       // Auto-set repairNeeded and cost for repair-related statuses
       const isRepairStatus = formData.status === 'REPAIR' || formData.status === 'CORRECTIVE_ACTION_REQUIRED';
       const inspectionCost = isRepairStatus ? parseFloat(formData.cost) || 0 : 0;
-
-      // Determine which images to use
-      // If images array is empty or only has default placeholders, use gear-type-specific defaults
-      let imagesToSave = images;
-      
-      // Check if we need to populate default images
-      // If images array is empty, or if all images are from DEFAULT_IMAGES (old placeholders)
-      const isEmpty = images.length === 0;
-      
-      // Check if all images are from the old DEFAULT_IMAGES array (placeholders)
-      // Valid images would be: local file:// URIs (from camera/gallery) or custom URLs
-      const onlyHasDefaults = images.length > 0 && images.every(img => {
-        if (!img || img.trim() === '') return true;
-        // If it's a local file, it's valid (user added it)
-        if (img.startsWith('file://') || img.startsWith('content://')) return false;
-        // If it's in DEFAULT_IMAGES, it's a placeholder
-        if (DEFAULT_IMAGES.includes(img)) return true;
-        // Otherwise, assume it's a valid custom image
-        return false;
-      });
-
-      // If no valid images, populate with gear-type-specific defaults
-      if (isEmpty || onlyHasDefaults) {
-        const gearTypeName = gear?.gear_type?.gear_type || gear?.gear_name || '';
-        const defaultImages = getDefaultImagesForGearType(gearTypeName);
-        imagesToSave = defaultImages;
-        console.log(`Using default images for gear type: "${gearTypeName}"`, defaultImages);
-      } else {
-        console.log('Using provided images:', images);
-      }
 
       // Combine size1 and size2 with hyphen
       const combinedSize = formData.size1 && formData.size2 
@@ -835,7 +871,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         
         inspection_cost: inspectionCost,
         
-        inspection_image_url: imagesToSave,
+        inspection_image_url: uploadedImageUrls,
         remarks: formData.remarks,
         
         load_number: parseInt(formData.selectedLoad),
@@ -850,25 +886,26 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
       console.log('Inspection Data:', inspectionData);
 
-      if(true){
-              let response;
-          if (mode === 'create') {
-            response = await inspectionApi.createGearInspection(inspectionData);
-          } else {
-            response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
-          }
-
-          if (response.status) {
-            Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
-            // Go back to the previous screen (wherever we came from)
-            navigation.goBack();
-          } else {
-            Alert.alert('Error', response.message || 'Failed to save inspection');
-          }
-
-          console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response);
+      // Step 3: Create or update inspection
+      let response;
+      if (mode === 'create') {
+        response = await inspectionApi.createGearInspection(inspectionData);
+      } else {
+        response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
       }
+
+      if (response.status) {
+        Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+        // Go back to the previous screen (wherever we came from)
+        navigation.goBack();
+      } else {
+        Alert.alert('Error', response.message || 'Failed to save inspection');
+      }
+
+      console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response);
     } catch (error: any) {
+      setUploadingImages(false);
+      console.error('❌ Error saving inspection:', error);
       Alert.alert('Error', error.message || 'Network error');
     }
   };
@@ -1194,19 +1231,34 @@ const handleFieldChange = useCallback((field: string, value: any) => {
             {/* Gear Images */}
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+              
+              {/* Active Images */}
               <View style={styles.imagesContainer}>
-                {images.map((imageUri, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.imageBox}
-                    onPress={() => handleImagePress(imageUri)}
-                  >
-                    <Image 
-                      source={{ uri: imageUri }} 
-                      style={styles.previewImage}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
+                {images.map((image) => (
+                  <View key={image.id} style={styles.imageWrapper}>
+                    <TouchableOpacity 
+                      style={styles.imageBox}
+                      onPress={() => handleImagePress(image.uri)}
+                    >
+                      <Image 
+                        source={{ uri: image.uri }} 
+                        style={styles.previewImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                    {/* Remove Button */}
+                    <TouchableOpacity
+                      style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                      onPress={() => handleRemoveImage(image.id)}
+                    >
+                      <IconButton
+                        icon="close"
+                        size={16}
+                        iconColor="#fff"
+                        style={styles.removeIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 ))}
                 <TouchableOpacity 
                   style={[styles.imageBox, styles.addImageBox]}
@@ -1216,6 +1268,41 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                   <Text style={styles.addImageLabel}>Add Image</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Deleted Images - Show with Restore Option */}
+              {deletedImages.length > 0 && (
+                <View style={styles.deletedImagesSection}>
+                  <Divider style={{ marginVertical: 12 }} />
+                  <Text style={[styles.deletedImagesTitle, { color: colors.onSurfaceVariant }]}>
+                    Recently Deleted ({deletedImages.length})
+                  </Text>
+                  <View style={styles.imagesContainer}>
+                    {deletedImages.map((image) => (
+                      <View key={image.id} style={styles.imageWrapper}>
+                        <View style={styles.imageBox}>
+                          <Image 
+                            source={{ uri: image.uri }} 
+                            style={styles.previewImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                        {/* Restore Button */}
+                        <TouchableOpacity
+                          style={[styles.restoreImageButton, { backgroundColor: colors.primary }]}
+                          onPress={() => handleRestoreImage(image.id)}
+                        >
+                          <IconButton
+                            icon="restore"
+                            size={16}
+                            iconColor="#fff"
+                            style={styles.removeIcon}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Status and Remarks - Combined Section */}
@@ -1472,19 +1559,34 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                 )}
 
                 <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Gear Images</Text>
+                
+                {/* Active Images */}
                 <View style={styles.imagesContainer}>
-                  {images.map((imageUri, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      style={styles.imageBox}
-                      onPress={() => handleImagePress(imageUri)}
-                    >
-                      <Image 
-                        source={{ uri: imageUri }} 
-                        style={styles.previewImage}
-                        resizeMode="cover"
-                      />
-                    </TouchableOpacity>
+                  {images.map((image) => (
+                    <View key={image.id} style={styles.imageWrapper}>
+                      <TouchableOpacity 
+                        style={styles.imageBox}
+                        onPress={() => handleImagePress(image.uri)}
+                      >
+                        <Image 
+                          source={{ uri: image.uri }} 
+                          style={styles.previewImage}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                      {/* Remove Button */}
+                      <TouchableOpacity
+                        style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                        onPress={() => handleRemoveImage(image.id)}
+                      >
+                        <IconButton
+                          icon="close"
+                          size={16}
+                          iconColor="#fff"
+                          style={styles.removeIcon}
+                        />
+                      </TouchableOpacity>
+                    </View>
                   ))}
                   <TouchableOpacity 
                     style={[styles.imageBox, styles.addImageBox]}
@@ -1494,8 +1596,58 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                     <Text style={styles.addImageLabel}>Add Image</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Deleted Images - Show with Restore Option */}
+                {deletedImages.length > 0 && (
+                  <View style={styles.deletedImagesSection}>
+                    <Divider style={{ marginVertical: 12 }} />
+                    <Text style={[styles.deletedImagesTitle, { color: colors.onSurfaceVariant }]}>
+                      Recently Deleted ({deletedImages.length})
+                    </Text>
+                    <View style={styles.imagesContainer}>
+                      {deletedImages.map((image) => (
+                        <View key={image.id} style={styles.imageWrapper}>
+                          <View style={styles.imageBox}>
+                            <Image 
+                              source={{ uri: image.uri }} 
+                              style={styles.previewImage}
+                              resizeMode="cover"
+                            />
+                          </View>
+                          {/* Restore Button */}
+                          <TouchableOpacity
+                            style={[styles.restoreImageButton, { backgroundColor: colors.primary }]}
+                            onPress={() => handleRestoreImage(image.id)}
+                          >
+                            <IconButton
+                              icon="restore"
+                              size={16}
+                              iconColor="#fff"
+                              style={styles.removeIcon}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
+          </View>
+        )}
+
+        {/* Upload Progress Indicator */}
+        {uploadingImages && (
+          <View style={[styles.uploadProgressContainer, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.uploadProgressText, { color: colors.onSurface }]}>
+              Uploading Images {uploadProgress.current > 0 ? `(${uploadProgress.current}/${uploadProgress.total})` : '...'}
+            </Text>
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+            {uploadProgress.percentage > 0 && (
+              <Text style={[styles.uploadProgressPercentage, { color: colors.onSurfaceVariant }]}>
+                {uploadProgress.percentage}%
+              </Text>
+            )}
           </View>
         )}
 
@@ -1505,14 +1657,17 @@ const handleFieldChange = useCallback((field: string, value: any) => {
             mode="outlined" 
             onPress={() => navigation.goBack()} 
             style={{ marginRight: 12 }}
+            disabled={uploadingImages}
           >
             Cancel
           </Button>
           <Button 
             mode="contained" 
             onPress={saveChanges}
+            loading={uploadingImages}
+            disabled={uploadingImages}
           >
-            {saveButtonText}
+            {uploadingImages ? 'Uploading...' : saveButtonText}
           </Button>
         </View>
       </ScrollView>
@@ -1807,6 +1962,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  imageWrapper: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
   imageBox: {
     width: 80,
     height: 80,
@@ -1820,6 +1980,25 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  removeIcon: {
+    margin: 0,
+    padding: 0,
   },
   
   addImageBox: {
@@ -1839,6 +2018,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#666',
     textAlign: 'center',
+  },
+
+  // Deleted Images styles
+  deletedImagesSection: {
+    marginTop: 16,
+  },
+  deletedImagesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  restoreImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+
+  // Upload Progress styles
+  uploadProgressContainer: {
+    marginHorizontal: 14,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  uploadProgressText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  uploadProgressPercentage: {
+    fontSize: 12,
+    marginTop: 4,
   },
 
   // Modal styles
