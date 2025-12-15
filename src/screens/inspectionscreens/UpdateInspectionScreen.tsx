@@ -273,6 +273,8 @@ export default function UpdateInspectionScreen() {
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isColorLocked, setIsColorLocked] = useState(colorLocked || false);
+  const [usedColors, setUsedColors] = useState<string[]>([]);
+  const [loadingUsedColors, setLoadingUsedColors] = useState<boolean>(false);
   
   // Images state - Now dynamic with upload support
   // Track images with unique IDs to handle duplicate URLs
@@ -702,6 +704,48 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   });
 }, []);
 
+  // Fetch used colors from other rosters
+  const fetchUsedColors = useCallback(async () => {
+    if (!currentLead?.lead_id) {
+      setUsedColors([]);
+      return;
+    }
+
+    try {
+      setLoadingUsedColors(true);
+      const response = await inspectionApi.getInspectionRosters(currentLead.lead_id);
+      const rosters = Array.isArray(response?.roster) ? response.roster : [];
+      
+      // Extract tag colors from rosters, excluding current firefighter and null values
+      const usedColorsList = rosters
+        .filter((roster: any) => {
+          // Exclude current firefighter's roster
+          if (resolvedRosterId) {
+            return roster.id !== resolvedRosterId && roster.tag_color;
+          }
+          return roster.tag_color;
+        })
+        .map((roster: any) => roster.tag_color.toLowerCase().trim())
+        .filter((color: string) => color); // Remove empty strings
+
+      // Remove duplicates
+      const uniqueUsedColors: string[] = Array.from(new Set(usedColorsList)) as string[];
+      setUsedColors(uniqueUsedColors);
+    } catch (error) {
+      console.error('Error fetching used colors:', error);
+      setUsedColors([]);
+    } finally {
+      setLoadingUsedColors(false);
+    }
+  }, [currentLead?.lead_id, resolvedRosterId]);
+
+  // Fetch used colors when color picker opens
+  useEffect(() => {
+    if (colorPickerVisible && !isColorLocked) {
+      fetchUsedColors();
+    }
+  }, [colorPickerVisible, isColorLocked, fetchUsedColors]);
+
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
     // Open image editor instead of just preview
@@ -1010,7 +1054,11 @@ const handleFieldChange = useCallback((field: string, value: any) => {
             navigation.navigate('GearDetail', { gear_id: gear.gear_id });
           }
         }}
-        onColorPickerOpen={() => setColorPickerVisible(true)}
+        onColorPickerOpen={() => {
+          if (!isColorLocked) {
+            setColorPickerVisible(true);
+          }
+        }}
         mode={mode}
       />
 
@@ -1686,7 +1734,14 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         visible={colorPickerVisible}
         onClose={() => setColorPickerVisible(false)}
         selectedColor={formData.selectedColor}
-        onColorSelect={(color) => handleFieldChange('selectedColor', color)}
+        onColorSelect={(color) => {
+          const normalizedColor = color?.toLowerCase().trim() || '';
+          handleFieldChange('selectedColor', normalizedColor);
+          // Save to AsyncStorage immediately
+          AsyncStorage.setItem(TAG_COLOR_STORAGE_KEY, normalizedColor);
+          setColorPickerVisible(false);
+        }}
+        usedColors={usedColors}
       />
 
       {/* Image Source Picker Modal */}
