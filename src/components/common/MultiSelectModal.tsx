@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import { Text, IconButton, Button, useTheme } from 'react-native-paper';
+import { Text, IconButton, Button, useTheme, Checkbox } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface MultiSelectOption {
@@ -76,6 +76,12 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
               ]}
               onPress={() => toggleSelection(option.value)}
             >
+              <Checkbox
+                status={selectedValues.includes(option.value) ? 'checked' : 'unchecked'}
+                onPress={() => toggleSelection(option.value)}
+                color="#E53935"
+                uncheckedColor="#E53935"
+              />
               <Text
                 style={[
                   styles.multiSelectOptionText,
@@ -88,13 +94,6 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
               >
                 {option.label}
               </Text>
-              {selectedValues.includes(option.value) && (
-                <IconButton
-                  icon="check-circle"
-                  size={20}
-                  iconColor={colors.primary}
-                />
-              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -138,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 16,
     borderBottomWidth: 1,
   },
   multiSelectOptionText: {
