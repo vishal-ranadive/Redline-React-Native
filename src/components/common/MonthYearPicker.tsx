@@ -60,6 +60,18 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
     return { year, month: month - 1 };
   }, [value]);
 
+  // Format the date in local timezone to avoid iOS timezone issues
+  const formatMonthYear = (dateValue: string): string => {
+    const [year, month] = dateValue.split('-').map(Number);
+    // Using new Date(year, month, day) creates date in LOCAL timezone
+    // This prevents iOS from interpreting it as UTC and shifting timezones
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   const years = useMemo(() => {
     const yearsArray: number[] = [];
     for (let year = endYear; year >= startYear; year -= 1) {
@@ -163,12 +175,7 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
         ]}
         icon="calendar"
       >
-        {value
-          ? new Date(`${value}-01`).toLocaleDateString(undefined, {
-              month: 'short',
-              year: 'numeric',
-            })
-          : placeholder}
+        {value ? formatMonthYear(value) : placeholder}
       </Button>
 
       <Modal transparent visible={visible} animationType="fade" onRequestClose={closeModal}>
