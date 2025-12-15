@@ -753,6 +753,10 @@ const handleGearPress = (gear: any) => {
       const serialNumber = gearDetail?.serial_number || 'N/A';
       const manufacturerName = gearDetail?.manufacturer?.manufacturer_name || 'N/A';
       const gearSize = gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A';
+      
+      // Get inspection images
+      const inspectionImages = gear.current_inspection?.inspection_images || [];
+      const hasImages = inspectionImages.length > 0;
 
       return (
         <View style={[styles.cardWrapper, { width: isTablet ? '48%' : '100%' }]}>
@@ -791,14 +795,33 @@ const handleGearPress = (gear: any) => {
                   )}
                 </View>
 
-                {/* Gear Image */}
-                <View style={styles.gearImageContainer}>
-                  <Image 
-                    source={{ uri: getGearImageUrl(gearTypeName) }} 
-                    style={styles.gearImage}
-                    resizeMode="cover"
-                  />
-                </View>
+                {/* Gear Images - 3 Column Grid or Default Image */}
+                {hasImages ? (
+                  <View style={styles.inspectionImagesContainer}>
+                    {inspectionImages.slice(0, 6).map((imageUri: string, index: number) => (
+                      <View key={index} style={styles.inspectionImageBox}>
+                        <Image 
+                          source={{ uri: imageUri }} 
+                          style={styles.inspectionImage}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ))}
+                    {inspectionImages.length > 6 && (
+                      <View style={[styles.inspectionImageBox, styles.moreImagesBox]}>
+                        <Text style={styles.moreImagesText}>+{inspectionImages.length - 6}</Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.gearImageContainer}>
+                    <Image 
+                      source={{ uri: getGearImageUrl(gearTypeName) }} 
+                      style={styles.gearImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
 
                 {/* Gear Details */}
                 <View style={styles.gearDetails}>
@@ -1670,6 +1693,34 @@ const styles = StyleSheet.create({
   gearEmoji: {
     fontSize: p(64),
     textAlign: 'center',
+  },
+  inspectionImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginBottom: p(8),
+    gap: p(4),
+  },
+  inspectionImageBox: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: p(6),
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  inspectionImage: {
+    width: '100%',
+    height: '100%',
+  },
+  moreImagesBox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  moreImagesText: {
+    color: '#fff',
+    fontSize: p(18),
+    fontWeight: 'bold',
   },
   gearDetails: {
     marginBottom: p(10),

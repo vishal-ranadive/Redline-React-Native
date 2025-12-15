@@ -212,4 +212,13 @@ what's not wokring on iphone
 # PPE Report - insufficiant data 
 - we are not getting any inspection details currently this are just gear details and status 
 Can you please Mitesh Modha
-https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread.v2/1765534868079?context=%7B%22contextType%22%3A%22chat%22%7D
+https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread.v2/1765534868079?context=%7B%22contextType%22%3A%22chat%22%
+
+
+# ✅ API Response GET /gear-inspections/loadwise/ 
+- we don't have the inspection_images here 
+
+
+# I-Phone 
+- Date selection in for Add new gear > manufacture date 
+- Date selection on leads screen (Landing screen)
