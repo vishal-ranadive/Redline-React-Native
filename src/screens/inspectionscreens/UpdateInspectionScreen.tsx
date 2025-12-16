@@ -609,21 +609,27 @@ const getServiceTypeValue = (serviceType: string) => {
       return INSPECTION_CONSTANTS.STATUS_OPTIONS;
     }
 
-    // Map API status to UI options with colors
-    const statusColorMap: { [key: string]: string } = {
-      'Pass': '#34A853',
-      'Repair': '#F9A825', 
-      'Expired': '#ff0303ff',
-      'Recommended Out Of Service': '#f15719ff',
-      'Corrective Action Required': '#F9A825',
-      'Fail': '#8B4513' // Brown for Fail
+    // Map API status IDs to UI colors
+    const statusColorMap: { [key: number]: string } = {
+      1: '#34A853', // Pass
+      2: '#4285F4', // Repair (Blue)
+      3: '#9370DB', // Expired (Purple)
+      4: '#D93025', // Recommended Out Of Service (Red)
+      5: '#FFD700', // Corrective Action Required (Yellow)
+      6: '#D93025', // Fail (Red)
+      7: '#666666', // N/A (hidden from UI)
+      8: '#666666' // OOS (hidden from UI)
     };
 
-    return gearStatus.map((status: any) => ({
-      value: getStatusValue(status.status),
-      label: status.status.toUpperCase(),
-      color: statusColorMap[status.status] || '#666666'
-    }));
+    // Filter out "N/A" (id: 7) and "OOS" (id: 8) statuses from UI (hidden but kept in code)
+    const hiddenStatusIds = [7, 8];
+    return gearStatus
+      .filter((status: any) => !hiddenStatusIds.includes(status.id))
+      .map((status: any) => ({
+        value: getStatusValue(status.status),
+        label: status.status.toUpperCase(),
+        color: statusColorMap[status.id] || '#666666'
+      }));
   }, [gearStatus]);
 
   console.log("Formatted status options:", formattedStatusOptions);

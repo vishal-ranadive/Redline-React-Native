@@ -1,7 +1,7 @@
 // src/screens/inspectionscreens/components/StatusSelection.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Chip, useTheme } from 'react-native-paper';
+import { Text, Chip, useTheme, Icon } from 'react-native-paper';
 
 export interface StatusOption {
   value: string;
@@ -31,6 +31,7 @@ export const StatusSelection: React.FC<StatusSelectionProps> = ({
             key={option.value}
             selected={selectedStatus === option.value}
             onPress={() => onStatusChange(option.value)}
+            icon={selectedStatus === option.value ? () => <Icon source="check" size={16} color="#fff" /> : undefined}
             style={[
               styles.choiceChip,
               { 
