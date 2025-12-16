@@ -64,3 +64,48 @@ export const INSPECTION_CONSTANTS = {
     'HOOD'
   ],
 };
+
+// Status color mapping by ID (primary method)
+export const STATUS_COLOR_BY_ID: { [key: number]: string } = {
+  1: '#34A853', // Pass
+  2: '#4285F4', // Repair (Blue)
+  3: '#9370DB', // Expired (Purple)
+  4: '#D93025', // Recommended Out Of Service (Red)
+  5: '#FFD700', // Corrective Action Required (Yellow)
+  6: '#D93025', // Fail (Red)
+  7: '#666666', // N/A (hidden from UI)
+  8: '#666666' // OOS (hidden from UI)
+};
+
+// Status color mapping by status string (fallback for legacy code)
+export const STATUS_COLOR_BY_STRING: { [key: string]: string } = {
+  'Pass': '#34A853',
+  'Repair': '#4285F4',
+  'Expired': '#9370DB',
+  'Recommended Out Of Service': '#D93025',
+  'Corrective Action Required': '#FFD700',
+  'Fail': '#D93025',
+  'N/A': '#666666',
+  'OOS': '#666666',
+};
+
+/**
+ * Get status color by ID (preferred) or by status string (fallback)
+ * @param statusId - Status ID (number) - optional
+ * @param statusString - Status string (e.g., "Pass", "Repair") - optional
+ * @returns Color hex code or default gray
+ */
+export const getStatusColor = (statusId?: number | null, statusString?: string | null): string => {
+  // First try to get color by ID (preferred method)
+  if (statusId != null && STATUS_COLOR_BY_ID[statusId]) {
+    return STATUS_COLOR_BY_ID[statusId];
+  }
+  
+  // Fallback to string-based lookup
+  if (statusString) {
+    return STATUS_COLOR_BY_STRING[statusString] || '#666666';
+  }
+  
+  // Default fallback
+  return '#666666';
+};

@@ -43,7 +43,7 @@ import {
   RepairCostFields,
 } from './components';
 import { CustomDropdown, MultiSelectModal, ColorPickerModal } from '../../components/common';
-import { INSPECTION_CONSTANTS } from '../../constants/inspection';
+import { INSPECTION_CONSTANTS, STATUS_COLOR_BY_ID } from '../../constants/inspection';
 import { p } from "../../utils/responsive";
 import { inspectionApi } from '../../services/inspectionApi';
 import LoadPicker from '../../components/common/LoadPicker';
@@ -609,17 +609,8 @@ const getServiceTypeValue = (serviceType: string) => {
       return INSPECTION_CONSTANTS.STATUS_OPTIONS;
     }
 
-    // Map API status IDs to UI colors
-    const statusColorMap: { [key: number]: string } = {
-      1: '#34A853', // Pass
-      2: '#4285F4', // Repair (Blue)
-      3: '#9370DB', // Expired (Purple)
-      4: '#D93025', // Recommended Out Of Service (Red)
-      5: '#FFD700', // Corrective Action Required (Yellow)
-      6: '#D93025', // Fail (Red)
-      7: '#666666', // N/A (hidden from UI)
-      8: '#666666' // OOS (hidden from UI)
-    };
+    // Use global status color mapping from constants
+    const statusColorMap = STATUS_COLOR_BY_ID;
 
     // Filter out "N/A" (id: 7) and "OOS" (id: 8) statuses from UI (hidden but kept in code)
     const hiddenStatusIds = [7, 8];

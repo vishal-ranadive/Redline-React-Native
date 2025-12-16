@@ -12,6 +12,7 @@ import { useLeadStore } from '../../store/leadStore';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
+import { getStatusColor } from '../../constants/inspection';
 
 type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
 
@@ -64,14 +65,7 @@ type RouteProps = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-const statusColorMap: { [key: string]: string } = {
-  Pass: '#34A853',
-  Repair: '#F9A825',
-  Expired: '#ff0303ff',
-  'Recommended Out Of Service': '#f15719ff',
-  'Corrective Action Required': '#F9A825',
-  Fail: '#8B4513',
-};
+// Status color mapping moved to global constants - use getStatusColor() instead
 
 // Function to get appropriate emoji based on gear type
 const getGearEmoji = (gearType: string | null) => {
@@ -219,9 +213,7 @@ export default function GearsScreen() {
     return matchesSearch && matchesStatus;
   });
 
-  const getGearStatusColor = (status: string) => {
-    return statusColorMap[status] || '#9E9E9E';
-  };
+  // Status color function moved to global constants - use getStatusColor() instead
 
   const handleUpdateGear = async (inspection: GearInspection) => {
     // Parse roster name to extract first, middle, and last name
@@ -354,7 +346,7 @@ export default function GearsScreen() {
   const renderGear = useCallback(({ item }: { item: GearInspection }) => {
 
     const tagColor = normalizeTagColor(item.roster.tag_color) || "";
-    const statusColor = getGearStatusColor(item.gear_status.status);
+    const statusColor = getStatusColor(item.gear_status.id, item.gear_status.status);
     const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
     
     // Get inspection images

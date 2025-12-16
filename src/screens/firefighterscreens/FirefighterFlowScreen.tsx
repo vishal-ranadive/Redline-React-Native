@@ -39,6 +39,7 @@ import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 import { gearApi } from '../../services/gearApi';
+import { getStatusColor } from '../../constants/inspection';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -109,14 +110,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInsp
 //   'default': 'https://media.gettyimages.com/id/72542196/photo/firemens-gear-at-firehouse.jpg?s=612x612&w=0&k=20&c=Hha2TRyDvyoN3CYK-Hjp_uWf-Jg1P4oJJVWtY6CP6eU='
 // };
 
-const statusColorMap: { [key: string]: string } = {
-  Pass: '#34A853',
-  Repair: '#F9A825',
-  Expired: '#ff0303ff',
-  'Recommended Out Of Service': '#f15719ff',
-  'Corrective Action Required': '#F9A825',
-  Fail: '#8B4513',
-};
+// Status color mapping moved to global constants - use getStatusColor() instead
 
 // Function to get appropriate emoji based on gear type
 const getGearEmoji = (gearType: string | null) => {
@@ -395,38 +389,7 @@ const getCategoryInspectionSummary = (categoryId:string) => {
 
 
 
-const normalizeStatus = (status: string) => {
-  if (!status) return 'NOT_INSPECTED';
-
-  return status
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '_')
-    .replace(/-/g, '_');
-};
-
-const getStatusColor = (status: string) => {
-  console.log("ssssssssssssssss", status)
-
-    const normalized = normalizeStatus(status);
-
-  switch (normalized) {
-    case 'PASS':
-      return '#34A853'; // green
-  
-    case 'CORRECTIVE_ACTION_REQUIRED':
-      return '#F9A825'; // yellow
-
-    case 'RECOMMENDED_OOS':
-      return '#f15719ff'; // orange
-
-    case 'EXPIRED':
-      return '#ff0303ff'; // red
-
-    default:
-      return '#666'; // fallback
-  }
-};
+// Local getStatusColor function removed - use global getStatusColor from constants/inspection instead
 
 
 
@@ -779,7 +742,8 @@ const handleGearPress = (gear: any) => {
   const renderGearCard = useCallback(
     (gear: any) => {
       const gearStatus = getGearStatus(gear);
-      const statusColor = statusColorMap[gearStatus] || '#9E9E9E';
+      const statusId = gear.current_inspection?.gear_status?.id;
+      const statusColor = getStatusColor(statusId, gearStatus);
       const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
       const tagColor = tagColorName ? getColorHex(tagColorName) : "";
       const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id)?.gear_type || gear.gear?.gear_name || 'Other';
@@ -1019,11 +983,11 @@ const handleGearPress = (gear: any) => {
                                 {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
                               </Text>
                               <View style={styles.statusRowPortrait}>
-                                <Icon source="arrow-right" size={14} color={getStatusColor(gear.current_status)} />
+                                <Icon source="arrow-right" size={14} color={getStatusColor(null, gear.current_status)} />
                                 <Text 
                                   style={[
                                     styles.gearStatusTextCategory,
-                                    { color: getStatusColor(gear.current_status), marginLeft: p(4) }
+                                    { color: getStatusColor(null, gear.current_status), marginLeft: p(4) }
                                   ]}
                                 >
                                   {gear.current_status}
@@ -1039,7 +1003,7 @@ const handleGearPress = (gear: any) => {
                               <Text 
                                 style={[
                                   styles.gearStatusTextCategory,
-                                  { color: getStatusColor(gear.current_status), marginLeft: p(8) }
+                                  { color: getStatusColor(null, gear.current_status), marginLeft: p(8) }
                                 ]}
                               >
                                 {gear.current_status}

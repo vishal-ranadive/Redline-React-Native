@@ -11,17 +11,11 @@ import { useInspectionStore } from '../../store/inspectionStore';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
+import { getStatusColor } from '../../constants/inspection';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
-const statusColorMap: { [key: string]: string } = {
-  Pass: '#34A853',
-  Repair: '#F9A825',
-  Expired: '#ff0303ff',
-  'Recommended Out Of Service': '#f15719ff',
-  'Corrective Action Required': '#F9A825',
-  Fail: '#8B4513',
-};
+// Status color mapping moved to global constants - use getStatusColor() instead
 
 // Function to get appropriate emoji based on gear type
 const getGearEmoji = (gearType: string | null) => {
@@ -412,9 +406,8 @@ export default function FirefighterGearsScreen() {
       const gearTypeName = gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? 'Other';
       const isOtherType = gearTypeName.toLowerCase().trim() === 'other';
       const displayTypeOrName = isOtherType ? gearName : gearTypeName;
-      const statusColor = item.gearStatus
-        ? statusColorMap[item.gearStatus] ?? tagColor
-        : '#9E9E9E';
+      const statusId = gear.current_inspection?.gear_status?.id;
+      const statusColor = getStatusColor(statusId, item.gearStatus);
       
       // Get inspection images
       const inspectionImages = gear.current_inspection?.inspection_images || [];
