@@ -273,4 +273,6 @@ https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread
 9. Delete functionality for not inspected gears 
 10. Inspection Details : Hide the N/A & OOS 
 11. Gear details : Need to check update roster of gear 
+12. Gear Type  : Gear special type  > Structural | Wildland | ARFF | EMS/Tech Rescue | Other
+13. Load choose are giving on firefighter screen 
 

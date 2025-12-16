@@ -48,8 +48,8 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    email: '',
-    phone: '',
+    email: '', // Commented out from UI and submission
+    phone: '', // Commented out from UI and submission
     rank: '',
   });
 
@@ -79,9 +79,9 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       newErrors.last_name = 'Last name is required';
     }
 
-    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
+    // if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
+    //   newErrors.email = 'Email is invalid';
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -117,8 +117,8 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
       franchise_id: currentLead.franchise.id,
       first_name: formData.first_name.trim(),
       last_name: formData.last_name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
+      // email: formData.email.trim(),
+      // phone: formData.phone.trim(),
       active_status: true,
       rank: formData.rank.trim(),
     };
@@ -139,8 +139,8 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
     setFormData({
       first_name: '',
       last_name: '',
-      email: '',
-      phone: '',
+      email: '', // Commented out from UI and submission
+      phone: '', // Commented out from UI and submission
       rank: '',
     });
     setErrors({});
@@ -198,7 +198,8 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
               </Text>
             )}
 
-            <TextInput
+            {/* Email field - commented out */}
+            {/* <TextInput
               label="Email"
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
@@ -213,9 +214,10 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
               <Text style={[styles.errorText, { color: colors.error }]}>
                 {errors.email}
               </Text>
-            )}
+            )} */}
 
-            <TextInput
+            {/* Phone field - commented out */}
+            {/* <TextInput
               label="Phone"
               value={formData.phone}
               onChangeText={(value) => handleInputChange('phone', value)}
@@ -223,7 +225,7 @@ const AddFirefighterModal: React.FC<AddFirefighterModalProps> = ({
               mode="outlined"
               keyboardType="phone-pad"
               left={<TextInput.Icon icon="phone" />}
-            />
+            /> */}
 
             <TextInput
               label="Rank"

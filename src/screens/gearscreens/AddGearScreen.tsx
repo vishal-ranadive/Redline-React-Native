@@ -8,6 +8,8 @@ import {
   FlatList,
   Pressable,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   type PressableProps,
   type PressableStateCallbackType,
   type StyleProp,
@@ -151,7 +153,6 @@ const AddGearScreen = () => {
 
   // NEW: Barcode scanner state
   const [barcodeScannerVisible, setBarcodeScannerVisible] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [gearTypeDropdownFocus, setGearTypeDropdownFocus] = useState(false);
 
   // mock images
@@ -193,19 +194,6 @@ const AddGearScreen = () => {
       setSerialNumber(presetSerialNumber);
     }
   }, [presetSerialNumber]);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () =>
-      setKeyboardVisible(true),
-    );
-    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
-      setKeyboardVisible(false),
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
   // Fetch gear types on mount
   useEffect(() => {
     fetchGearTypes();
@@ -569,10 +557,14 @@ const AddGearScreen = () => {
         styles.container,
         {
           backgroundColor: colors.background,
-          paddingBottom: keyboardVisible ? p(250) : 0,
         },
       ]}
     >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
         {/* header */}
         <View style={[styles.header, { borderBottomColor: colors.outline }]}>
           <Button
@@ -596,8 +588,9 @@ const AddGearScreen = () => {
 
         <ScrollView
           style={styles.content}
-          contentContainerStyle={{ paddingBottom: p(28) }}
+          contentContainerStyle={{ paddingBottom: p(278) }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {currentLead && (
             <Card
@@ -711,6 +704,7 @@ const AddGearScreen = () => {
 
                   <View style={styles.inputRow}>
                     <View style={[styles.inputCol, { flex: 1 }]}>
+                      
                       <Text style={[styles.label, { color: colors.onSurface }]}>
                         Gear Type *
                       </Text>
@@ -742,42 +736,46 @@ const AddGearScreen = () => {
                       />
                     </View>
 
-                    <View style={{ width: p(12) }} />
+                    {isCustomGearNameRequired && (
+                      <>
+                        <View style={{ width: p(12) }} />
 
-                    <View style={[styles.inputCol, { flex: 1 }]}>
-                      <Text style={[styles.label, { color: colors.onSurface }]}>
-                        Gear Name{isCustomGearNameRequired ? ' *' : ''}
-                      </Text>
-                      <TextInput
-                        mode="outlined"
-                        value={gearName}
-                        onChangeText={(text) => {
-                          setGearName(text);
-                          if (text.trim()) {
-                            setGearNameError('');
-                          }
-                        }}
-                        placeholder="Enter gear name"
-                        style={styles.input}
-                        outlineColor={colors.outline}
-                        activeOutlineColor={colors.primary}
-                        dense
-                        editable={isGearNameEditable}
-                        disabled={!isGearNameEditable}
-                        error={!!gearNameError}
-                      />
-                      {!!gearNameError && (
-                        <Text
-                          style={{
-                            color: colors.error,
-                            marginTop: p(2),
-                            fontSize: p(11),
-                          }}
-                        >
-                          {gearNameError}
-                        </Text>
-                      )}
-                    </View>
+                        <View style={[styles.inputCol, { flex: 1 }]}>
+                          <Text style={[styles.label, { color: colors.onSurface }]}>
+                            Gear Name *
+                          </Text>
+                          <TextInput
+                            mode="outlined"
+                            value={gearName}
+                            onChangeText={(text) => {
+                              setGearName(text);
+                              if (text.trim()) {
+                                setGearNameError('');
+                              }
+                            }}
+                            placeholder="Enter gear name"
+                            style={styles.input}
+                            outlineColor={colors.outline}
+                            activeOutlineColor={colors.primary}
+                            dense
+                            editable={isGearNameEditable}
+                            disabled={!isGearNameEditable}
+                            error={!!gearNameError}
+                          />
+                          {!!gearNameError && (
+                            <Text
+                              style={{
+                                color: colors.error,
+                                marginTop: p(2),
+                                fontSize: p(11),
+                              }}
+                            >
+                              {gearNameError}
+                            </Text>
+                          )}
+                        </View>
+                      </>
+                    )}
                   </View>
                 </>
               ) : (
@@ -866,41 +864,43 @@ const AddGearScreen = () => {
                     />
                   </View>
 
-                  {/* 6. Gear Name */}
-                  <View style={[styles.inputCol, { marginTop: p(12) }]}>
-                    <Text style={[styles.label, { color: colors.onSurface }]}>
-                      Gear Name{isCustomGearNameRequired ? ' *' : ''}
-                    </Text>
-                    <TextInput
-                      mode="outlined"
-                      value={gearName}
-                      onChangeText={(text) => {
-                        setGearName(text);
-                        if (text.trim()) {
-                          setGearNameError('');
-                        }
-                      }}
-                      placeholder="Enter gear name"
-                      style={styles.input}
-                      outlineColor={colors.outline}
-                      activeOutlineColor={colors.primary}
-                      dense
-                      editable={isGearNameEditable}
-                      disabled={!isGearNameEditable}
-                      error={!!gearNameError}
-                    />
-                    {!!gearNameError && (
-                      <Text
-                        style={{
-                          color: colors.error,
-                          marginTop: p(2),
-                          fontSize: p(11),
-                        }}
-                      >
-                        {gearNameError}
+                  {/* 6. Gear Name - Only show when "Other" gear type is selected */}
+                  {isCustomGearNameRequired && (
+                    <View style={[styles.inputCol, { marginTop: p(12) }]}>
+                      <Text style={[styles.label, { color: colors.onSurface }]}>
+                        Gear Name *
                       </Text>
-                    )}
-                  </View>
+                      <TextInput
+                        mode="outlined"
+                        value={gearName}
+                        onChangeText={(text) => {
+                          setGearName(text);
+                          if (text.trim()) {
+                            setGearNameError('');
+                          }
+                        }}
+                        placeholder="Enter gear name"
+                        style={styles.input}
+                        outlineColor={colors.outline}
+                        activeOutlineColor={colors.primary}
+                        dense
+                        editable={isGearNameEditable}
+                        disabled={!isGearNameEditable}
+                        error={!!gearNameError}
+                      />
+                      {!!gearNameError && (
+                        <Text
+                          style={{
+                            color: colors.error,
+                            marginTop: p(2),
+                            fontSize: p(11),
+                          }}
+                        >
+                          {gearNameError}
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </>
               )}
             </Card.Content>
@@ -930,7 +930,8 @@ const AddGearScreen = () => {
               {submitting ? 'Adding Gear...' : 'Add New Gear'}
             </Button>
           </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Modals */}
       <RosterModal

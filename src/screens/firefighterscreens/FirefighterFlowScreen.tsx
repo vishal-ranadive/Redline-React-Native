@@ -38,6 +38,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
+import { gearApi } from '../../services/gearApi';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -548,6 +549,41 @@ const handleGearPress = (gear: any) => {
     );
   };
 
+  const handleDeleteGear = (gear: any) => {
+    const gearId = gear.gear?.gear_id;
+    const gearName = gear.gear?.gear_name || 'this gear';
+    
+    Alert.alert(
+      'Delete Gear',
+      `Are you sure you want to delete ${gearName}? This action cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await gearApi.deleteGear(gearId);
+              Alert.alert('Success', 'Gear deleted successfully');
+              
+              // Refresh the gear list
+              if (selectedFirefighter && currentLead) {
+                await fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id);
+              }
+            } catch (error: any) {
+              console.error('Error deleting gear:', error);
+              Alert.alert('Error', error.response?.data?.error || 'Failed to delete gear');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const handleCompleteInspection = () => {
     if (!selectedFirefighter) {
       Alert.alert('Select Firefighter', 'Please select a firefighter first');
@@ -770,29 +806,38 @@ const handleGearPress = (gear: any) => {
               <Card.Content>
                 {/* Card Header with Gear Status */}
                 <View style={styles.cardHeader}>
-                  {gearStatus && gearStatus !== 'Not Inspected' ? (
-                    <Chip 
-                      mode="outlined" 
-                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: statusColor, borderColor: statusColor },
-                      ]}
+                  <View style={styles.cardHeaderLeft}>
+                    {gearStatus && gearStatus !== 'Not Inspected' ? (
+                      <Chip 
+                        mode="outlined" 
+                        textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                        style={[
+                          styles.headerStatusChip,
+                          { backgroundColor: statusColor, borderColor: statusColor },
+                        ]}
+                      >
+                        {gearStatus}
+                      </Chip>
+                    ) : (
+                    
+                    <Button 
+                      mode="contained" 
+                      onPress={() => handleDeleteGear(gear)} 
+                      icon="delete" 
+                      buttonColor="red"
+                      textColor="#fff"
+                      compact
+                      style={styles.deleteButton}
+                      labelStyle={{ fontSize: p(12), fontWeight: '600' }}
+                      contentStyle={{ paddingHorizontal: p(4) }}
                     >
-                      {gearStatus}
-                    </Chip>
-                  ) : (
-                    <Chip
-                      mode="outlined"
-                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: '#9E9E9E', borderColor: '#9E9E9E' },
-                      ]}
-                    >
-                      Not Inspected
-                    </Chip>
-                  )}
+                      Delete
+                    </Button>
+                    
+                    )}
+                  </View>
+                  
+
                 </View>
 
                 {/* Gear Images - 3 Column Grid or Default Image */}
@@ -1671,6 +1716,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: p(8),
     paddingRight: p(4),
+  },
+  cardHeaderLeft: {
+    flex: 1,
+  },
+  deleteButton: {
+    margin: 0,
+    borderRadius: p(8),
+    elevation: 2,
+    position: 'absolute',
+    top: p(0),
+    left: p(0),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   headerStatusChip: {
     // height: p(26),
