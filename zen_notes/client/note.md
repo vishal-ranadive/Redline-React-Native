@@ -223,4 +223,54 @@ https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread
 - Date selection in for Add new gear > manufacture date 
 - Date selection on leads screen (Landing screen)
 
+
+
+
+
+=============
+# 16-12-2025
+
+[Backend]
 # when are we removing this tag colors 
+
+Hello Mitesh Modha
+This are things i need here 
+1. {{base_url}}/api/gear-inspections/rosters/102/
+        {
+            "id": 1,
+            "name": "None",
+            "email": null,
+            "total_gear_scan_count": 394,
+            "tag_color": null
+        },
+ 
+along with this gear name and status 
+ 
+2. {{base_url}}/api/gear-inspections/rosters/102/
+search based on fname lname 
+ 
+3. by roster lastname and firstname
+/roster/firestation/28/
+ 
+4. PPE Report - insufficiant data
+- we are not getting any inspection details currently this are just gear details and status
+Can you please Mitesh Modha
+https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread.v2/1765534868079?context=%7B%22contextType%22%3A%22chat%22%
+ 
+ 
+5. ✅ API Response GET /gear-inspections/loadwise/
+- we don't have the inspection_images here
+ 
+6. Leads screen
+    [Doubts]
+    - Mitesh Modha Akhil Sehrawat 
+    - Steves wants to pull service appointment type from oddo to replace job#
+ 
+7. Q) @mitesh Are we storing history 
+
+----------
+8. Add New Firefighter:  Removed email and phone
+9. Delete functionality for not inspected gears 
+10. Inspection Details : Hide the N/A & OOS 
+11. Gear details : Need to check update roster of gear 
+
