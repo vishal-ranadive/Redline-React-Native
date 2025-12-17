@@ -79,10 +79,15 @@ export const inspectionApi = {
   },
 
   // Get firefighter roster list for inspections for a lead
-  getInspectionRosters: async (leadId: number): Promise<any> => {
-    console.log(`➡️ API CALL GET /gear-inspections/rosters/${leadId}/`);
+  getInspectionRosters: async (leadId: number, page: number = 1, pageSize: number = 20): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-inspections/rosters/${leadId}/?page=${page}&page_size=${pageSize}`);
 
-    const response = await axiosInstance.get(`/gear-inspections/rosters/${leadId}/`);
+    const response = await axiosInstance.get(`/gear-inspections/rosters/${leadId}/`, {
+      params: {
+        page: page,
+        page_size: pageSize,
+      },
+    });
 
     console.log('✅ API Response GET /gear-inspections/rosters/', response.data);
     return response.data;

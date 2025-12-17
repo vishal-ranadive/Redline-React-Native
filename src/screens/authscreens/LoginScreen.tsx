@@ -24,8 +24,8 @@ const LoginScreen = () => {
   const paperTheme = useTheme();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('tech@maildrop.cc');
-  const [password, setPassword] = useState('Admin@12');
+  const [email, setEmail] = useState('tech.demo@maildrop.cc');
+  const [password, setPassword] = useState('12345');
   const [showPassword, setShowPassword] = useState(false);
 
   // 🔁 Dynamic subtitles that cycle every 2 seconds

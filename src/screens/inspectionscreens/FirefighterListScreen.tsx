@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, ScrollView, RefreshControl } from 'react-native';
 import { Text, Icon, useTheme, TextInput, DataTable, ActivityIndicator, Card } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Header from '../../components/common/Header';
@@ -11,24 +11,23 @@ import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
 import { COLOR_MAP, getColorHex } from '../../constants/colors';
 import RosterCardSkeleton from '../skeleton/RosterCardSkeleton';
+import Pagination from '../../components/common/Pagination';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
 
-type Firefighter = {
+type Gear = {
+  gear_id: number;
+  gear_name: string;
+  gear_status: string;
+};
+
+type Roster = {
   id: number;
   name: string;
   email: string | null;
   total_gear_scan_count: number;
   tag_color: string | null;
-};
-
-type GearCard = {
-  gear_id: number;
-  gear_name: string;
-  gear_status: string;
-  roster_id: number;
-  roster_name: string;
-  tag_color: string | null;
+  gear: Gear[];
 };
 
 type RosterGroup = {
@@ -36,7 +35,13 @@ type RosterGroup = {
   roster_name: string;
   tag_color: string | null;
   email: string | null;
-  gears: GearCard[];
+  gears: Gear[];
+};
+
+type PaginationInfo = {
+  page: number;
+  page_size: number;
+  total: number;
 };
 
 const statusColorMap: { [key: string]: string } = {
@@ -54,17 +59,17 @@ export default function FirefighterListScreen() {
 
   const { currentLead } = useLeadStore();
 
-  const [gearCards, setGearCards] = useState<GearCard[]>([]);
-  const [rosters, setRosters] = useState<Firefighter[]>([]);
+  const [rosterGroups, setRosterGroups] = useState<RosterGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
 
-  // Pagination state
-  const [page, setPage] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(8);
-  const numberOfItemsPerPageList = [4, 8, 12, 16];
+  // Pagination state (1-based for Pagination component)
+  const [page, setPage] = useState<number>(1);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(20);
+  const numberOfItemsPerPageList = [10, 20, 30, 50];
 
   // Detect if device is mobile (width < 600)
   const screenWidth = Dimensions.get('window').width;
@@ -85,67 +90,48 @@ export default function FirefighterListScreen() {
       }
       setError(null);
 
-      // First, fetch all rosters
-      const rostersResponse = await inspectionApi.getInspectionRosters(leadId);
-      const rosters: Firefighter[] = Array.isArray(rostersResponse?.roster)
+      // Fetch rosters with gears included
+      const rostersResponse = await inspectionApi.getInspectionRosters(leadId, page, numberOfItemsPerPage);
+      const rosters: Roster[] = Array.isArray(rostersResponse?.roster)
         ? rostersResponse.roster
         : [];
 
+      // Store pagination info
+      if (rostersResponse?.pagination) {
+        setPagination({
+          page: rostersResponse.pagination.page,
+          page_size: rostersResponse.pagination.page_size,
+          total: rostersResponse.pagination.total,
+        });
+      }
+
       if (rosters.length === 0) {
-        setGearCards([]);
-        setRosters([]);
+        setRosterGroups([]);
         setLoading(false);
         setRefreshing(false);
         return;
       }
 
-      // Store rosters for later use
-      setRosters(rosters);
+      // Transform rosters to roster groups with gears
+      const groups: RosterGroup[] = rosters.map((roster) => ({
+        roster_id: roster.id,
+        roster_name: roster.name,
+        tag_color: roster.tag_color,
+        email: roster.email,
+        gears: Array.isArray(roster.gear) ? roster.gear : [],
+      }));
 
-      // Fetch gear inspection info for each roster
-      const allGearCards: GearCard[] = [];
-      
-      await Promise.all(
-        rosters.map(async (roster) => {
-          try {
-            const gearResponse = await inspectionApi.getFirefighterInspectionInfo(leadId, roster.id);
-            const gears = Array.isArray(gearResponse?.gear) ? gearResponse.gear : [];
-
-            // Filter only gears with current_inspection
-            const gearsWithInspection = gears.filter(
-              (gear: any) => gear.current_inspection !== null && gear.current_inspection !== undefined
-            );
-
-            // Create gear cards
-            gearsWithInspection.forEach((gear: any) => {
-              const gearStatus = gear.current_inspection?.gear_status?.status || 'No Status';
-              const tagColor = gear.current_inspection?.tag_color || roster.tag_color;
-
-              allGearCards.push({
-                gear_id: gear.gear?.gear_id,
-                gear_name: gear.gear?.gear_name || 'Unknown Gear',
-                gear_status: gearStatus,
-                roster_id: roster.id,
-                roster_name: roster.name,
-                tag_color: tagColor,
-              });
-            });
-          } catch (err) {
-            console.error(`Error fetching gears for roster ${roster.id}:`, err);
-          }
-        })
-      );
-
-      setGearCards(allGearCards);
+      setRosterGroups(groups);
     } catch (e: any) {
       console.error('Error fetching gears:', e);
       setError('Failed to load gears.');
-      setGearCards([]);
+      setRosterGroups([]);
+      setPagination(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [page, numberOfItemsPerPage]);
 
   // Initial load on mount
   useEffect(() => {
@@ -154,6 +140,13 @@ export default function FirefighterListScreen() {
       isFirstMount.current = false;
     }
   }, [effectiveLeadId, fetchAllGears]);
+
+  // Fetch data when page or items per page changes (after initial mount)
+  useEffect(() => {
+    if (!isFirstMount.current) {
+      fetchAllGears(effectiveLeadId, true);
+    }
+  }, [page, numberOfItemsPerPage, effectiveLeadId, fetchAllGears]);
 
   // Refresh on focus (but don't show loading spinner)
   useFocusEffect(
@@ -164,26 +157,10 @@ export default function FirefighterListScreen() {
     }, [effectiveLeadId, fetchAllGears]),
   );
 
-  // Group gears by roster
-  const rosterGroups = useMemo(() => {
-    const grouped = new Map<number, RosterGroup>();
-    
-    gearCards.forEach((gear) => {
-      if (!grouped.has(gear.roster_id)) {
-        const rosterData = rosters.find(r => r.id === gear.roster_id);
-        grouped.set(gear.roster_id, {
-          roster_id: gear.roster_id,
-          roster_name: gear.roster_name,
-          tag_color: gear.tag_color || rosterData?.tag_color || null,
-          email: rosterData?.email || null,
-          gears: [],
-        });
-      }
-      grouped.get(gear.roster_id)!.gears.push(gear);
-    });
-    
-    return Array.from(grouped.values());
-  }, [gearCards, rosters]);
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   // Filter roster groups based on search
   const filteredRosterGroups = useMemo(() => {
@@ -195,7 +172,7 @@ export default function FirefighterListScreen() {
       .map((group) => {
         const filteredGears = group.gears.filter((gear) => {
           const nameMatch = gear.gear_name?.toLowerCase().includes(query);
-          const rosterMatch = gear.roster_name?.toLowerCase().includes(query);
+          const rosterMatch = group.roster_name?.toLowerCase().includes(query);
           const statusMatch = gear.gear_status?.toLowerCase().includes(query);
           return nameMatch || rosterMatch || statusMatch;
         });
@@ -204,26 +181,45 @@ export default function FirefighterListScreen() {
       .filter((group) => group.gears.length > 0);
   }, [rosterGroups, searchQuery]);
 
-  const totalItems = filteredRosterGroups.reduce((sum, group) => sum + group.gears.length, 0);
-  const totalPages = Math.max(1, Math.ceil(filteredRosterGroups.length / itemsPerPage) || 1);
-  const from = page * itemsPerPage;
-  const to = Math.min(from + itemsPerPage, filteredRosterGroups.length);
-  const currentRosterGroups = filteredRosterGroups.slice(from, to);
-  console.log("currentRosterGroups", currentRosterGroups);
-  useEffect(() => {
-    setPage(0);
-  }, [itemsPerPage, searchQuery]);
+  // Calculate estimated height for a roster card based on gear count
+  const getEstimatedHeight = (gearCount: number) => {
+    const baseHeight = 100; // Base height for header and padding
+    const gearRowHeight = 40; // Height per gear row
+    return baseHeight + (gearCount * gearRowHeight);
+  };
 
-  useEffect(() => {
-    if (page >= totalPages && totalPages > 0) {
-      setPage(totalPages - 1);
+  // Distribute roster groups into columns for bento grid layout
+  const distributedColumns = useMemo(() => {
+    if (numColumns === 1) {
+      return [filteredRosterGroups];
     }
-  }, [page, totalPages]);
+
+    const columns: RosterGroup[][] = Array(numColumns).fill(null).map(() => []);
+    const columnHeights = Array(numColumns).fill(0);
+
+    filteredRosterGroups.forEach((group) => {
+      const estimatedHeight = getEstimatedHeight(group.gears.length);
+      // Find the column with the smallest height
+      const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights));
+      columns[shortestColumnIndex].push(group);
+      columnHeights[shortestColumnIndex] += estimatedHeight;
+    });
+
+    return columns;
+  }, [filteredRosterGroups, numColumns]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchAllGears(effectiveLeadId, false);
-  }, [effectiveLeadId]);
+  }, [effectiveLeadId, fetchAllGears]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  const handleItemsPerPageChange = useCallback((newItemsPerPage: number) => {
+    setNumberOfItemsPerPage(newItemsPerPage);
+  }, []);
 
   const handleViewGears = (rosterGroup: RosterGroup) => {
     const roster = {
@@ -262,7 +258,7 @@ export default function FirefighterListScreen() {
   /**
    * Render roster group with gears
    */
-  const renderRosterGroup = ({ item }: { item: RosterGroup }) => {
+  const renderRosterGroup = (item: RosterGroup) => {
     const tagColor = normalizeTagColor(item.tag_color);
     const scannedCount = item.gears.length;
 
@@ -339,57 +335,63 @@ export default function FirefighterListScreen() {
         </View>
       )}
 
-      {/* Roster Groups List - Responsive Columns */}
+      {/* Roster Groups List - Bento Grid Layout */}
       {loading && !refreshing ? (
         <RosterCardSkeleton count={6} numColumns={numColumns} />
+      ) : filteredRosterGroups.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Icon source="account-search" size={64} color={colors.outline} />
+          <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
+            {error ? 'No rosters available' : 'No Rosters Found'}
+          </Text>
+          <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
+            {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
+          </Text>
+        </View>
       ) : (
-        <FlatList
-          data={currentRosterGroups}
-          renderItem={renderRosterGroup}
-          keyExtractor={(item) => item.roster_id.toString()}
-          numColumns={numColumns}
+        <ScrollView
+          style={styles.scrollView}
           contentContainerStyle={[styles.listContainer, isMobile && styles.listContainerMobile]}
-          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
           showsVerticalScrollIndicator={true}
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={styles.emptyContainer}>
-                <Icon source="account-search" size={64} color={colors.outline} />
-                <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
-                  {error ? 'No rosters available' : 'No Rosters Found'}
-                </Text>
-                <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-                  {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
-                </Text>
-              </View>
-            ) : null
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
-        />
+        >
+          <View style={styles.bentoGrid}>
+            {distributedColumns.map((column, columnIndex) => (
+              <View
+                key={`column-${columnIndex}`}
+                style={[
+                  styles.bentoColumn,
+                  columnIndex < distributedColumns.length - 1 && styles.bentoColumnSpacing
+                ]}
+              >
+                {column.map((group) => (
+                  <View key={`roster-${group.roster_id}`}>
+                    {renderRosterGroup(group)}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       )}
 
-      {/* Pagination */}
-      {/* <View style={[styles.paginationContainer, { backgroundColor: colors.surface, borderTopColor: colors.outline }]}>
-        <DataTable.Pagination
+      {/* Pagination Controls */}
+      {pagination && pagination.total > 0 && (
+        <Pagination
           page={page}
-          numberOfPages={totalPages}
-          onPageChange={setPage}
-          label={`${from + 1}-${to} of ${filteredRosterGroups.length}`}
-          showFastPaginationControls
-          numberOfItemsPerPageList={numberOfItemsPerPageList}
-          numberOfItemsPerPage={itemsPerPage}
-          onItemsPerPageChange={setItemsPerPage}
-          selectPageDropdownLabel={'Rosters per page'}
-          theme={{
-            colors: {
-              primary: colors.primary,
-              onSurface: colors.onSurface,
-              surface: colors.surface,
-            },
-          }}
+          total={pagination.total}
+          itemsPerPage={numberOfItemsPerPage}
+          itemsPerPageList={numberOfItemsPerPageList}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+          containerStyle={[
+            styles.paginationContainer,
+            isMobile && styles.paginationContainerMobile,
+          ]}
         />
-      </View> */}
+      )}
     </SafeAreaView>
   );
 }
@@ -412,20 +414,28 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: p(8),
   },
+  scrollView: {
+    flex: 1,
+  },
   listContainer: {
     paddingBottom: p(100),
-    paddingHorizontal: p(5),
     flexGrow: 1,
   },
   listContainerMobile: {
     paddingHorizontal: 0,
   },
-  columnWrapper: {
-    justifyContent: 'space-between',
-    paddingHorizontal: p(9),
+  bentoGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: p(5),
+  },
+  bentoColumn: {
+    flex: 1,
+  },
+  bentoColumnSpacing: {
+    marginRight: p(12),
   },
   cardWrapper: {
-    width: '48%',
+    width: '100%',
     marginBottom: p(12),
   },
   cardWrapperMobile: {
@@ -502,7 +512,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginBottom: p(65),
-    borderTopWidth: 1,
+  },
+  paginationContainerMobile: {
+    marginBottom: p(70),
   },
   emptyContainer: {
     flex: 1,
