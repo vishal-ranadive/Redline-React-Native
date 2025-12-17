@@ -79,14 +79,20 @@ export const inspectionApi = {
   },
 
   // Get firefighter roster list for inspections for a lead
-  getInspectionRosters: async (leadId: number, page: number = 1, pageSize: number = 20): Promise<any> => {
-    console.log(`➡️ API CALL GET /gear-inspections/rosters/${leadId}/?page=${page}&page_size=${pageSize}`);
+  getInspectionRosters: async (leadId: number, page: number = 1, pageSize: number = 20, lastName?: string): Promise<any> => {
+    const params: any = {
+      page: page,
+      page_size: pageSize,
+    };
+
+    if (lastName?.trim()) {
+      params.last_name = lastName.trim();
+    }
+
+    console.log(`➡️ API CALL GET /gear-inspections/rosters/${leadId}/`, params);
 
     const response = await axiosInstance.get(`/gear-inspections/rosters/${leadId}/`, {
-      params: {
-        page: page,
-        page_size: pageSize,
-      },
+      params,
     });
 
     console.log('✅ API Response GET /gear-inspections/rosters/', response.data);

@@ -12,6 +12,7 @@ import { inspectionApi } from '../../services/inspectionApi';
 import { COLOR_MAP, getColorHex } from '../../constants/colors';
 import RosterCardSkeleton from '../skeleton/RosterCardSkeleton';
 import Pagination from '../../components/common/Pagination';
+import useDebounce from '../../hooks/useDebounce';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterGearsScreen'>;
 
@@ -64,6 +65,7 @@ export default function FirefighterListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
 
   // Pagination state (1-based for Pagination component)
@@ -83,7 +85,7 @@ export default function FirefighterListScreen() {
   // Track if this is the first mount
   const isFirstMount = useRef(true);
 
-  const fetchAllGears = useCallback(async (leadId: number, showLoading: boolean = true) => {
+  const fetchAllGears = useCallback(async (leadId: number, showLoading: boolean = true, lastName?: string) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -91,7 +93,7 @@ export default function FirefighterListScreen() {
       setError(null);
 
       // Fetch rosters with gears included
-      const rostersResponse = await inspectionApi.getInspectionRosters(leadId, page, numberOfItemsPerPage);
+      const rostersResponse = await inspectionApi.getInspectionRosters(leadId, page, numberOfItemsPerPage, lastName);
       const rosters: Roster[] = Array.isArray(rostersResponse?.roster)
         ? rostersResponse.roster
         : [];
@@ -131,30 +133,30 @@ export default function FirefighterListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [page, numberOfItemsPerPage]);
+  }, [page, numberOfItemsPerPage, debouncedSearchQuery]);
 
   // Initial load on mount
   useEffect(() => {
     if (isFirstMount.current) {
-      fetchAllGears(effectiveLeadId, true);
+      fetchAllGears(effectiveLeadId, true, debouncedSearchQuery);
       isFirstMount.current = false;
     }
-  }, [effectiveLeadId, fetchAllGears]);
+  }, [effectiveLeadId, fetchAllGears, debouncedSearchQuery]);
 
-  // Fetch data when page or items per page changes (after initial mount)
+  // Fetch data when page, items per page, or search query changes (after initial mount)
   useEffect(() => {
     if (!isFirstMount.current) {
-      fetchAllGears(effectiveLeadId, true);
+      fetchAllGears(effectiveLeadId, true, debouncedSearchQuery);
     }
-  }, [page, numberOfItemsPerPage, effectiveLeadId, fetchAllGears]);
+  }, [page, numberOfItemsPerPage, effectiveLeadId, fetchAllGears, debouncedSearchQuery]);
 
   // Refresh on focus (but don't show loading spinner)
   useFocusEffect(
     useCallback(() => {
       if (!isFirstMount.current) {
-        fetchAllGears(effectiveLeadId, false);
+        fetchAllGears(effectiveLeadId, false, debouncedSearchQuery);
       }
-    }, [effectiveLeadId, fetchAllGears]),
+    }, [effectiveLeadId, fetchAllGears, debouncedSearchQuery]),
   );
 
   // Reset to page 1 when search query changes
@@ -162,24 +164,6 @@ export default function FirefighterListScreen() {
     setPage(1);
   }, [searchQuery]);
 
-  // Filter roster groups based on search
-  const filteredRosterGroups = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return rosterGroups;
-    }
-    const query = searchQuery.toLowerCase();
-    return rosterGroups
-      .map((group) => {
-        const filteredGears = group.gears.filter((gear) => {
-          const nameMatch = gear.gear_name?.toLowerCase().includes(query);
-          const rosterMatch = group.roster_name?.toLowerCase().includes(query);
-          const statusMatch = gear.gear_status?.toLowerCase().includes(query);
-          return nameMatch || rosterMatch || statusMatch;
-        });
-        return { ...group, gears: filteredGears };
-      })
-      .filter((group) => group.gears.length > 0);
-  }, [rosterGroups, searchQuery]);
 
   // Calculate estimated height for a roster card based on gear count
   const getEstimatedHeight = (gearCount: number) => {
@@ -191,13 +175,13 @@ export default function FirefighterListScreen() {
   // Distribute roster groups into columns for bento grid layout
   const distributedColumns = useMemo(() => {
     if (numColumns === 1) {
-      return [filteredRosterGroups];
+      return [rosterGroups];
     }
 
     const columns: RosterGroup[][] = Array(numColumns).fill(null).map(() => []);
     const columnHeights = Array(numColumns).fill(0);
 
-    filteredRosterGroups.forEach((group) => {
+    rosterGroups.forEach((group) => {
       const estimatedHeight = getEstimatedHeight(group.gears.length);
       // Find the column with the smallest height
       const shortestColumnIndex = columnHeights.indexOf(Math.min(...columnHeights));
@@ -206,12 +190,12 @@ export default function FirefighterListScreen() {
     });
 
     return columns;
-  }, [filteredRosterGroups, numColumns]);
+  }, [rosterGroups, numColumns]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchAllGears(effectiveLeadId, false);
-  }, [effectiveLeadId, fetchAllGears]);
+    await fetchAllGears(effectiveLeadId, false, debouncedSearchQuery);
+  }, [effectiveLeadId, fetchAllGears, debouncedSearchQuery]);
 
   const handlePageChange = useCallback((newPage: number) => {
     setPage(newPage);
@@ -317,7 +301,7 @@ export default function FirefighterListScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by firefighter name, gear name, or status"
+          placeholder="Search by firefighter's last name"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
@@ -338,14 +322,14 @@ export default function FirefighterListScreen() {
       {/* Roster Groups List - Bento Grid Layout */}
       {loading && !refreshing ? (
         <RosterCardSkeleton count={6} numColumns={numColumns} />
-      ) : filteredRosterGroups.length === 0 ? (
+      ) : rosterGroups.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Icon source="account-search" size={64} color={colors.outline} />
           <Text variant="titleMedium" style={{ marginTop: 16, color: colors.outline }}>
             {error ? 'No rosters available' : 'No Rosters Found'}
           </Text>
           <Text variant="bodyMedium" style={{ color: colors.outline, textAlign: 'center', marginTop: 8 }}>
-            {error ?? (searchQuery ? 'Try adjusting your search criteria' : 'No rosters with gear inspections available')}
+            {error ?? (debouncedSearchQuery ? 'No firefighters found matching your search' : 'No rosters with gear inspections available')}
           </Text>
         </View>
       ) : (
@@ -511,7 +495,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    marginBottom: p(65),
+    marginBottom: p(52),
   },
   paginationContainerMobile: {
     marginBottom: p(70),
