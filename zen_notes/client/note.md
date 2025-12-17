@@ -276,3 +276,39 @@ https://teams.microsoft.com/l/message/19:9359c7f3b276412993ba3bc4f3cb85a2@thread
 12. Gear Type  : Gear special type  > Structural | Wildland | ARFF | EMS/Tech Rescue | Other
 13. Load choose are giving on firefighter screen 
 
+========================
+role: "Corporate_Technician"
+
+Get all leads for above user  Corporate_Technician
+API Response: 200 /leads/ 
+
+role: "Technician"
+
+API Response: 200 /leads/?franchise_id=38
+
+
+
+This will hard code 
+{{base_url}}/api/login/?src=ipad
+
+backend - check role 
+0] check source 
+{{base_url}}/api/login/?src=web
+web  [Corporate_Technician, Technician] don't give access | 401 unanthorised
+
+1] Corporate_Technician -> who has all leads 
+2] Technician -> leads from only franchise
+
+
+
+-----------
+
+firefireghter List screen 
+- search lname
+- search by firefighter last name 
+
+
+- change gear card image to icon 
+
+{{base_url}}/api/gear-inspections/rosters/103/?last_name=test&page_size=20
+{{base_url}}/api/gear-inspections/rosters/103/?page_size=20

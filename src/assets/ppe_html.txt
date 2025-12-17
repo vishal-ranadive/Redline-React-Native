@@ -1,0 +1,942 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roster Gear Assignment Report</title>
+    <style>
+        /* Import Professional Font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Global Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.4;
+            font-size: 10pt;
+        }
+
+        /* A4 Page Container */
+        .page-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            padding: 12mm;
+        }
+
+        /* Header Section */
+        .report-header {
+            text-align: center;
+            border-bottom: 3px solid #ed2c2a;
+        }
+
+
+        .report-logo {
+            width: 300px;               /* whatever width you want */
+            height: 80px;               /* whatever height looks good */
+            margin: 0 auto 10px auto;
+            overflow: hidden;           /* hide the extra top/bottom */
+            position: relative;
+        }
+
+        .report-logo::before {
+            content: "";
+            position: absolute;
+            top: -38px;                 /* ↑ shift image up (crop top) */
+            left: 0;
+            width: 100%;
+            height: 200%;               /* enlarge so we can slide it */
+            background-image: url('https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png');
+            background-size: 300px auto; /* keep original ratio */
+            background-repeat: no-repeat;
+            background-position: center center;
+        }
+
+        .report-title {
+            font-size: 12pt;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .report-subtitle {
+            font-size: 11pt;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #ed2c2a;
+            margin: 10px 0 6px 0;
+            padding: 4px 0;
+            border-bottom: 1.5px solid #e2e8f0;
+        }
+
+        /* Details Table */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        .details-table td {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e0;
+            font-size: 10pt;
+        }
+
+        .details-table td:first-child {
+            width: 180px;
+            background: #fff5f5;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .details-table td:nth-child(2) {
+            background: white;
+            color: #1a202c;
+        }
+
+        /* Roster Section */
+        .roster-section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+
+        .roster-header {
+            background: #fee2e2;
+            padding: 10px 12px;
+            border-left: 4px solid #ed2c2a;
+            margin: 15px 0 10px 0;
+            font-weight: 600;
+            font-size: 11pt;
+            color: #1a202c;
+        }
+
+        .roster-name-label {
+            color: #991b1b;
+            font-size: 9pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        /* Gears Table */
+        .gears-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .gears-table thead {
+            background: linear-gradient(135deg, #ed2c2a 0%, #dc2626 100%);
+        }
+
+        .gears-table thead th {
+            padding: 10px 8px;
+            text-align: left;
+            font-size: 9pt;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border: 1px solid #dc2626;
+        }
+
+        .gears-table tbody td {
+            padding: 9px 8px;
+            font-size: 9.5pt;
+            color: #2d3748;
+            border: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .gears-table tbody tr:nth-child(even) {
+            background: #fef2f2;
+        }
+
+        /* Empty State */
+        .no-gears {
+            text-align: center;
+            padding: 20px;
+            color: #a0aec0;
+            font-style: italic;
+            background: #fef2f2;
+            border: 1px dashed #fca5a5;
+            border-radius: 6px;
+        }
+
+        /* Footer */
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 0;
+            text-align: center;
+        }
+
+        .footer-divider {
+            width: 100%;
+            height: 1px;
+            background: #1a202c;
+            margin: 0 0 10px 0;
+        }
+
+        .footer-link {
+            color: #ed2c2a;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 10pt;
+        }
+
+        /* Utilities */
+        .text-bold {
+            font-weight: 700;
+        }
+
+        /* Operation Type Badge */
+        .operation-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 4px;
+            font-size: 8pt;
+            font-weight: 600;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        /* Summary Row Containers */
+        .summary-row-container {
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid;
+            margin-bottom: 8px;
+            margin-top: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            page-break-inside: avoid;
+        }
+
+        .row-title {
+            font-size: 10pt;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid;
+        }
+
+        /* Summary Cards Rows - 3 Column Layout */
+        .summary-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: space-between;
+        }
+
+        .summary-card {
+            width: calc((100% - 12px) / 3);
+            min-width: 0;
+            background: white;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            min-height: 70px;
+            margin-bottom: 4px;
+        }
+
+        .summary-card .card-icon {
+            font-size: 20pt;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .summary-card .gear-image {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            margin-bottom: 2px;
+            border-radius: 16px;
+        }
+
+        .summary-card .card-content {
+            width: 100%;
+        }
+
+        .summary-card .card-value {
+            font-size: 16pt;
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 2px 0 1px 0;
+        }
+
+        .summary-card .card-label {
+            font-size: 7pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            font-weight: 600;
+            margin-top: 1px;
+            line-height: 1.1;
+        }
+
+        /* Primary Cards (Red Theme) */
+        .summary-card.primary-card {
+            border-color: #ed2c2a;
+            background: #fff5f5;
+        }
+
+        .summary-card.primary-card .card-value {
+            color: #ed2c2a;
+        }
+
+        .summary-card.primary-card .card-label {
+            color: #991b1b;
+        }
+
+        /* Status Cards */
+        .summary-card.status-pass {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+
+        .summary-card.status-pass .card-value {
+            color: #059669;
+        }
+
+        .summary-card.status-pass .card-label {
+            color: #065f46;
+        }
+
+        .summary-card.status-fail {
+            border-color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .summary-card.status-fail .card-value {
+            color: #dc2626;
+        }
+
+        .summary-card.status-fail .card-label {
+            color: #991b1b;
+        }
+
+        .summary-card.status-oos {
+            border-color: #6b7280;
+            background: #f3f4f6;
+        }
+
+        .summary-card.status-oos .card-value {
+            color: #4b5563;
+        }
+
+        .summary-card.status-oos .card-label {
+            color: #374151;
+        }
+
+        .summary-card.status-expired {
+            border-color: #f97316;
+            background: #fed7aa;
+        }
+
+        .summary-card.status-expired .card-value {
+            color: #ea580c;
+        }
+
+        .summary-card.status-expired .card-label {
+            color: #c2410c;
+        }
+
+        .summary-card.status-action {
+            border-color: #eab308;
+            background: #fef3c7;
+        }
+
+        .summary-card.status-action .card-value {
+            color: #ca8a04;
+        }
+
+        .summary-card.status-action .card-label {
+            color: #854d0e;
+        }
+
+        /* Gear Type Cards (Red Theme) */
+        .summary-card.gear-type {
+            border-color: #ed2c2a;
+            background: #ffffff;
+        }
+
+        .summary-card.gear-type .card-value {
+            color: #ed2c2a;
+        }
+
+        .summary-card.gear-type .card-label {
+            color: #991b1b;
+        }
+
+        /* Page Break Classes */
+        .page-break-after {
+            page-break-after: always;
+        }
+
+        .page-break-before {
+            page-break-before: always;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+             @page {
+        margin-top: 20px;   /* ← gives the space you want */
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+    }
+            
+            .page-container {
+                width: 100%;
+                margin: 0;
+                padding: 8mm;
+            }
+
+            .roster-section {
+                page-break-inside: avoid;
+            }
+
+            .details-table {
+                page-break-inside: avoid;
+            }
+
+            .summary-row {
+                page-break-inside: avoid;
+            }
+            
+            .summary-card {
+                width: calc((100% - 12px) / 3);
+                min-width: 0;
+                max-width: none;
+            }
+
+            .page-break-after {
+                page-break-after: always;
+            }
+
+            .page-break-before {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="report-logo" aria-label="Redline Logo"></div>
+            <h1 class="report-title">PPE INSPECTION REPORT</h1>
+            <p class="report-subtitle">Appointment Information</p>
+        </div>
+
+        <!-- Appointment Details Section -->
+        <h2 class="section-title">Appointment Details</h2>
+        <table class="details-table">
+            <tr>
+                <td>Franchise Name</td>
+                <td>Demo</td>
+            </tr>
+            <tr>
+                <td>MEU</td>
+                <td>MEU 3</td>
+            </tr>
+            <tr>
+                <td>Department Name</td>
+                <td>Demo Fire Station</td>
+            </tr>
+            <tr>
+                <td>Street</td>
+                <td>14 St. N E</td>
+            </tr>
+            <tr>
+                <td>City</td>
+                <td>New York</td>
+            </tr>
+            <tr>
+                <td>State</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Zip</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Contact Name (Chief)</td>
+                <td>12345</td>
+            </tr>
+            <tr>
+                <td>Phone</td>
+                <td>12345</td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td>N/A</td>
+            </tr>
+            <tr>
+                <td>Inspection Date</td>
+                <td>December 03, 2025</td>
+            </tr>
+            <tr>
+                <td>Assigned Technicians</td>
+                <td>steve test, Technician 1 A. Doe</td>
+            </tr>
+        </table>
+
+        <!-- Summary Statistics Cards -->
+        <h2 class="section-title" style="margin-top: 8px;">Inspection Summary</h2>
+        
+        <!-- First Row Container - Primary Stats -->
+        <div class="summary-row-container" style="background-color: #fff5f5; border-color: #ed2c2a;">
+            <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
+                Overview & Status
+            </div>
+            <div class="summary-row">
+            <div class="summary-card primary-card">
+                <div class="card-icon">👥</div>
+                <div class="card-content">
+                    <div class="card-value">5</div>
+                    <div class="card-label">Total Firefighters</div>
+                </div>
+            </div>
+
+            <div class="summary-card primary-card">
+                <div class="card-icon">🧰</div>
+                <div class="card-content">
+                    <div class="card-value">14</div>
+                    <div class="card-label">Total Gears</div>
+                </div>
+            </div>
+
+            <div class="summary-card status-pass">
+                <div class="card-icon">✓</div>
+                <div class="card-content">
+                    <div class="card-value">6</div>
+                    <div class="card-label">Passed</div>
+                </div>
+            </div>
+
+            <div class="summary-card status-fail">
+                <div class="card-icon">✗</div>
+                <div class="card-content">
+                    <div class="card-value">1</div>
+                    <div class="card-label">Failed</div>
+                </div>
+            </div>
+
+            <div class="summary-card status-oos">
+                <div class="card-icon">⊗</div>
+                <div class="card-content">
+                    <div class="card-value">2</div>
+                    <div class="card-label">Out of Service</div>
+                </div>
+            </div>
+
+            <div class="summary-card status-expired">
+                <div class="card-icon">⏰</div>
+                <div class="card-content">
+                    <div class="card-value">1</div>
+                    <div class="card-label">Expired</div>
+                </div>
+            </div>
+
+            <div class="summary-card status-action">
+                <div class="card-icon">⚠</div>
+                <div class="card-content">
+                    <div class="card-value">2</div>
+                    <div class="card-label">Action Required</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Second Row Container - Gear Types -->
+        <div class="summary-row-container" style="background-color: #ffffff; border-color: #ed2c2a; margin-top: 16px;">
+            <div class="row-title" style="color: #ed2c2a; border-bottom-color: rgba(237, 44, 42, 0.3);">
+                Gear Type Breakdown
+            </div>
+            <div class="summary-row">
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844940/RedLine/rcyfyv9ksduotb8ctzh4.jpg" alt="Jackets" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧥</div>
+                <div class="card-content">
+                    <div class="card-value">7</div>
+                    <div class="card-label">Jackets</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844939/RedLine/bmudwf2fzcmajvaovtt7.jpg" alt="Pants" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">👖</div>
+                <div class="card-content">
+                    <div class="card-value">3</div>
+                    <div class="card-label">Pants</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844940/RedLine/pmn1uatdfhw7blcjdj92.jpg" alt="Helmets" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">⛑️</div>
+                <div class="card-content">
+                    <div class="card-value">3</div>
+                    <div class="card-label">Helmets</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844939/RedLine/ru1rbjqn2txzlvktdvyp.jpg" alt="Hoods" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧢</div>
+                <div class="card-content">
+                    <div class="card-value">0</div>
+                    <div class="card-label">Hoods</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844939/RedLine/iwgapecwptmk50xtgrmd.jpg" alt="Gloves" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">🧤</div>
+                <div class="card-content">
+                    <div class="card-value">0</div>
+                    <div class="card-label">Gloves</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764844940/RedLine/urbfdqrkibqwqxld5ex3.jpg" alt="Boots" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">👢</div>
+                <div class="card-content">
+                    <div class="card-value">1</div>
+                    <div class="card-label">Boots</div>
+                </div>
+            </div>
+
+            <div class="summary-card gear-type">
+                <img src="https://res.cloudinary.com/dwwykeft2/image/upload/v1764846369/RedLine/deetngagy8pvhaymcsf4.jpg" alt="Other Gear" class="gear-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="card-icon" style="display: none;">📦</div>
+                <div class="card-content">
+                    <div class="card-value">0</div>
+                    <div class="card-label">Other Gear</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Roster and Gears Section -->
+        <h2 class="section-title">Roster & Gear Assignments</h2>
+        
+        <div class="roster-section">
+          <div class="roster-header">
+            <span class="roster-name-label">Roster Name:</span>
+            <span class="text-bold">joe blow</span>
+            
+          </div>
+          <table class="gears-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Serial Number</th>
+                <th>Manufacturer</th>
+                <th>Date of Mfg.</th>
+                <th>Status</th>
+                <th>Service Type</th>
+                <th>HydroTest Performed</th>
+                <th>HydroTest Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr>
+            <td>HELMET</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Fail</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>HELMET</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Fail</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>BOOTS</td>
+            <td>2714</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>PANTS SHELL</td>
+            <td>274716011</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>274716003</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Corrective Action Required</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>PANTS LINER</td>
+            <td>274716011</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Corrective Action Required</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>JACKET LINER</td>
+            <td>274716003</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+            </tbody>
+          </table>
+        </div>
+      
+        <div class="roster-section">
+          <div class="roster-header">
+            <span class="roster-name-label">Roster Name:</span>
+            <span class="text-bold">Akhil Sehrawat</span>
+            
+          </div>
+          <table class="gears-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Serial Number</th>
+                <th>Manufacturer</th>
+                <th>Date of Mfg.</th>
+                <th>Status</th>
+                <th>Service Type</th>
+                <th>HydroTest Performed</th>
+                <th>HydroTest Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>SN-123456789ASDG</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Repair</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>asdfg</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>qwerty</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+            </tbody>
+          </table>
+        </div>
+      
+        <div class="roster-section">
+          <div class="roster-header">
+            <span class="roster-name-label">Roster Name:</span>
+            <span class="text-bold">Steve Test</span>
+            
+          </div>
+          <table class="gears-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Serial Number</th>
+                <th>Manufacturer</th>
+                <th>Date of Mfg.</th>
+                <th>Status</th>
+                <th>Service Type</th>
+                <th>HydroTest Performed</th>
+                <th>HydroTest Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>0075720481279</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Pass</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+            </tbody>
+          </table>
+        </div>
+      
+        <div class="roster-section">
+          <div class="roster-header">
+            <span class="roster-name-label">Roster Name:</span>
+            <span class="text-bold">Emma William</span>
+            
+          </div>
+          <table class="gears-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Serial Number</th>
+                <th>Manufacturer</th>
+                <th>Date of Mfg.</th>
+                <th>Status</th>
+                <th>Service Type</th>
+                <th>HydroTest Performed</th>
+                <th>HydroTest Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr>
+            <td>JACKET SHELL</td>
+            <td>SN-E1995</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Recommended Out Of Service</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+          <tr>
+            <td>PANTS LINER</td>
+            <td>SN-123456</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Expired</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+            </tbody>
+          </table>
+        </div>
+      
+        <div class="roster-section">
+          <div class="roster-header">
+            <span class="roster-name-label">Roster Name:</span>
+            <span class="text-bold">Haris</span>
+            
+          </div>
+          <table class="gears-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Serial Number</th>
+                <th>Manufacturer</th>
+                <th>Date of Mfg.</th>
+                <th>Status</th>
+                <th>Service Type</th>
+                <th>HydroTest Performed</th>
+                <th>HydroTest Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+          <tr>
+            <td>HELMET</td>
+            <td>SN-123DMKELRT</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>Repair</td>
+            <td></td>
+            <td>N/A</td>
+            <td>N/A</td>
+          </tr>
+        
+            </tbody>
+          </table>
+        </div>
+      
+
+        <!-- Footer -->
+        <div class="report-footer">
+            <div class="footer-divider"></div>
+            <a href="https://www.redlinegearcleaning.com" class="footer-link">www.redlinegearcleaning.com</a>
+        </div>
+    </div>
+</body>
+</html>
+  

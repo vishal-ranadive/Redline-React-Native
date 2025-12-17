@@ -1222,7 +1222,6 @@ const handleGearPress = (gear: any) => {
               icon="barcode-scan"
               labelStyle={styles.actionButtonLabel}
               contentStyle={styles.actionButtonContent}
-              disabled={!selectedFirefighter}
             >
               Scan Gear
             </Button>
@@ -1234,7 +1233,6 @@ const handleGearPress = (gear: any) => {
               icon="plus-circle"
               labelStyle={styles.actionButtonLabel}
               contentStyle={styles.actionButtonContent}
-              disabled={!selectedFirefighter}
             >
               Add New Gear
             </Button>
@@ -1261,7 +1259,6 @@ const handleGearPress = (gear: any) => {
               icon="barcode-scan"
               labelStyle={styles.actionButtonLabel}
               contentStyle={styles.actionButtonContent}
-              disabled={!selectedFirefighter}
             >
               Scan Gear
             </Button>
@@ -1275,7 +1272,6 @@ const handleGearPress = (gear: any) => {
                 icon="plus-circle"
                 labelStyle={styles.actionButtonLabel}
                 contentStyle={styles.actionButtonContent}
-                disabled={!selectedFirefighter}
               >
                 Add New Gear
               </Button>

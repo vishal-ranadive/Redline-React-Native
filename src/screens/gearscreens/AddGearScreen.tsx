@@ -401,7 +401,7 @@ const AddGearScreen = () => {
     }
 
     return (
-      <Card style={[styles.selectedItemCard, { borderColor: colors.primary }]}>
+      <Card style={[styles.selectedItemCard, { borderColor: colors.primary, backgroundColor: colors.surface }]}>
         <Card.Content style={styles.selectedItemContent}>
           <View style={styles.selectedItemInfo}>
             <Icon source="account" size={p(36)} color={colors.primary} />
@@ -489,7 +489,7 @@ const AddGearScreen = () => {
     }
 
     return (
-      <Card style={[styles.selectedItemCard, { borderColor: colors.primary }]}>
+      <Card style={[styles.selectedItemCard, { borderColor: colors.primary, backgroundColor: colors.surface }]}>
         <Card.Content style={styles.selectedItemContent}>
           <View style={styles.selectedItemInfo}>
             <Icon source="factory" size={p(36)} color={colors.primary} />
@@ -711,11 +711,18 @@ const AddGearScreen = () => {
                       <Dropdown
                         style={[
                           styles.dropdown,
-                          { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
+                          { 
+                            borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline,
+                            backgroundColor: colors.surface,
+                          },
                         ]}
-                        selectedTextStyle={styles.dropdownSelectedText}
-                        placeholderStyle={styles.dropdownPlaceholder}
-                        containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
+                        selectedTextStyle={[styles.dropdownSelectedText, { color: colors.onSurface }]}
+                        placeholderStyle={[styles.dropdownPlaceholder, { color: colors.onSurfaceVariant }]}
+                        containerStyle={{ 
+                          borderRadius: p(8), 
+                          paddingHorizontal: p(8),
+                          backgroundColor: colors.surface,
+                        }}
                         itemTextStyle={{ color: colors.onSurface }}
                         activeColor={colors.surfaceVariant}
                         data={gearTypeOptions}
@@ -839,11 +846,18 @@ const AddGearScreen = () => {
                     <Dropdown
                       style={[
                         styles.dropdown,
-                        { borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline },
+                        { 
+                          borderColor: gearTypeDropdownFocus ? colors.primary : colors.outline,
+                          backgroundColor: colors.surface,
+                        },
                       ]}
-                      selectedTextStyle={styles.dropdownSelectedText}
-                      placeholderStyle={styles.dropdownPlaceholder}
-                      containerStyle={{ borderRadius: p(8), paddingHorizontal: p(8) }}
+                      selectedTextStyle={[styles.dropdownSelectedText, { color: colors.onSurface }]}
+                      placeholderStyle={[styles.dropdownPlaceholder, { color: colors.onSurfaceVariant }]}
+                      containerStyle={{ 
+                        borderRadius: p(8), 
+                        paddingHorizontal: p(8),
+                        backgroundColor: colors.surface,
+                      }}
                       itemTextStyle={{ color: colors.onSurface }}
                       activeColor={colors.surfaceVariant}
                       data={gearTypeOptions}
@@ -1013,13 +1027,11 @@ const styles = StyleSheet.create({
   },
   dropdownPlaceholder: {
     fontSize: p(14),
-    color: '#999',
   },
 
   selectedItemCard: {
     borderWidth: 1,
     borderRadius: p(8),
-    backgroundColor: 'white',
   },
   selectedItemContent: {
     flexDirection: 'row',
@@ -1030,7 +1042,7 @@ const styles = StyleSheet.create({
   selectedItemInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   selectedItemText: { flex: 1, marginLeft: p(10) },
   selectedItemName: { fontSize: p(15), fontWeight: '600' },
-  selectedItemSubtitle: { fontSize: p(13), color: '#666' },
+  selectedItemSubtitle: { fontSize: p(13) },
 
   thumb: {
     width: p(70),
