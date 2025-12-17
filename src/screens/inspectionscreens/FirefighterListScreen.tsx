@@ -65,7 +65,7 @@ export default function FirefighterListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
 
   // Pagination state (1-based for Pagination component)

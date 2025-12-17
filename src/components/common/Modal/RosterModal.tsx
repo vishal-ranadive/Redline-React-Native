@@ -40,7 +40,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(1000);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
   const debouncedSearch = useDebounce(searchQuery, 500);
   const [supportedOrientations, setSupportedOrientations] = useState<
     ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
@@ -65,21 +65,8 @@ const RosterModal: React.FC<RosterModalProps> = ({
 
   const numberOfItemsPerPageList = [200, 300, 400, 500];
 
-  // Filter rosters based on search query (client-side filtering)
-  const filteredRosters = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return rosters;
-    }
-    
-    const query = searchQuery.toLowerCase();
-    return rosters.filter(roster =>
-      (roster.roster_name?.toLowerCase().includes(query) || false) ||
-      (roster.email?.toLowerCase().includes(query) || false) ||
-      (roster.first_name?.toLowerCase().includes(query) || false) ||
-      (roster.last_name?.toLowerCase().includes(query) || false) ||
-      (roster.phone?.toLowerCase().includes(query) || false)
-    );
-  }, [rosters, searchQuery]);
+  // Rosters are now filtered server-side, so we use them directly
+  const filteredRosters = rosters;
 
   // Calculate pagination range based on filtered results
   const totalFiltered = filteredRosters.length;
@@ -87,26 +74,26 @@ const RosterModal: React.FC<RosterModalProps> = ({
   const to = Math.min(page * numberOfItemsPerPage, totalFiltered);
   const paginatedRosters = filteredRosters.slice(from, to);
 
-  // Fetch all rosters when modal opens (client-side search and pagination)
+  // Fetch rosters when modal opens or search changes (server-side search and pagination)
   useEffect(() => {
     if (visible && currentLead?.firestation?.id && currentLead?.lead_id) {
-      // Fetch all rosters - we'll do client-side filtering and pagination
       const searchParams: any = {
         page: 1,
-        page_size: 1000, // Fetch a large number to get all rosters
+        page_size: numberOfItemsPerPage, // Fetch a large number to get all rosters
         leadId: currentLead.lead_id, // Pass leadId to get tag_color in response
+        last_name: debouncedSearch.trim() || undefined, // Add debounced search to API call
       };
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
     }
-  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id]);
+  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch]);
 
   // Reset when modal opens
   useEffect(() => {
     if (visible) {
       setSearchQuery('');
       setPage(1);
-      setNumberOfItemsPerPage(1000);
+      setNumberOfItemsPerPage(10);
     }
   }, [visible]);
 
@@ -218,7 +205,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Searchbar
-            placeholder="Search by name, email..."
+            placeholder="Search by firefighter's last name"
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchBar}
@@ -262,10 +249,10 @@ const RosterModal: React.FC<RosterModalProps> = ({
             <View style={styles.emptyContainer}>
               <Icon source="account-search" size={p(64)} color={colors.onSurfaceVariant} />
               <Text style={[styles.emptyText, { color: colors.onSurfaceVariant, fontSize: p(18) }]}>
-                {searchQuery ? 'No fire fighters found' : 'No fire fighters available'}
+                {searchQuery ? 'No fire fighters found matching your search' : 'No fire fighters available'}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-                {searchQuery ? 'Try a different search term' : 'Add a new fire fighter manually'}
+                {searchQuery ? 'Try a different search term or add a new fire fighter manually' : 'Add a new fire fighter manually'}
               </Text>
             </View>
           )}
@@ -277,7 +264,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
             mode="contained"
             onPress={handleAddManual}
             buttonColor={colors.primary}
-            textColor={colors.surface}
+            textColor={"#fff"}
             style={styles.addButton}
             icon="account-plus"
             labelStyle={{ fontSize: p(16), fontWeight: '600' }}

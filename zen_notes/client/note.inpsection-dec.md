@@ -10,5 +10,9 @@ src\screens\inspectionscreens\FirefighterGearsScreen.tsx
   }, [gearCards]);
 
 
-
-<View key={`${columnIndex}-${group.roster_id}`}>
+# 2 search from backend 
+{{base_url}}/api/leads/?lead_id=100
+- we should not perfectly matching 
+{
+    "detail": "No LeadsGenerated matches the given query."
+}

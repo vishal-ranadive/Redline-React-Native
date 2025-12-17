@@ -19,7 +19,8 @@ import {
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 import { useManufacturerStore } from '../../../store/manufacturerStore';
-import  useDebounce  from '../../../hooks/useDebounce';
+import useDebounce from '../../../hooks/useDebounce';
+import Pagination from '../Pagination';
 
 interface ManufacturerModalProps {
   visible: boolean;
@@ -30,13 +31,15 @@ interface ManufacturerModalProps {
 const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose, onSelect }) => {
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
   const debouncedSearch = useDebounce(searchQuery, 500);
   const [supportedOrientations, setSupportedOrientations] = useState<
     ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
   >(['portrait', 'landscape']);
-  
+
   // Store
-  const { manufacturers, loading, fetchManufacturers } = useManufacturerStore();
+  const { manufacturers, loading, fetchManufacturers, pagination } = useManufacturerStore();
 
   // Lock to current orientation when modal opens
   useEffect(() => {
@@ -51,33 +54,37 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
     }
   }, [visible]);
 
-  // Filter manufacturers based on search query
-  const filteredManufacturers = manufacturers.filter(mfr =>
-    searchQuery.trim() === '' ? true :
-    mfr.manufacturer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (mfr.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (mfr.city || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const numberOfItemsPerPageList = [10, 20, 50, 100];
 
-  // Fetch manufacturers with search
+  // Fetch manufacturers with search and pagination
   useEffect(() => {
     if (visible) {
-      const searchParams: any = {};
-      
+      const searchParams: any = {
+        page: page,
+        page_size: numberOfItemsPerPage,
+      };
+
       if (debouncedSearch.trim()) {
         searchParams.manufacturer_name = debouncedSearch;
       }
 
       fetchManufacturers(searchParams);
     }
-  }, [visible, debouncedSearch]);
+  }, [visible, debouncedSearch, page, numberOfItemsPerPage]);
 
   // Reset when modal opens
   useEffect(() => {
     if (visible) {
       setSearchQuery('');
+      setPage(1);
+      setNumberOfItemsPerPage(10);
     }
   }, [visible]);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   const handleSelect = (m: any) => {
     onSelect(m);
@@ -94,12 +101,16 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
       </View>
       <View style={styles.itemBody}>
         <Text style={[styles.itemTitle, { color: colors.onSurface }]}>{item.manufacturer_name}</Text>
-        <Text style={[styles.itemSub, { color: colors.onSurfaceVariant }]}>
-          {item.city} {item.state ? `• ${item.state}` : ''} {item.country ? `• ${item.country}` : ''}
-        </Text>
-        <Text style={[styles.itemSub, { color: colors.onSurfaceVariant }]}>
-          {item.email} {item.phone ? `• ${item.phone}` : ''}
-        </Text>
+        {(item.city || item.state || item.country) && (
+          <Text style={[styles.itemSub, { color: colors.onSurfaceVariant }]}>
+            {[item.city, item.state, item.country].filter(Boolean).join(' • ')}
+          </Text>
+        )}
+        {(item.email || item.phone) && (
+          <Text style={[styles.itemSub, { color: colors.onSurfaceVariant }]}>
+            {[item.email, item.phone].filter(Boolean).join(' • ')}
+          </Text>
+        )}
       </View>
       <Icon source="chevron-right" size={p(20)} color={colors.onSurfaceVariant} />
     </TouchableOpacity>
@@ -123,7 +134,7 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
 
         <View style={styles.searchWrap}>
           <Searchbar
-            placeholder="Search manufacturer, email or city..."
+            placeholder="Search manufacturer name"
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.search}
@@ -138,19 +149,33 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={{ color: colors.onSurfaceVariant, marginTop: p(12) }}>Loading manufacturers...</Text>
             </View>
-          ) : filteredManufacturers.length > 0 ? (
-            <FlatList
-              data={filteredManufacturers}
-              keyExtractor={(item) => item.manufacturer_id.toString()}
-              renderItem={renderItem}
-              ItemSeparatorComponent={() => <Divider />}
-              showsVerticalScrollIndicator={false}
-            />
+          ) : manufacturers.length > 0 ? (
+            <>
+              <FlatList
+                data={manufacturers}
+                keyExtractor={(item) => item.manufacturer_id.toString()}
+                renderItem={renderItem}
+                ItemSeparatorComponent={() => <Divider />}
+                showsVerticalScrollIndicator={false}
+              />
+
+              {/* Pagination Controls */}
+              {pagination && pagination.total > 0 && (
+                <Pagination
+                  page={page}
+                  total={pagination.total}
+                  itemsPerPage={numberOfItemsPerPage}
+                  itemsPerPageList={numberOfItemsPerPageList}
+                  onPageChange={setPage}
+                  onItemsPerPageChange={setNumberOfItemsPerPage}
+                />
+              )}
+            </>
           ) : (
             <View style={styles.empty}>
               <Icon source="factory" size={p(60)} color={colors.onSurfaceVariant} />
               <Text style={[styles.emptyText, { color: colors.onSurfaceVariant, fontSize: p(18) }]}>
-                {searchQuery ? 'No manufacturers found' : 'No manufacturers available'}
+                {searchQuery ? 'No manufacturers found matching your search' : 'No manufacturers available'}
               </Text>
               <Text style={[styles.emptySub, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
                 {searchQuery ? 'Try a different search term' : 'Add a manufacturer via the admin panel'}
