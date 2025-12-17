@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   Animated,
   Image,
 } from 'react-native';
@@ -27,6 +26,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [ipadError, setIpadError] = useState('');
 
   // 🔁 Dynamic subtitles that cycle every 2 seconds
   const subtitles = [
@@ -65,11 +65,6 @@ const LoginScreen = () => {
     return () => clearError();
   }, []);
 
-  useEffect(() => {
-    if (error) {
-      Alert.alert('Login Error', error);
-    }
-  }, [error]);
 
   const handleLogin = async () => {
     console.log('🎯 Login button pressed');
@@ -110,10 +105,38 @@ const LoginScreen = () => {
       navigation.navigate('LeadScreen');
     } catch (error) {
       console.error('❌ Login error caught in component:', error);
+
+      // Check if the error is specifically about unauthorized access for role on iPad
+      let errorMessage = '';
+      if (error && typeof error === 'object') {
+        if ('response' in error && error.response && typeof error.response === 'object' &&
+            'data' in error.response && error.response.data && typeof error.response.data === 'object') {
+          // Check for both 'message' and 'error' properties in response data
+          if ('message' in error.response.data && typeof error.response.data.message === 'string') {
+            errorMessage = error.response.data.message;
+          } else if ('error' in error.response.data && typeof error.response.data.error === 'string') {
+            errorMessage = error.response.data.error;
+          }
+        }
+        if (errorMessage === '' && 'message' in error && typeof error.message === 'string') {
+          errorMessage = error.message;
+        }
+        if (errorMessage === '') {
+          errorMessage = String(error);
+        }
+      } else {
+        errorMessage = String(error);
+      }
+      const isUnauthorizedIPadError = errorMessage.includes('Unauthorized access for this role on iPad');
+
+      if (isUnauthorizedIPadError) {
+        setIpadError('RedLine Access Denied');
+      }
+
       Toast.show({
         type: 'error',
-        text1: 'Login failed',
-        text2: 'Invalid credentials or server issue',
+        text1: isUnauthorizedIPadError ? 'Access Denied' : 'Login failed',
+        text2: isUnauthorizedIPadError ? 'Unauthorized access for this role on iPad' : 'Invalid credentials or server issue',
       });
     }
   };
@@ -169,6 +192,7 @@ const LoginScreen = () => {
             onChangeText={(text) => {
               setEmail(text);
               clearError();
+              setIpadError('');
             }}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -186,6 +210,7 @@ const LoginScreen = () => {
             onChangeText={(text) => {
               setPassword(text);
               clearError();
+              setIpadError('');
             }}
             right={
               <TextInput.Icon
@@ -197,6 +222,13 @@ const LoginScreen = () => {
             theme={{ fonts: { bodyLarge: { fontSize: p(14) } } }}
             disabled={isLoading}
           />
+
+          {/* Error Message */}
+          {ipadError ? (
+            <Text style={[styles.errorText, { color: paperTheme.colors.error }]}>
+              {ipadError}
+            </Text>
+          ) : null}
 
           {/* 🚪 Login Button */}
           <Button
@@ -274,6 +306,18 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: p(16),
+    width: '100%',
+  },
+  errorText: {
+    fontSize: p(14),
+    marginBottom: p(16),
+    textAlign: 'center',
+    fontWeight: '600',
+    backgroundColor: 'rgba(244, 67, 54, 0.1)', // Light red background like highlighter
+    paddingHorizontal: p(12),
+    paddingVertical: p(4),
+    borderRadius: p(4),
+    overflow: 'hidden',
     width: '100%',
   },
   button: {
