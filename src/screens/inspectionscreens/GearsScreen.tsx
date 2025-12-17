@@ -34,7 +34,13 @@ type GearInspection = {
   };
   roster: {
     name: string; // firstName + MiddleName + LastName
-    tag_color: string;
+    roster_id?: number;
+    first_name?: string;
+    middle_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    rank?: string;
   };
   inspection_id: number;
   inspection_date: string;
@@ -51,6 +57,7 @@ type GearInspection = {
       id: number;
       status: string; // e.g., 'Cleaned and Inspected', 'Inspected Only', 'Specialised Cleaning', etc.
     };
+  tag_color: string;
 };
 
 type Load = {
@@ -175,9 +182,23 @@ export default function GearsScreen() {
         setLoading(true);
       }
       const response = await inspectionApi.getGearInspectionsLoadwise(load.loadNumber, currentLead.lead_id);
-      
+      console.log('Raw API response:', response);
+
       if (response?.gear_inspections) {
-        setGearInspections(response.gear_inspections);
+        console.log('First inspection roster data:', response.gear_inspections[0]?.roster);
+        // Ensure roster names are properly constructed
+        const processedInspections = response.gear_inspections.map((inspection: any) => ({
+          ...inspection,
+          roster: {
+            ...inspection.roster,
+            name: inspection.roster.name ||
+                  [inspection.roster.first_name, inspection.roster.middle_name, inspection.roster.last_name]
+                    .filter(Boolean)
+                    .join(' ') ||
+                  'Unknown Firefighter'
+          }
+        }));
+        setGearInspections(processedInspections);
       } else {
         setGearInspections([]);
       }
@@ -217,23 +238,40 @@ export default function GearsScreen() {
   // Status color function moved to global constants - use getStatusColor() instead
 
   const handleUpdateGear = async (inspection: GearInspection) => {
+    console.log('handleUpdateGear called with inspection:', {
+      inspection_id: inspection.inspection_id,
+      gear_id: inspection.gear.gear_id,
+      roster_name: inspection.roster.name,
+      tag_color: inspection.tag_color,
+      roster_data: inspection.roster,
+      full_inspection: inspection
+    });
+
     // Parse roster name to extract first, middle, and last name
     const nameParts = inspection.roster.name.trim().split(/\s+/).filter(part => part.length > 0);
     const firstName = nameParts[0] || '';
     const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : (nameParts.length === 2 ? '' : nameParts[1] || '');
     const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-    
+
+    console.log('Parsed name parts:', { nameParts, firstName, middleName, lastName });
+
     // Try to fetch inspection data to get full roster information including roster_id
     let rosterId: number | undefined;
     try {
+      console.log('Fetching inspection data for roster_id...');
       const inspectionResponse = await inspectionApi.getGearInspectionByInspectionId(inspection.inspection_id);
+      console.log('Inspection API response:', inspectionResponse);
+
       if (inspectionResponse?.status && inspectionResponse?.data?.roster) {
         rosterId = inspectionResponse.data.roster.roster_id;
+        console.log('Roster ID found:', rosterId);
+      } else {
+        console.log('No roster data found in response');
       }
     } catch (error) {
-      console.log('Could not fetch inspection data for roster_id, using name only');
+      console.log('Could not fetch inspection data for roster_id, using name only. Error:', error);
     }
-    
+
     // Construct roster object from inspection data
     const roster = {
       name: inspection.roster.name,
@@ -245,18 +283,31 @@ export default function GearsScreen() {
       email: '',
       phone: '',
     };
-    
+
+    console.log('Constructed roster object:', roster);
+
     // Get tag color from inspection
-    const tagColor = normalizeTagColor(inspection.roster.tag_color);
-    
-    navigation.navigate('UpadateInspection', {
+    const tagColor = normalizeTagColor(inspection.tag_color);
+    console.log('Normalized tag color:', tagColor);
+
+    const navigationParams = {
       gearId: inspection.gear.gear_id,
       inspectionId: inspection.inspection_id,
-      mode: 'update',
+      mode: 'update' as const,
       firefighter: roster,
       tagColor: tagColor || undefined,
-      colorLocked: !!inspection.roster.tag_color
-    });
+      colorLocked: !!inspection.tag_color
+    };
+
+    console.log('Navigation params:', navigationParams);
+
+    try {
+      console.log('Attempting navigation to UpadateInspection...');
+      navigation.navigate('UpadateInspection', navigationParams);
+      console.log('Navigation call completed successfully');
+    } catch (navError) {
+      console.error('Navigation failed:', navError);
+    }
   };
 
   /**
@@ -346,7 +397,7 @@ export default function GearsScreen() {
    */
   const renderGear = useCallback(({ item }: { item: GearInspection }) => {
 
-    const tagColor = normalizeTagColor(item.roster.tag_color) || "";
+    const tagColor = normalizeTagColor(item.tag_color) || "";
     const statusColor = getStatusColor(item.gear_status.id, item.gear_status.status);
     const gearTypeName = item.gear.gear_type?.gear_type || item.gear.gear_name || 'Other';
     
@@ -468,11 +519,11 @@ export default function GearsScreen() {
                   </Text>
                 </View>
 
-                {item.roster.tag_color && (
+                {item.tag_color && (
                   <View style={styles.detailRow}>
                     <View style={[styles.colorTag, { backgroundColor: tagColor }]} />
                     <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Tag:</Text>
-                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{item.roster.tag_color}</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{item.tag_color}</Text>
                   </View>
                 )}
               </View>

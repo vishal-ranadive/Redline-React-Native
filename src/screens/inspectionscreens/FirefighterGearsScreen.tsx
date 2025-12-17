@@ -262,17 +262,43 @@ export default function FirefighterGearsScreen() {
   const currentGears = filteredGears.slice(from, to);
 
   const handleUpdateGear = (card: GearCard) => {
+    console.log('handleUpdateGear called with card:', {
+      gearId: card.gear.gear?.gear_id,
+      inspectionId: card.gear.current_inspection?.inspection_id,
+      gearName: card.gear.gear?.gear_name,
+      serialNumber: card.gear.gear?.serial_number,
+      tagColor: card.color,
+      gearStatus: card.gearStatus,
+      roster: {
+        roster_id: roster.id,
+        roster_name: roster.name,
+        roster_email: roster.email
+      }
+    });
+
     const gearId = card.gear.gear?.gear_id;
     const inspectionId = card.gear.current_inspection?.inspection_id;
-    
-    navigation.navigate('UpadateInspection', {
+
+    console.log('Extracted IDs:', { gearId, inspectionId });
+
+    const navigationParams = {
       gearId,
       inspectionId,
-      mode: 'update',
+      mode: 'update' as const,
       firefighter: roster,
       tagColor: card.color ?? undefined,
       colorLocked: true,
-    });
+    };
+
+    console.log('Navigation params:', navigationParams);
+
+    try {
+      console.log('Attempting navigation to UpadateInspection...');
+      navigation.navigate('UpadateInspection', navigationParams);
+      console.log('Navigation call completed successfully');
+    } catch (navError) {
+      console.error('Navigation failed:', navError);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -417,7 +443,16 @@ export default function FirefighterGearsScreen() {
         <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => handleUpdateGear(item)}
+            onPress={() => {
+              console.log('Gear card pressed for item:', {
+                gearId: item.gear.gear?.gear_id,
+                gearName: item.gear.gear?.gear_name,
+                inspectionId: item.gear.current_inspection?.inspection_id,
+                gearStatus: item.gearStatus,
+                tagColor: item.color
+              });
+              handleUpdateGear(item);
+            }}
             style={[styles.card, styles.shadow, { borderColor: colors.outline }]}
           >
             <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
@@ -529,7 +564,16 @@ export default function FirefighterGearsScreen() {
                 {/* Update Button */}
                 <Button
                   mode="contained"
-                  onPress={() => handleUpdateGear(item)}
+                  onPress={() => {
+                    console.log('Update button pressed for item:', {
+                      gearId: item.gear.gear?.gear_id,
+                      gearName: item.gear.gear?.gear_name,
+                      inspectionId: item.gear.current_inspection?.inspection_id,
+                      gearStatus: item.gearStatus,
+                      tagColor: item.color
+                    });
+                    handleUpdateGear(item);
+                  }}
                   icon="clipboard-edit-outline"
                   style={styles.updateButton}
                   contentStyle={styles.updateButtonContent}
