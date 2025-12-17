@@ -1147,7 +1147,7 @@ const LeadDetailScreen = () => {
               onPress={() => action.action && action.action()}
               buttonColor={actionButtonsDisabled ? '#E0E0E0' : colors.primary}
               textColor={actionButtonsDisabled ? '#9E9E9E' : '#FFFFFF'}
-              // disabled={actionButtonsDisabled}
+              disabled={actionButtonsDisabled}
               labelStyle={{
                 fontSize: p(14),
                 fontWeight: '600',
