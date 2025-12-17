@@ -11,6 +11,7 @@ interface ThemeState {
   theme: Theme; // The actual theme being used
   setThemePreference: (preference: ThemePreference) => Promise<void>;
   loadThemePreference: () => Promise<void>;
+  toggleTheme: () => Promise<void>;
 }
 
 const THEME_STORAGE_KEY = '@app_theme_preference';
@@ -48,6 +49,17 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     } catch (error) {
       console.error('Failed to load theme preference:', error);
     }
+  },
+  
+  toggleTheme: async () => {
+    const { themePreference, theme } = get();
+    // If preference is automatic, toggle to opposite of current theme
+    // Otherwise, toggle between light and dark
+    const newPreference: ThemePreference = 
+      themePreference === 'automatic' 
+        ? (theme === 'light' ? 'dark' : 'light')
+        : (themePreference === 'light' ? 'dark' : 'light');
+    await get().setThemePreference(newPreference);
   },
 }));
 

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import { TextInput, Button, Text, useTheme, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
@@ -137,10 +138,18 @@ const LoginScreen = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.formContainer}>
-          {/* 🟥 App Title */}
-          <Text style={[styles.title, { color: paperTheme.colors.primary }]}>
-            RedLine Gear
-          </Text>
+          {/* RedLine Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={{ 
+                uri: theme === 'dark'
+                  ? 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765531884/RedLine/gdfwbzg3ejynlcu3kqk3.png'
+                  : 'https://res.cloudinary.com/dwwykeft2/image/upload/v1765457898/RedLine/wqoaomsleu1egppnvjo6.png'
+              }}
+              style={styles.logo}
+              resizeMode="cover"
+            />
+          </View>
 
           {/* ✨ Animated Subtitle */}
           <Animated.Text
@@ -240,6 +249,16 @@ const styles = StyleSheet.create({
   formContainer: {
     width: '90%',
     maxWidth: p(500),
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: p(32),
+  },
+  logo: {
+    width: p(200),
+    height: p(60),
   },
   title: {
     fontSize: p(32),
@@ -255,11 +274,13 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: p(16),
+    width: '100%',
   },
   button: {
     marginBottom: p(12),
     paddingVertical: p(5),
     borderRadius: p(6),
+    width: '100%',
   },
   footer: {
     fontSize: p(12),
