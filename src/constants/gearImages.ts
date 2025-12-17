@@ -14,3 +14,31 @@ export const GEAR_IMAGE_URLS = {
   other: 'https://res.cloudinary.com/dwwykeft2/image/upload/v1764846369/RedLine/deetngagy8pvhaymcsf4.jpg', // fallback to jacket
 } as const;
 
+/**
+ * Global constants for local gear icons
+ * Using require() for local asset images
+ */
+export const GEAR_ICONS = {
+  jacket: require('../assets/gears/jacket.jpg'),
+  jacket_liner: require('../assets/gears/jacket_shell.jpg'),
+  pants: require('../assets/gears/pants.jpg'),
+  pants_liner: require('../assets/gears/pants_shell.jpg'),
+} as const;
+
+/**
+ * Get appropriate local gear icon based on gear type
+ * @param gearType - The gear type string (e.g., "JACKET", "PANT LINER")
+ * @returns The appropriate gear icon or default jacket icon
+ */
+export const getGearIconImage = (gearType: string | null) => {
+  if (!gearType) return GEAR_ICONS.jacket; // default
+
+  const type = gearType.toUpperCase();
+  if (type.includes('JACKET') && type.includes('LINER')) return GEAR_ICONS.jacket_liner;
+  if (type.includes('JACKET')) return GEAR_ICONS.jacket;
+  if (type.includes('PANT') && type.includes('LINER')) return GEAR_ICONS.pants_liner;
+  if (type.includes('PANT')) return GEAR_ICONS.pants;
+
+  return GEAR_ICONS.jacket; // default
+};
+

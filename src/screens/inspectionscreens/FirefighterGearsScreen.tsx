@@ -9,7 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInspectionStore } from '../../store/inspectionStore';
 import { getColorHex } from '../../constants/colors';
-import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
+import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getStatusColor } from '../../constants/inspection';
 
@@ -450,13 +450,15 @@ export default function FirefighterGearsScreen() {
                   )}
                 </View>
 
-                {/* Gear Images - 3 Column Grid or Default Image */}
+                {/* Gear Icon - Single Icon Based on Gear Type */}
+                {/* Commented out: Gear Images - 3 Column Grid or Default Image */}
+                {/*
                 {hasImages ? (
                   <View style={styles.inspectionImagesContainer}>
                     {inspectionImages.slice(0, 6).map((imageUri: string, index: number) => (
                       <View key={index} style={styles.inspectionImageBox}>
-                        <Image 
-                          source={{ uri: imageUri }} 
+                        <Image
+                          source={{ uri: imageUri }}
                           style={styles.inspectionImage}
                           resizeMode="cover"
                         />
@@ -470,13 +472,22 @@ export default function FirefighterGearsScreen() {
                   </View>
                 ) : (
                   <View style={styles.gearImageContainer}>
-                    <Image 
-                      source={{ uri: getGearImageUrl(gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? null) }} 
+                    <Image
+                      source={{ uri: getGearImageUrl(gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? null) }}
                       style={styles.gearImage}
                       resizeMode="cover"
                     />
                   </View>
                 )}
+                */}
+
+                <View style={styles.gearImageContainer}>
+                  <Image
+                    source={getGearIconImage(gearDetail?.gear_type?.gear_type ?? gearDetail?.gear_name ?? null)}
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
+                </View>
 
                 {/* Gear Details */}
                 <View style={styles.gearDetails}>

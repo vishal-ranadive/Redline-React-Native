@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inspectionApi } from '../../services/inspectionApi';
 import { useLeadStore } from '../../store/leadStore';
 import { getColorHex } from '../../constants/colors';
-import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
+import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getStatusColor } from '../../constants/inspection';
 
@@ -101,7 +101,7 @@ const getGearImageUrl = (gearType: string | null) => {
 // Function to get appropriate icon for gear type
 const getGearTypeIcon = (gearType: string | null) => {
   if (!gearType) return 'package-variant';
-  
+
   const type = gearType.toLowerCase();
   if (type.includes('pant') || type.includes('pants')) return 'tshirt-v';
   if (type.includes('jacket')) return 'tshirt-crew';
@@ -113,9 +113,10 @@ const getGearTypeIcon = (gearType: string | null) => {
   if (type.includes('harness')) return 'seatbelt';
   if (type.includes('axe')) return 'axe';
   if (type.includes('hose')) return 'pipe';
-  
+
   return 'package-variant';
 };
+
 
 const normalizeTagColor = (color?: string | null) => {
   if (!color) {
@@ -390,13 +391,15 @@ export default function GearsScreen() {
                 )}
               </View>
 
-              {/* Gear Images - 3 Column Grid or Default Image */}
+              {/* Gear Icon - Single Icon Based on Gear Type */}
+              {/* Commented out: Gear Images - 3 Column Grid or Default Image */}
+              {/*
               {hasImages ? (
                 <View style={styles.inspectionImagesContainer}>
                   {inspectionImages.slice(0, 6).map((imageUri: string, index: number) => (
                     <View key={index} style={styles.inspectionImageBox}>
-                      <Image 
-                        source={{ uri: imageUri }} 
+                      <Image
+                        source={{ uri: imageUri }}
                         style={styles.inspectionImage}
                         resizeMode="cover"
                       />
@@ -410,13 +413,22 @@ export default function GearsScreen() {
                 </View>
               ) : (
                 <View style={styles.gearImageContainer}>
-                  <Image 
-                    source={{ uri: getGearImageUrl(gearTypeName) }} 
+                  <Image
+                    source={{ uri: getGearImageUrl(gearTypeName) }}
                     style={styles.gearImage}
                     resizeMode="cover"
                   />
                 </View>
               )}
+              */}
+
+              <View style={styles.gearImageContainer}>
+                <Image
+                  source={getGearIconImage(gearTypeName)}
+                  style={styles.gearImage}
+                  resizeMode="cover"
+                />
+              </View>
 
               {/* Gear Details */}
               <View style={styles.gearDetails}>
@@ -539,7 +551,7 @@ export default function GearsScreen() {
                 {
                   backgroundColor:
                     statusFilter === status
-                      ? status === 'All' ? colors.primary : getGearStatusColor(status as GearStatus)
+                      ? status === 'All' ? colors.primary : getStatusColor(null, status as GearStatus)
                       : colors.surfaceVariant,
                 },
               ]}
