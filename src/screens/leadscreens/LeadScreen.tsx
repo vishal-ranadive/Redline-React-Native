@@ -16,6 +16,7 @@ import {
   Checkbox,
   Divider,
 } from 'react-native-paper';
+import { Calendar } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -27,7 +28,6 @@ import { useAuthStore } from '../../store/authStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
 import useFormattedDate from '../../hooks/useFormattedDate';
 import Pagination from '../../components/common/Pagination';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 // Status management
 import { 
@@ -320,15 +320,6 @@ const LeadScreen = () => {
     setPage(1);
   }, []);
 
-  /**
-   * Handle date picker confirmation
-   */
-  const handleDateConfirm = useCallback((date: Date) => {
-    const formatted = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-    setDateFilter(formatted);
-    setDatePickerVisible(false);
-    setPage(1);
-  }, []);
 
   /**
    * Format date for display
@@ -823,15 +814,101 @@ const LeadScreen = () => {
         </Modal>
       </Portal>
 
-      {/* Date Picker Modal */}
-      <DateTimePickerModal
-        isVisible={datePickerVisible}
-        mode="date"
-        onConfirm={handleDateConfirm}
-        onCancel={() => setDatePickerVisible(false)}
-        date={dateFilter ? new Date(dateFilter) : new Date()}
-        themeVariant={theme === 'dark' ? 'dark' : 'light'}
-      />
+      {/* Calendar Date Picker Modal */}
+      <Portal>
+        <Modal
+          visible={datePickerVisible}
+          onDismiss={() => setDatePickerVisible(false)}
+          contentContainerStyle={[
+            styles.modalContainer,
+            isMobile && styles.modalContainerMobile,
+            {
+              backgroundColor: colors.surface,
+              height: modalHeight,
+            },
+          ]}
+        >
+          {/* Modal Header */}
+          <View style={[styles.modalHeader, { borderBottomColor: colors.outline }]}>
+            <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
+              Select Date
+            </Text>
+            <Button
+              mode="text"
+              onPress={() => setDatePickerVisible(false)}
+              icon="close"
+              textColor={colors.onSurface}
+              style={styles.modalCloseButton}
+            >
+              Close
+            </Button>
+          </View>
+
+          {/* Calendar */}
+          <View style={styles.calendarContainer}>
+            <Calendar
+              current={dateFilter || new Date().toISOString().split('T')[0]}
+              markedDates={dateFilter ? {
+                [dateFilter]: {
+                  selected: true,
+                  selectedColor: colors.primary,
+                  selectedTextColor: colors.onPrimary,
+                }
+              } : {}}
+              onDayPress={(day) => {
+                const selectedDate = day.dateString;
+                setDateFilter(selectedDate);
+                setDatePickerVisible(false);
+                setPage(1);
+              }}
+              theme={{
+                backgroundColor: colors.surface,
+                calendarBackground: colors.surface,
+                textSectionTitleColor: colors.onSurface,
+                selectedDayBackgroundColor: colors.primary,
+                selectedDayTextColor: colors.onPrimary,
+                todayTextColor: colors.primary,
+                dayTextColor: colors.onSurface,
+                textDisabledColor: colors.outline,
+                dotColor: colors.primary,
+                selectedDotColor: colors.onPrimary,
+                arrowColor: colors.primary,
+                monthTextColor: colors.onSurface,
+                indicatorColor: colors.primary,
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 14,
+              }}
+              style={styles.calendar}
+            />
+          </View>
+
+          {/* Modal Footer */}
+          <View style={[styles.modalFooter, { borderTopColor: colors.outline }]}>
+            <Button
+              mode="text"
+              onPress={() => {
+                setDateFilter('');
+                setDatePickerVisible(false);
+                setPage(1);
+              }}
+              textColor={colors.error}
+              disabled={!dateFilter}
+            >
+              Clear
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => setDatePickerVisible(false)}
+              buttonColor={colors.primary}
+              textColor={colors.onPrimary}
+            >
+              Done
+            </Button>
+          </View>
+        </Modal>
+      </Portal>
+
     </SafeAreaView>
   );
 };
@@ -1082,6 +1159,19 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
     minHeight: 400,
     paddingBottom: p(200),
+  },
+  calendarContainer: {
+    flex: 1,
+    padding: p(16),
+    justifyContent: 'center',
+  },
+  calendar: {
+    borderRadius: p(8),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
   },
 });
 
