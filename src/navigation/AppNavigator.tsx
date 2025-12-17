@@ -5,6 +5,7 @@ import LoginScreen from '../screens/authscreens/LoginScreen';
 import ForgotPasswordScreen from '../screens/authscreens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/authscreens/ResetPasswordScreen';
 import SplashScreen from '../screens/authscreens/SplashScreen';
+import UnauthorizedScreen from '../screens/authscreens/UnauthorizedScreen';
 import LeadScreen from '../screens/leadscreens/LeadScreen';
 import SettingsScreen from '../screens/settingsscreens/Settings';
 import LeadDetailScreen from '../screens/leadscreens/LeadDetailScreen';
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
+  Unauthorized: undefined;
   LeadScreen: undefined;
   Settings: undefined;
   LeadDetail: { lead: any };
@@ -80,6 +82,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Screen name="Unauthorized" component={UnauthorizedScreen} />
 
       {/* App Screens */}
       <Stack.Screen name="LeadScreen" component={withMainLayout(LeadScreen)} />

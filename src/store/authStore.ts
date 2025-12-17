@@ -106,7 +106,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axios.post(`${BASE_URL}/login/`, { email, password });
+          const response = await axios.post(`${BASE_URL}/login/?src=ipad`, { email, password });
           const { access_token, refresh_token } = response.data;
 
           // 1) set tokens immediately so axios interceptors can use them

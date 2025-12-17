@@ -83,6 +83,23 @@ const LoginScreen = () => {
 
     try {
       await login(email, password);
+      console.log('✅ Login successful, checking user role');
+      
+      // Check if user role is allowed
+      const currentUser = useAuthStore.getState().user;
+      const allowedRoles = ["Technician", "Corporate_Technician"];
+      
+      if (currentUser?.role && !allowedRoles.includes(currentUser.role)) {
+        console.log('❌ Unauthorized role:', currentUser.role);
+        Toast.show({
+          type: 'error',
+          text1: 'Access Denied',
+          text2: 'Your role does not have access to this application',
+        });
+        navigation.navigate('Unauthorized');
+        return;
+      }
+      
       console.log('✅ Login successful, navigating to LeadScreen');
       Toast.show({
         type: 'success',

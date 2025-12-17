@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { leadApi } from '../services/leadApi';
+import { useAuthStore } from './authStore';
 
 interface LeadState {
   // State
@@ -37,6 +38,12 @@ export const useLeadStore = create<LeadState>()(
       fetchLeads: async (params: any = {}) => {
         set({ loading: true, error: null });
         try {
+          // Check user role and add franchise_id for Technician role
+          const user = useAuthStore.getState().user;
+          if (user?.role === "Technician" && user.franchiseId) {
+            params.franchise_id = user.franchiseId;
+          }
+          
           const response = await leadApi.getLeads(params);
 
           if (response.status) {
