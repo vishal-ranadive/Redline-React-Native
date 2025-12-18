@@ -1,6 +1,6 @@
 // src/screens/leadscreens/LeadScreen.tsx
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, SectionList, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Dimensions, Alert, ScrollView, Image } from 'react-native';
 import {
   Text,
   TextInput,
@@ -10,7 +10,6 @@ import {
   Icon,
   IconButton,
   Badge,
-  DataTable,
   Modal,
   Portal,
   Checkbox,
@@ -25,13 +24,43 @@ import { useLeadStore } from '../../store/leadStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
-import useFormattedDate from '../../hooks/useFormattedDate';
+// Helper function to format dates
+const formatDate = (date?: string | Date | null, format: string = 'DD MMM YYYY', placeholder: string = 'Date not set'): string => {
+  if (!date) return placeholder;
+  const dayjs = require('dayjs');
+  const parsed = dayjs(date);
+  if (!parsed.isValid()) return placeholder;
+  return parsed.format(format);
+};
+
+// Helper function to normalize lead type (handles case variations)
+const normalizeLeadType = (type?: string): 'REPAIR' | 'INSPECTION' | null => {
+  if (!type) return null;
+  const normalized = type.toUpperCase().trim();
+  if (normalized === 'REPAIR') return 'REPAIR';
+  if (normalized === 'INSPECTION') return 'INSPECTION';
+  return null;
+};
+
+// Helper function to get display text for lead type
+const getLeadTypeDisplay = (type: string | undefined): 'Repair' | 'Inspection' | 'Unknown' => {
+  const normalized = normalizeLeadType(type);
+  if (normalized === 'REPAIR') return 'Repair';
+  if (normalized === 'INSPECTION') return 'Inspection';
+  return 'Unknown';
+};
+
+// Helper function to check if lead type matches filter (case insensitive)
+const matchesLeadType = (leadType: string | undefined, filterType: 'Repair' | 'Inspection' | null): boolean => {
+  if (!filterType) return true; // No filter applied
+  const normalized = normalizeLeadType(leadType);
+  return normalized === (filterType === 'Repair' ? 'REPAIR' : filterType === 'Inspection' ? 'INSPECTION' : null);
+};
 import Pagination from '../../components/common/Pagination';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 // Status management
-import { 
-  getStatusesByType, 
+import {
   getAllStatusesGrouped,
   getStatusColor,
   formatStatus,
@@ -39,8 +68,8 @@ import {
 } from '../../constants/leadStatuses';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import BottomNavBar from '../../navigation/BottomNavBar';
-import { printTable } from '../../utils/printTable';
 import { Avatar } from 'react-native-paper';
+import CreateJobModal from '../../components/common/Modal/CreateJobModal';
 
 // Responsive utility placeholder
 const p = (size: number): number => size;
@@ -62,7 +91,7 @@ const LeadScreen = () => {
   
   // State Hooks
   const [search, setSearch] = useState<string>(''); // Search query
-  const [orderTypeFilter, setOrderTypeFilter] = useState<'REPAIR' | 'INSPECTION' | null>(null); // Type filter
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'Repair' | 'Inspection' | null>(null); // Type filter
   const [orientation, setOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>(
     Dimensions.get('window').width > Dimensions.get('window').height ? 'LANDSCAPE' : 'PORTRAIT'
   ); // Screen orientation
@@ -71,6 +100,7 @@ const LeadScreen = () => {
   const [statusModalVisible, setStatusModalVisible] = useState(false); // Modal visibility state
   const [dateFilter, setDateFilter] = useState<string>(''); // Date filter
   const [datePickerVisible, setDatePickerVisible] = useState(false); // Date picker modal visibility
+  const [createJobModalVisible, setCreateJobModalVisible] = useState(false); // Create job modal visibility
   
   // Determine if device is mobile (typically < 600px width)
   const isMobile = screenWidth < 600;
@@ -81,7 +111,7 @@ const LeadScreen = () => {
   const modalHeight = useMemo(() => {
     const screenHeight = Dimensions.get('window').height;
     return screenHeight * 0.8; // 80% of screen height
-  }, [orientation, screenWidth]);
+  }, []); // No dependencies needed since Dimensions.get is called inside
   
   // Pagination state
   const [page, setPage] = useState<number>(1); // Current page
@@ -95,7 +125,7 @@ const LeadScreen = () => {
     const sections = getAllStatusesGrouped();
     if (!orderTypeFilter) return sections;
 
-    const typeKey = orderTypeFilter === 'REPAIR' ? 'repair' : 'inspection';
+    const typeKey = orderTypeFilter === 'Repair' ? 'repair' : 'inspection';
     return sections.filter(
       (section) => section.type === 'common' || section.type === typeKey,
     );
@@ -193,7 +223,7 @@ const LeadScreen = () => {
 
       // Add type filter if selected
       if (orderTypeFilter) {
-        params.type = orderTypeFilter;
+        params.type = orderTypeFilter; // Send as title case: 'Repair' or 'Inspection'
       }
 
       // Add status filters if any selected
@@ -274,11 +304,11 @@ const LeadScreen = () => {
       station: lead?.firestation?.name || 'Unknown Station',
       address: lead?.firestation?.address || 'Unknown Address',
       status: lead?.lead_status || 'Unknown',
-      leadType: lead?.type, // Keep as 'REPAIR' or 'INSPECTION'
+      leadType: normalizeLeadType(lead?.type), // Normalize to consistent uppercase
       technicianDetails: [],
       department: lead?.firestation?.name || 'Unknown Department',
       phWater: 5, // Placeholder - update with actual data if available
-      appointmentDate: useFormattedDate(lead?.schedule_date),
+      appointmentDate: formatDate(lead?.schedule_date, 'DD MMM YYYY', 'No date'),
       schedule_date: lead?.schedule_date, // Keep raw date for filtering
       // Include the full lead object for navigation
       ...lead
@@ -360,7 +390,7 @@ const LeadScreen = () => {
       ]}
     > 
       <Card style={[styles.cardContainer, {backgroundColor: colors.surface}]}>
-        <Card.Content style={isMobileOrTablet ? styles.cardContentMobile : undefined}>
+        <Card.Content style={styles.cardContentMobile }>
           {/* Card Header with Job ID and Status */}
           <View style={styles.cardHeader}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
@@ -427,7 +457,7 @@ const LeadScreen = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                 <Icon source="truck" size={18} color={colors.onSurfaceVariant} />
                 <Text style={{ marginLeft: 6 }}>
-                  MEU : {item.lead.meu}
+                  MEU : {item?.lead?.meu}
                 </Text>
               </View>
 
@@ -461,7 +491,7 @@ const LeadScreen = () => {
                       size={p(14)}
                     />
                     <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
-                      {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
+                      {getLeadTypeDisplay(item.leadType)}
                     </Text>
                   </View>
                 </View>
@@ -487,7 +517,7 @@ const LeadScreen = () => {
               size={p(14)}
             />
             <Text style={{ marginLeft: p(4), color: colors.onSurface, fontSize: 12 }}>
-              {item.leadType === 'REPAIR' ? 'Repair' : 'Inspection'}
+              {getLeadTypeDisplay(item.leadType)}
             </Text>
           </View>
         )}
@@ -570,15 +600,28 @@ const LeadScreen = () => {
         {/* Filter Rows - Responsive Layout */}
         <View style={styles.filterRow}>
           <Button
-            mode={orderTypeFilter === 'REPAIR' ? 'contained' : 'outlined'}
+            mode="contained"
+            onPress={() => setCreateJobModalVisible(true)}
+            style={styles.filterButton}
+            labelStyle={styles.filterLabel}
+            buttonColor={colors.primary}
+            textColor={colors.onPrimary}
+            rippleColor={colors.primaryContainer}
+            icon="plus"
+          >
+            Create Job
+          </Button>
+
+          <Button
+            mode={orderTypeFilter === 'Repair' ? 'contained' : 'outlined'}
             onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'REPAIR' ? null : 'REPAIR');
+              setOrderTypeFilter(orderTypeFilter === 'Repair' ? null : 'Repair');
               setPage(1);
             }}
             style={styles.filterButton}
             labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'REPAIR' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'REPAIR' ? colors.onPrimary : colors.onSurface}
+            buttonColor={orderTypeFilter === 'Repair' ? colors.primary : colors.surface}
+            textColor={orderTypeFilter === 'Repair' ? colors.onPrimary : colors.onSurface}
             rippleColor={colors.primaryContainer}
             icon="wrench"
           >
@@ -586,15 +629,15 @@ const LeadScreen = () => {
           </Button>
 
           <Button
-            mode={orderTypeFilter === 'INSPECTION' ? 'contained' : 'outlined'}
+            mode={orderTypeFilter === 'Inspection' ? 'contained' : 'outlined'}
             onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'INSPECTION' ? null : 'INSPECTION');
+              setOrderTypeFilter(orderTypeFilter === 'Inspection' ? null : 'Inspection');
               setPage(1);
             }}
             style={styles.filterButton}
             labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'INSPECTION' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'INSPECTION' ? colors.onPrimary : colors.onSurface}
+            buttonColor={orderTypeFilter === 'Inspection' ? colors.primary : colors.surface}
+            textColor={orderTypeFilter === 'Inspection' ? colors.onPrimary : colors.onSurface}
             rippleColor={colors.primaryContainer}
             icon="magnify"
           >
@@ -832,6 +875,16 @@ const LeadScreen = () => {
         date={dateFilter ? new Date(dateFilter) : new Date()}
         themeVariant={theme === 'dark' ? 'dark' : 'light'}
       />
+
+      {/* Create Job Modal */}
+      <CreateJobModal
+        visible={createJobModalVisible}
+        onClose={() => setCreateJobModalVisible(false)}
+        onJobCreated={() => {
+          // Refresh leads after job creation
+          fetchData();
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -1025,7 +1078,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardContentMobile: {
-    paddingBottom: p(50), // Increased padding to accommodate absolute positioned button in both portrait and landscape
+    paddingBottom: p(10), // Increased padding to accommodate absolute positioned button in both portrait and landscape
   },
   leadDetailsMobile: {
     flexDirection: 'column',

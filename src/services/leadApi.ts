@@ -2,6 +2,19 @@
 import { axiosInstance } from './api';
 
 export const leadApi = {
+  createLead: async (leadData: {
+    franchise_id: number;
+    firestation_id: number;
+    schedule_date: string;
+    type: 'Repair' | 'Inspection';
+    repair_cost?: number;
+  }): Promise<any> => {
+    console.log('➡️ API CALL POST /leads/ with', leadData);
+    const response = await axiosInstance.post('/leads/', leadData);
+    console.log('✅ API Response POST /leads/', response.data);
+    return response.data;
+  },
+
   getLeads: async (params?: any): Promise<any> => {
 
     console.log('➡️ API CALL /leads/ with', params);
