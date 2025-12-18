@@ -37,7 +37,7 @@ import {
 } from '../../constants/leadStatuses';
 import { useLeadStore } from '../../store/leadStore';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview' | 'FirefighterFlow'>;
 
 interface Technician {
   id: number;
@@ -121,10 +121,16 @@ const LeadDetailScreen = () => {
   const { top, bottom } = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { fetchLeadById, currentLead } = useLeadStore();
-  
+
   const { lead: initialLead } = route.params as any;
   // printTable("initialLead",initialLead)
   const [lead, setLead] = useState<LeadDetail>(initialLead);
+
+  // Normalize lead type to handle case sensitivity issues
+  const normalizedLeadType: 'REPAIR' | 'INSPECTION' = useMemo(() => {
+    const type = lead.type?.toUpperCase();
+    return type === 'REPAIR' ? 'REPAIR' : 'INSPECTION';
+  }, [lead.type]);
   const [statusDialogVisible, setStatusDialogVisible] = React.useState(false);
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -170,10 +176,10 @@ const LeadDetailScreen = () => {
    * Uses the constants system for dynamic status management
    */
   const availableStatuses = useMemo(() => {
-    return getStatusesByType(lead.type);
-  }, [lead.type]);
+    return getStatusesByType(normalizedLeadType);
+  }, [normalizedLeadType]);
 
-  // Get current water hardness category and color
+  // Get current water hardness category and color (only for inspections)
   const currentHardnessCategory = useMemo(() => {
     const ppm = parseFloat(hardnessValue) || 0;
     console.log("ppmppmppmppm", ppm)
@@ -272,8 +278,8 @@ const LeadDetailScreen = () => {
   const handleStatusUpdate = async (newStatus: LeadStatus) => {
     try {
       // Validate if the status is valid for this lead type
-      if (!isValidStatusForType(newStatus, lead.type)) {
-        Alert.alert('Error', `Invalid status for ${lead.type.toLowerCase()} lead`);
+      if (!isValidStatusForType(newStatus, normalizedLeadType)) {
+        Alert.alert('Error', `Invalid status for ${normalizedLeadType.toLowerCase()} lead`);
         return;
       }
 
@@ -734,9 +740,9 @@ const LeadDetailScreen = () => {
                   fontWeight: '600',
                   color: '#fff',
                 }}
-                icon={lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline'}
+                icon={normalizedLeadType === 'REPAIR' ? 'wrench' : 'clipboard-check-outline'}
               >
-                {lead.type === 'REPAIR' ? 'Repair' : 'Inspection'}
+                {normalizedLeadType === 'REPAIR' ? 'Repair' : 'Inspection'}
               </Button>
             </View>
             
@@ -786,7 +792,7 @@ const LeadDetailScreen = () => {
                 { icon: 'calendar', label: 'Appointment Date', value: useFormattedDate(lead.schedule_date) },
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 // { icon: 'office-building', label: 'Department', value:'Sarasota County Fire Department'},
-                { icon: lead.type === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: lead.type === 'REPAIR' ? 'Repair' : 'Inspection' },
+                { icon: normalizedLeadType === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: normalizedLeadType === 'REPAIR' ? 'Repair' : 'Inspection' },
                 { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
                 { icon: 'map-marker', label: 'Address', value: generateFullAddress(), isAddress: true },
@@ -945,110 +951,112 @@ const LeadDetailScreen = () => {
           </Card.Content>
         </Card>
 
-        {/* Water Hardness Section */}
-        <Card
-          style={[
-            styles.card,
-            { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
-          ]}
-        >
-          <Card.Content>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <View style={{ flex: 1, minWidth: '60%' }}>
-                <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
-                  Water Hardness
-                </Text>
-                <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12), marginTop: p(4) }]}>
-                  (Must be below 60 ppm. Over 60 ppm needs treatment)
-                </Text>
+        {/* Water Hardness Section - Only show for inspections */}
+        {normalizedLeadType === 'INSPECTION' && (
+          <Card
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+            ]}
+          >
+            <Card.Content>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: '60%' }}>
+                  <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Water Hardness
+                  </Text>
+                  <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12), marginTop: p(4) }]}>
+                    (Must be below 60 ppm. Over 60 ppm needs treatment)
+                  </Text>
+                </View>
+
+                {/* Display current hardness or edit button */}
+                {!isEditingHardness ? (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleEditHardness}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: p(6),
+                    }}
+                  >
+                    <Text style={{ color: currentHardnessColor, fontWeight: '700', fontSize: p(14) }}>
+                      {hardnessValue ? `${hardnessValue} ppm (${currentHardnessCategory})` : ''}
+                    </Text>
+                    <Icon
+                      source="pencil"
+                      size={p(20)}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(8) }}>
+                    <Button
+                      mode="text"
+                      compact
+                      onPress={handleCancelEditHardness}
+                      textColor={colors.error}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      mode="contained"
+                      compact
+                      onPress={handleSaveHardness}
+                      disabled={!hardnessValue}
+                    >
+                      Save
+                    </Button>
+                  </View>
+                )}
               </View>
 
-              {/* Display current hardness or edit button */}
-              {!isEditingHardness ? (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={handleEditHardness}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: p(6),
-                  }}
-                >
-                  <Text style={{ color: currentHardnessColor, fontWeight: '700', fontSize: p(14) }}>
-                    {hardnessValue ? `${hardnessValue} ppm (${currentHardnessCategory})` : ''}
-                  </Text>
-                  <Icon
-                    source="pencil"
-                    size={p(20)}
-                    color={colors.primary}
+              {/* Expandable input field */}
+              {(showHardnessInput || isEditingHardness) && (
+                <View style={{ marginTop: p(16) }}>
+                  <TextInput
+                    label="Water Hardness (ppm)"
+                    value={hardnessValue}
+                    onChangeText={setHardnessValue}
+                    keyboardType="numeric"
+                    mode="outlined"
+                    placeholder="Enter ppm value (0-425+)"
+                    style={{ fontSize: p(16) }}
+                    right={
+                      <TextInput.Affix text="ppm" />
+                    }
                   />
-                </TouchableOpacity>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(8) }}>
-                  <Button
-                    mode="text"
-                    compact
-                    onPress={handleCancelEditHardness}
-                    textColor={colors.error}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    mode="contained"
-                    compact
-                    onPress={handleSaveHardness}
-                    disabled={!hardnessValue}
-                  >
-                    Save
-                  </Button>
-                </View>
-              )}
-            </View>
 
-            {/* Expandable input field */}
-            {(showHardnessInput || isEditingHardness) && (
-              <View style={{ marginTop: p(16) }}>
-                <TextInput
-                  label="Water Hardness (ppm)"
-                  value={hardnessValue}
-                  onChangeText={setHardnessValue}
-                  keyboardType="numeric"
-                  mode="outlined"
-                  placeholder="Enter ppm value (0-425+)"
-                  style={{ fontSize: p(16) }}
-                  right={
-                    <TextInput.Affix text="ppm" />
-                  }
-                />
-                
-                {/* Hardness scale guide */}
-                <View style={styles.hardnessGuide}>
-                  <Text style={[styles.guideTitle, { color: colors.onSurface }]}>
-                    Hardness Scale:
-                  </Text>
-                  <View style={styles.guideItems}>
-                    <View style={styles.guideItem}>
-                      <View style={[styles.colorDot, { backgroundColor: '#4CAF50' }]} />
-                      <Text style={[styles.guideText, { color: colors.onSurface }]}>0-25 ppm: Soft</Text>
-                    </View>
-                    <View style={styles.guideItem}>
-                      <View style={[styles.colorDot, { backgroundColor: '#8BC34A' }]} />
-                      <Text style={[styles.guideText, { color: colors.onSurface }]}>26-75 ppm: Still Soft</Text>
-                    </View>
-                    <View style={styles.guideItem}>
-                      <View style={[styles.colorDot, { backgroundColor: '#FF9800' }]} />
-                      <Text style={[styles.guideText, { color: colors.onSurface }]}>76-250 ppm: Hard</Text>
-                    </View>
-                    <View style={styles.guideItem}>
-                      <View style={[styles.colorDot, { backgroundColor: '#F44336' }]} />
-                      <Text style={[styles.guideText, { color: colors.onSurface }]}>251+ ppm: Very Hard</Text>
+                  {/* Hardness scale guide */}
+                  <View style={styles.hardnessGuide}>
+                    <Text style={[styles.guideTitle, { color: colors.onSurface }]}>
+                      Hardness Scale:
+                    </Text>
+                    <View style={styles.guideItems}>
+                      <View style={styles.guideItem}>
+                        <View style={[styles.colorDot, { backgroundColor: '#4CAF50' }]} />
+                        <Text style={[styles.guideText, { color: colors.onSurface }]}>0-25 ppm: Soft</Text>
+                      </View>
+                      <View style={styles.guideItem}>
+                        <View style={[styles.colorDot, { backgroundColor: '#8BC34A' }]} />
+                        <Text style={[styles.guideText, { color: colors.onSurface }]}>26-75 ppm: Still Soft</Text>
+                      </View>
+                      <View style={styles.guideItem}>
+                        <View style={[styles.colorDot, { backgroundColor: '#FF9800' }]} />
+                        <Text style={[styles.guideText, { color: colors.onSurface }]}>76-250 ppm: Hard</Text>
+                      </View>
+                      <View style={styles.guideItem}>
+                        <View style={[styles.colorDot, { backgroundColor: '#F44336' }]} />
+                        <Text style={[styles.guideText, { color: colors.onSurface }]}>251+ ppm: Very Hard</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
+              )}
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Remarks Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) }]}>
@@ -1133,11 +1141,12 @@ const LeadDetailScreen = () => {
           ]}
         >
           {[
-            // { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('GearScan') },
-            { label: 'Start Inspection', icon: 'barcode-scan',  action:() => navigation.navigate('FirefighterFlow', {}) },
+            normalizedLeadType === 'REPAIR'
+              ? { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan' as any, { source: 'REPAIR' }) }
+              : { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('FirefighterFlow', {}) },
             {
-              label: lead.type === 'REPAIR' ? 'View Repairs' : 'View Inspections',
-              icon: lead.type === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
+              label: normalizedLeadType === 'REPAIR' ? 'View Repairs' : 'View Inspections',
+              icon: normalizedLeadType === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
               action: () => navigation.navigate('ViewInspectionScreen'),
             },
           ].map((action, i) => (

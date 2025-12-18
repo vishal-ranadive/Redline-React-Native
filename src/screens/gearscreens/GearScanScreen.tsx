@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Text, Button, Icon, Card, useTheme, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Camera } from 'react-native-camera-kit';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -24,7 +24,7 @@ import { useLeadStore } from '../../store/leadStore';
 import { useAuthStore } from '../../store/authStore';
 import { printTable } from '../../utils/printTable';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail' | 'AddGear' | 'UpadateInspection'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearDetail' | 'AddGear' | 'UpadateInspection' | 'RepairDetails'>;
 
 interface ScannedGear {
   gear_id: number;
@@ -57,10 +57,14 @@ interface ScanGearResponse {
 
 const GearScanScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProp<RootStackParamList, 'GearScan'>>();
   const { colors } = useTheme();
   const { searchGears, gears, loading, scanGear } = useGearStore();
   const { currentLead } = useLeadStore();
   const { user } = useAuthStore();
+
+  // Get source parameter to determine navigation flow
+  const source = (route.params as any)?.source || 'INSPECTION'; // Default to INSPECTION for existing flow
 
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
@@ -248,29 +252,39 @@ const stopScanning = () => {
   };
 
   const handleGearPress = (gear: any) => {
-    // Prepare roster data for navigation
-    const roster = gear.rosterData ? {
-      roster_id: gear.rosterData.rosterId,
-      id: gear.rosterData.rosterId,
-      first_name: gear.rosterData.rosterName?.split(' ')[0] || '',
-      last_name: gear.rosterData.rosterName?.split(' ').slice(1).join(' ') || '',
-      name: gear.rosterData.rosterName || '',
-      email: '',
-      phone: '',
-    } : undefined;
+    if (source === 'REPAIR') {
+      // Navigate to Repair Details screen for repair flow
+      navigation.navigate('RepairDetails', {
+        gearId: gear.gear_id,
+        leadId: currentLead?.lead_id,
+        leadData: currentLead,
+      });
+    } else {
+      // Navigate to UpdateInspection screen for inspection flow (existing behavior)
+      // Prepare roster data for navigation
+      const roster = gear.rosterData ? {
+        roster_id: gear.rosterData.rosterId,
+        id: gear.rosterData.rosterId,
+        first_name: gear.rosterData.rosterName?.split(' ')[0] || '',
+        last_name: gear.rosterData.rosterName?.split(' ').slice(1).join(' ') || '',
+        name: gear.rosterData.rosterName || '',
+        email: '',
+        phone: '',
+      } : undefined;
 
-    // Check if inspectionId exists and is not empty
-    const hasInspectionId = gear.inspectionId && 
-      gear.inspectionId.toString().trim() !== '' && 
-      gear.inspectionId.toString().trim() !== 'null';
+      // Check if inspectionId exists and is not empty
+      const hasInspectionId = gear.inspectionId &&
+        gear.inspectionId.toString().trim() !== '' &&
+        gear.inspectionId.toString().trim() !== 'null';
 
-    navigation.navigate('UpadateInspection', {
-      gearId: gear.gear_id,
-      inspectionId: hasInspectionId ? parseInt(gear.inspectionId.toString()) : undefined,
-      mode: gear.mode || (hasInspectionId ? 'update' : 'create'),
-      firefighter: roster,
-      colorLocked: false,
-    });
+      navigation.navigate('UpadateInspection', {
+        gearId: gear.gear_id,
+        inspectionId: hasInspectionId ? parseInt(gear.inspectionId.toString()) : undefined,
+        mode: gear.mode || (hasInspectionId ? 'update' : 'create'),
+        firefighter: roster,
+        colorLocked: false,
+      });
+    }
   };
 
   printTable("scannedGears state", scannedGears);
