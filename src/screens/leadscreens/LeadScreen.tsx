@@ -589,75 +589,156 @@ const LeadScreen = () => {
         </View>
 
         {/* Filter Rows - Responsive Layout */}
-        <View style={styles.filterRow}>
-          <Button
-            mode="contained"
-            onPress={() => setCreateJobModalVisible(true)}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={colors.primary}
-            textColor={colors.onPrimary}
-            rippleColor={colors.primaryContainer}
-            icon="plus"
-          >
-            Create Job
-          </Button>
+        <View style={[styles.filterRow, isMobileOrTablet && styles.filterRowMobile]}>
+          {isMobileOrTablet ? (
+            // Mobile/Tablet: All buttons in single row with wrapping
+            <>
+              <Button
+                mode={orderTypeFilter === 'Repair' ? 'contained' : 'outlined'}
+                onPress={() => {
+                  setOrderTypeFilter(orderTypeFilter === 'Repair' ? null : 'Repair');
+                  setPage(1);
+                }}
+                style={styles.filterButton}
+                labelStyle={styles.filterLabel}
+                buttonColor={orderTypeFilter === 'Repair' ? colors.primary : colors.surface}
+                textColor={orderTypeFilter === 'Repair' ? colors.onPrimary : colors.onSurface}
+                rippleColor={colors.primaryContainer}
+                icon="wrench"
+              >
+                Repair
+              </Button>
 
-          <Button
-            mode={orderTypeFilter === 'Repair' ? 'contained' : 'outlined'}
-            onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'Repair' ? null : 'Repair');
-              setPage(1);
-            }}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'Repair' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'Repair' ? colors.onPrimary : colors.onSurface}
-            rippleColor={colors.primaryContainer}
-            icon="wrench"
-          >
-            Repair
-          </Button>
+              <Button
+                mode={orderTypeFilter === 'Inspection' ? 'contained' : 'outlined'}
+                onPress={() => {
+                  setOrderTypeFilter(orderTypeFilter === 'Inspection' ? null : 'Inspection');
+                  setPage(1);
+                }}
+                style={styles.filterButton}
+                labelStyle={styles.filterLabel}
+                buttonColor={orderTypeFilter === 'Inspection' ? colors.primary : colors.surface}
+                textColor={orderTypeFilter === 'Inspection' ? colors.onPrimary : colors.onSurface}
+                rippleColor={colors.primaryContainer}
+                icon="magnify"
+              >
+                Inspection
+              </Button>
 
-          <Button
-            mode={orderTypeFilter === 'Inspection' ? 'contained' : 'outlined'}
-            onPress={() => {
-              setOrderTypeFilter(orderTypeFilter === 'Inspection' ? null : 'Inspection');
-              setPage(1);
-            }}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={orderTypeFilter === 'Inspection' ? colors.primary : colors.surface}
-            textColor={orderTypeFilter === 'Inspection' ? colors.onPrimary : colors.onSurface}
-            rippleColor={colors.primaryContainer}
-            icon="magnify"
-          >
-            Inspection
-          </Button>
+              <Button
+                mode="outlined"
+                onPress={() => setStatusModalVisible(true)}
+                style={styles.filterButton}
+                labelStyle={styles.filterLabel}
+                buttonColor={colors.surface}
+                textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+                icon="filter-variant"
+              >
+                Status
+              </Button>
 
-          <Button
-            mode="outlined"
-            onPress={() => setStatusModalVisible(true)}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={colors.surface}
-            textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
-            icon="filter-variant"
-          >
-            Status
-          </Button>
+              <Button
+                mode="outlined"
+                onPress={() => setDatePickerVisible(true)}
+                style={styles.filterButton}
+                labelStyle={styles.filterLabel}
+                buttonColor={colors.surface}
+                textColor={dateFilter ? colors.primary : colors.onSurface}
+                icon="calendar"
+              >
+                Date
+              </Button>
 
-          <Button
-            mode="outlined"
-            onPress={() => setDatePickerVisible(true)}
-            style={styles.filterButton}
-            labelStyle={styles.filterLabel}
-            buttonColor={colors.surface}
-            textColor={dateFilter ? colors.primary : colors.onSurface}
-            icon="calendar"
-          >
-            Date
-          </Button>
+              <Button
+                mode="contained"
+                onPress={() => setCreateJobModalVisible(true)}
+                style={styles.createJobButtonMobile}
+                labelStyle={styles.filterLabel}
+                buttonColor={colors.primary}
+                textColor={colors.onPrimary}
+                rippleColor={colors.primaryContainer}
+                icon="plus"
+              >
+                Create Job
+              </Button>
+            </>
+          ) : (
+            // Desktop: Filters on left, Create Job on right
+            <>
+              {/* Left side - Filter options */}
+              <View style={styles.filterLeftGroup}>
+                <Button
+                  mode={orderTypeFilter === 'Repair' ? 'contained' : 'outlined'}
+                  onPress={() => {
+                    setOrderTypeFilter(orderTypeFilter === 'Repair' ? null : 'Repair');
+                    setPage(1);
+                  }}
+                  style={styles.filterButton}
+                  labelStyle={styles.filterLabel}
+                  buttonColor={orderTypeFilter === 'Repair' ? colors.primary : colors.surface}
+                  textColor={orderTypeFilter === 'Repair' ? colors.onPrimary : colors.onSurface}
+                  rippleColor={colors.primaryContainer}
+                  icon="wrench"
+                >
+                  Repair
+                </Button>
+
+                <Button
+                  mode={orderTypeFilter === 'Inspection' ? 'contained' : 'outlined'}
+                  onPress={() => {
+                    setOrderTypeFilter(orderTypeFilter === 'Inspection' ? null : 'Inspection');
+                    setPage(1);
+                  }}
+                  style={styles.filterButton}
+                  labelStyle={styles.filterLabel}
+                  buttonColor={orderTypeFilter === 'Inspection' ? colors.primary : colors.surface}
+                  textColor={orderTypeFilter === 'Inspection' ? colors.onPrimary : colors.onSurface}
+                  rippleColor={colors.primaryContainer}
+                  icon="magnify"
+                >
+                  Inspection
+                </Button>
+
+                <Button
+                  mode="outlined"
+                  onPress={() => setStatusModalVisible(true)}
+                  style={styles.filterButton}
+                  labelStyle={styles.filterLabel}
+                  buttonColor={colors.surface}
+                  textColor={statusFilters.length > 0 ? colors.primary : colors.onSurface}
+                  icon="filter-variant"
+                >
+                  Status
+                </Button>
+
+                <Button
+                  mode="outlined"
+                  onPress={() => setDatePickerVisible(true)}
+                  style={styles.filterButton}
+                  labelStyle={styles.filterLabel}
+                  buttonColor={colors.surface}
+                  textColor={dateFilter ? colors.primary : colors.onSurface}
+                  icon="calendar"
+                >
+                  Date
+                </Button>
+              </View>
+
+              {/* Right side - Create Job button */}
+              <Button
+                mode="contained"
+                onPress={() => setCreateJobModalVisible(true)}
+                style={styles.createJobButton}
+                labelStyle={styles.filterLabel}
+                buttonColor={colors.primary}
+                textColor={colors.onPrimary}
+                rippleColor={colors.primaryContainer}
+                icon="plus"
+              >
+                Create Job
+              </Button>
+            </>
+          )}
         </View>
 
         {/* Active Status & Date Filter Chips */}
@@ -952,6 +1033,17 @@ const LeadScreen = () => {
         </Modal>
       </Portal>
 
+      {/* Create Job Modal */}
+      <CreateJobModal
+        visible={createJobModalVisible}
+        onClose={() => setCreateJobModalVisible(false)}
+        onJobCreated={() => {
+          setCreateJobModalVisible(false);
+          // Refresh leads after job creation
+          fetchData();
+        }}
+      />
+
     </SafeAreaView>
   );
 };
@@ -1015,8 +1107,17 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: p(10),
+  },
+  filterRowMobile: {
+    flexWrap: 'wrap',
+    gap: p(4),
+  },
+  filterLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: p(4),
   },
   filterButton: {
@@ -1025,6 +1126,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: p(0),
     marginVertical: p(4),
+  },
+  createJobButton: {
+    borderRadius: p(16),
+    borderWidth: 1,
+    paddingHorizontal: p(0),
+    marginVertical: p(4),
+  },
+  createJobButtonMobile: {
+    borderRadius: p(16),
+    borderWidth: 1,
+    paddingHorizontal: p(0),
+    marginVertical: p(4),
+    flex: 1,
+    minWidth: p(120),
   },
   modalContainer: {
     margin: p(20),
