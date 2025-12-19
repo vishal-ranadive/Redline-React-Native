@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
-  FlatList,
 } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 import { p } from '../../utils/responsive';
@@ -46,8 +45,8 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
 }) => {
   const { colors } = useTheme();
   const [visible, setVisible] = useState(false);
-  const [step, setStep] = useState<'year' | 'month'>('year');
-  const [pendingYear, setPendingYear] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
   const parsedDate = useMemo(() => {
     if (!value) {
@@ -74,39 +73,44 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
 
   const years = useMemo(() => {
     const yearsArray: number[] = [];
-    for (let year = endYear; year >= startYear; year -= 1) {
+    const start = Math.max(startYear, endYear - 24); // Show last 25 years max
+    for (let year = endYear; year >= start; year -= 1) {
       yearsArray.push(year);
     }
     return yearsArray;
   }, [startYear, endYear]);
 
   const openModal = () => {
-    setPendingYear(parsedDate?.year ?? endYear);
-    setStep('year');
+    setSelectedYear(parsedDate?.year ?? null);
+    setSelectedMonth(parsedDate?.month ?? null);
     setVisible(true);
   };
 
   const closeModal = () => {
     setVisible(false);
-    setStep('year');
+    setSelectedYear(null);
+    setSelectedMonth(null);
   };
 
   const handleYearSelect = (year: number) => {
-    setPendingYear(year);
-    setStep('month');
+    setSelectedYear(year);
   };
 
   const handleMonthSelect = (monthIndex: number) => {
-    if (pendingYear == null) {
+    setSelectedMonth(monthIndex);
+  };
+
+  const handleDone = () => {
+    if (selectedYear == null || selectedMonth == null) {
       return;
     }
-    const formatted = `${pendingYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+    const formatted = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     onChange(formatted);
     closeModal();
   };
 
-  const renderYear = ({ item }: { item: number }) => {
-    const isSelected = pendingYear === item;
+  const renderYear = (year: number) => {
+    const isSelected = selectedYear === year;
     return (
       <TouchableOpacity
         style={[
@@ -116,7 +120,7 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
             borderColor: colors.outline,
           },
         ]}
-        onPress={() => handleYearSelect(item)}
+        onPress={() => handleYearSelect(year)}
       >
         <Text
           style={[
@@ -124,15 +128,14 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
             { color: isSelected ? colors.onPrimaryContainer : colors.onSurface },
           ]}
         >
-          {item}
+          {year}
         </Text>
       </TouchableOpacity>
     );
   };
 
-  const renderMonth = ({ item, index }: { item: string; index: number }) => {
-    const isSelected =
-      parsedDate?.month === index && parsedDate?.year === pendingYear;
+  const renderMonth = (month: string, index: number) => {
+    const isSelected = selectedMonth === index;
     return (
       <TouchableOpacity
         style={[
@@ -150,7 +153,7 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
             { color: isSelected ? colors.onPrimaryContainer : colors.onSurface },
           ]}
         >
-          {item}
+          {month}
         </Text>
       </TouchableOpacity>
     );
@@ -182,39 +185,65 @@ const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
-              {step === 'year' ? 'Select Year' : 'Select Month'}
+              Select Month & Year
             </Text>
 
-            {step === 'year' ? (
-              <FlatList
-                key="year-grid"
-                data={years}
-                keyExtractor={(item) => item.toString()}
-                numColumns={4}
-                columnWrapperStyle={styles.gridRow}
-                renderItem={renderYear}
-                contentContainerStyle={styles.gridContent}
-              />
-            ) : (
-              <FlatList
-                key="month-grid"
-                data={months}
-                keyExtractor={(item) => item}
-                numColumns={3}
-                columnWrapperStyle={styles.gridRow}
-                renderItem={renderMonth}
-                contentContainerStyle={styles.gridContent}
-              />
-            )}
+            <View style={styles.pickerContainer}>
+              {/* Year Selection */}
+              <View style={styles.pickerColumn}>
+                <Text style={[styles.columnTitle, { color: colors.onSurface }]}>
+                  Year
+                </Text>
+                <ScrollView
+                  style={styles.scrollContainer}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.gridContent}
+                >
+                  <View style={styles.gridContainer}>
+                    {years.map((year) => (
+                      <View key={year} style={styles.gridItem}>
+                        {renderYear(year)}
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              {/* Separator */}
+              <View style={[styles.separator, { borderLeftColor: colors.outline }]} />
+
+              {/* Month Selection */}
+              <View style={styles.pickerColumn}>
+                <Text style={[styles.columnTitle, { color: colors.onSurface }]}>
+                  Month
+                </Text>
+                <ScrollView
+                  style={styles.scrollContainer}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.gridContent}
+                >
+                  <View style={styles.gridContainerMonths}>
+                    {months.map((month, index) => (
+                      <View key={month} style={styles.gridItemMonth}>
+                        {renderMonth(month, index)}
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
 
             <View style={styles.modalActions}>
-              {step === 'month' && (
-                <Button onPress={() => setStep('year')} mode="text">
-                  Back
-                </Button>
-              )}
               <Button onPress={closeModal} mode="text" textColor={colors.error}>
                 Cancel
+              </Button>
+              <Button
+                onPress={handleDone}
+                mode="contained"
+                disabled={selectedYear == null || selectedMonth == null}
+                buttonColor={colors.primary}
+              >
+                Done
               </Button>
             </View>
           </View>
@@ -257,7 +286,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: p(12),
     padding: p(16),
-    maxHeight: '80%',
+    maxHeight: '104%', // Increased by 30% from 80%
   },
   modalTitle: {
     fontSize: p(16),
@@ -288,6 +317,50 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: p(8),
     marginTop: p(4),
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    gap: p(8),
+    marginBottom: p(8),
+  },
+  pickerColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  columnTitle: {
+    fontSize: p(14),
+    fontWeight: '600',
+    marginBottom: p(8),
+  },
+  scrollContainer: {
+    maxHeight: p(350),
+    width: '100%',
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '48%', // For 2 columns (years)
+    marginBottom: p(8),
+  },
+  gridContainerMonths: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItemMonth: {
+    width: '48%', // For 2 columns (months)
+    marginBottom: p(8),
+  },
+  separator: {
+    width: 1,
+    height: '100%',
+    borderLeftWidth: 2,
+    borderLeftColor: 'transparent',
+    borderStyle: 'dotted',
+    opacity: 0.5,
   },
 });
 
