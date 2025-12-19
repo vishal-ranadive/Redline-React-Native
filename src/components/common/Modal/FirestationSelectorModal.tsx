@@ -181,7 +181,7 @@ const FirestationSelectorModal: React.FC<FirestationSelectorModalProps> = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="overFullScreen"
       onRequestClose={onClose}
       supportedOrientations={supportedOrientations}
     >

@@ -164,7 +164,7 @@ const FranchiseSelectorModal: React.FC<FranchiseSelectorModalProps> = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="overFullScreen"
       onRequestClose={onClose}
       supportedOrientations={supportedOrientations}
     >

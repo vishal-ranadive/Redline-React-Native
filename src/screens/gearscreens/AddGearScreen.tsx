@@ -36,6 +36,7 @@ import CommonDatePicker from '../../components/common/DatePicker';
 import MonthYearPicker from '../../components/common/MonthYearPicker';
 import RosterModal from '../../components/common/Modal/RosterModal';
 import ManufacturerModal from '../../components/common/Modal/ManufacturerModal';
+import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
 import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { useRosterStore } from '../../store/rosterStore';
@@ -167,6 +168,7 @@ const AddGearScreen = () => {
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [manufacturerModalVisible, setManufacturerModalVisible] =
     useState(false);
+  const [addFirefighterModalVisible, setAddFirefighterModalVisible] = useState(false);
   const [manufacturerMenuVisible, setManufacturerMenuVisible] = useState(false);
   const [statusMenuVisible, setStatusMenuVisible] = useState(false);
   const [rosterMenuVisible, setRosterMenuVisible] = useState(false);
@@ -379,7 +381,20 @@ const AddGearScreen = () => {
   };
 
   const handleAddRosterManual = () => {
-    showSnackbar('Add roster manual functionality to be implemented');
+    setAddFirefighterModalVisible(true);
+  };
+
+  const handleCloseAddFirefighterModal = () => {
+    setAddFirefighterModalVisible(false);
+  };
+
+  const handleFirefighterAdded = (roster: any) => {
+    console.log('Firefighter added successfully in AddGearScreen', roster);
+    if (roster) {
+      // Auto-select the newly added firefighter in the gear form
+      setAssignedRoster(roster);
+    }
+    setAddFirefighterModalVisible(false);
   };
 
   /* ---------- Render ---------- */
@@ -965,6 +980,12 @@ const AddGearScreen = () => {
           onManufacturerSelect(mfr as ManufacturerItem);
           setManufacturerModalVisible(false);
         }}
+      />
+
+      <AddFirefighterModal
+        visible={addFirefighterModalVisible}
+        onClose={handleCloseAddFirefighterModal}
+        onSuccess={handleFirefighterAdded}
       />
 
       {/* NEW: Barcode Scanner Modal */}
