@@ -69,7 +69,6 @@ import {
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import BottomNavBar from '../../navigation/BottomNavBar';
 import { Avatar } from 'react-native-paper';
-import CreateJobModal from '../../components/common/Modal/CreateJobModal';
 
 // Responsive utility placeholder
 const p = (size: number): number => size;
@@ -100,7 +99,6 @@ const LeadScreen = () => {
   const [statusModalVisible, setStatusModalVisible] = useState(false); // Modal visibility state
   const [dateFilter, setDateFilter] = useState<string>(''); // Date filter
   const [datePickerVisible, setDatePickerVisible] = useState(false); // Date picker modal visibility
-  const [createJobModalVisible, setCreateJobModalVisible] = useState(false); // Create job modal visibility
   
   // Determine if device is mobile (typically < 600px width)
   const isMobile = screenWidth < 600;
@@ -651,7 +649,7 @@ const LeadScreen = () => {
 
               <Button
                 mode="contained"
-                onPress={() => setCreateJobModalVisible(true)}
+                onPress={() => navigation.navigate('CreateJob')}
                 style={styles.createJobButtonMobile}
                 labelStyle={styles.filterLabel}
                 buttonColor={colors.primary}
@@ -727,7 +725,7 @@ const LeadScreen = () => {
               {/* Right side - Create Job button */}
               <Button
                 mode="contained"
-                onPress={() => setCreateJobModalVisible(true)}
+                onPress={() => navigation.navigate('CreateJob')}
                 style={styles.createJobButton}
                 labelStyle={styles.filterLabel}
                 buttonColor={colors.primary}
@@ -1033,16 +1031,6 @@ const LeadScreen = () => {
         </Modal>
       </Portal>
 
-      {/* Create Job Modal */}
-      <CreateJobModal
-        visible={createJobModalVisible}
-        onClose={() => setCreateJobModalVisible(false)}
-        onJobCreated={() => {
-          setCreateJobModalVisible(false);
-          // Refresh leads after job creation
-          fetchData();
-        }}
-      />
 
     </SafeAreaView>
   );

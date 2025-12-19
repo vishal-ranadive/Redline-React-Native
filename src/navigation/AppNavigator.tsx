@@ -26,6 +26,7 @@ import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlow
 import FirefighterRepairFlowScreen from '../screens/firefighterscreens/FirefighterRepairFlowScreen';
 import PPEReportPreviewScreen from '../screens/leadscreens/PPEReportPreviewScreen';
 import RepairDetailsScreen from '../screens/repairscreens/RepairDetailsScreen';
+import CreateJobScreen from '../screens/leadscreens/CreateJobScreen';
 import { FirefighterRoster } from '../store/inspectionStore';
 
 export type RootStackParamList = {
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   LeadScreen: undefined;
   Settings: undefined;
   LeadDetail: { lead: any };
+  CreateJob: undefined;
 
   GearScan: { source?: string } | undefined;
   GearSearch: undefined;
@@ -92,6 +94,7 @@ export default function AppNavigator() {
 
       {/* App Screens */}
       <Stack.Screen name="LeadScreen" component={withMainLayout(LeadScreen)} />
+      <Stack.Screen name="CreateJob" component={withMainLayout(CreateJobScreen)} />
       <Stack.Screen name="Settings" component={withMainLayout(SettingsScreen)} />
       <Stack.Screen name="UpadateInspection" component={withMainLayout(UpdateInspectionStatusScreen)}/>
 
