@@ -37,6 +37,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { useGearStore } from '../../store/gearStore';
 import { p } from "../../utils/responsive";
 import { imageUploadApi } from '../../services/imageUploadApi';
+import { repairApi } from '../../services/repairApi';
 import { RepairHeader } from './components/RepairHeader';
 
 const RepairDetailsScreen = () => {
@@ -44,6 +45,8 @@ const RepairDetailsScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { currentLead } = useLeadStore();
+
+  console.log("currentLead", currentLead);
   const { fetchGearById } = useGearStore();
 
   const { gearId, leadId, leadData } = route.params;
@@ -180,6 +183,7 @@ const RepairDetailsScreen = () => {
 
   const handlePickFromGallery = async () => {
     try {
+      
       const response = await launchImageLibrary({
         mediaType: 'photo',
         selectionLimit: 1,
@@ -274,24 +278,35 @@ const RepairDetailsScreen = () => {
 
       // Step 2: Prepare repair data
       const repairData = {
+        lead_id: currentLead?.lead_id || leadId,
+        firestation_id: currentLead?.firestation?.id || leadData?.firestation_id,
         gear_id: gearId,
-        lead_id: leadId,
+        roster_id: gear?.roster?.roster_id || null,
+        franchise_id: currentLead?.franchise?.id || leadData?.franchise_id,
+        repair_status: formData.repairStatus as 'completed' | 'rejected',
+        repair_sub_total: parseFloat(formData.repairSubTotal) || 0,
+        repair_image_url: uploadedImageUrls,
+        remarks: formData.remarks,
         repair_qty: parseInt(formData.repairQty),
         repair_tag: formData.repairTag,
         spear_gear: formData.spearGear,
-        repair_sub_total: parseFloat(formData.repairSubTotal) || 0,
-        repair_status: formData.repairStatus,
-        repair_image_url: uploadedImageUrls,
-        remarks: formData.remarks,
       };
 
       console.log('Repair Data:', repairData);
 
-      // TODO: Implement repair creation API call
-      Alert.alert('Success', 'Repair created successfully!');
+      // Step 3: Create repair via API
+      const repairResponse = await repairApi.createGearRepair(repairData);
 
-      // Navigate back
-      navigation.goBack();
+      if (repairResponse.status === 200) {
+        Alert.alert('Success', repairResponse.msg || 'Repair created successfully!');
+        // Navigate back
+        // navigation.goBack();
+      } else {
+        // Handle specific error cases like duplicates
+        const errorMsg = repairResponse.msg || 'Failed to create repair';
+        Alert.alert('Error', errorMsg);
+        return; // Don't navigate back on error
+      }
     } catch (error: any) {
       setUploadingImages(false);
       console.error('❌ Error creating repair:', error);
@@ -432,6 +447,16 @@ const RepairDetailsScreen = () => {
                 value={formData.repairTag}
                 onChangeText={(text) => handleFieldChange('repairTag', text)}
                 placeholder="Enter repair tag"
+                style={{ marginBottom: 16 }}
+              />
+
+              {/* Repair Cost */}
+              <Input
+                label="Repair Cost"
+                value={formData.repairSubTotal}
+                onChangeText={(text) => handleFieldChange('repairSubTotal', text)}
+                keyboardType="numeric"
+                placeholder="Enter repair cost"
                 style={{ marginBottom: 16 }}
               />
 
@@ -606,6 +631,16 @@ const RepairDetailsScreen = () => {
                   value={formData.repairTag}
                   onChangeText={(text) => handleFieldChange('repairTag', text)}
                   placeholder="Enter repair tag"
+                  style={{ marginBottom: 16 }}
+                />
+
+                {/* Repair Cost */}
+                <Input
+                  label="Repair Cost"
+                  value={formData.repairSubTotal}
+                  onChangeText={(text) => handleFieldChange('repairSubTotal', text)}
+                  keyboardType="numeric"
+                  placeholder="Enter repair cost"
                   style={{ marginBottom: 16 }}
                 />
 
