@@ -707,7 +707,7 @@ const AddGearScreen = () => {
 
                     <View style={{ width: p(12) }} />
 
-                    <View style={[styles.inputCol, { flex: 1 }]}>
+                    <View style={[styles.inputCol, { flex: 1, marginTop: p(12) }]}>
                       <MonthYearPicker
                         label="Manufacturing Month & Year"
                         value={manufacturingDate}

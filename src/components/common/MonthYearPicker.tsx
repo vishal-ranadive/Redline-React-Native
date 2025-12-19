@@ -21,18 +21,18 @@ type MonthYearPickerProps = {
 const DEFAULT_START_YEAR = 2000;
 
 const months = [
-  'January',
-  'February',
-  'March',
-  'April',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
   'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 const MonthYearPicker: React.FC<MonthYearPickerProps> = ({
