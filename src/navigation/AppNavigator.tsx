@@ -23,6 +23,7 @@ import FirefighterListScreen from '../screens/inspectionscreens/FirefighterListS
 import ViewInspectionScreen from '../screens/inspectionscreens/ViewInspectionScreen';
 import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGearsScreen';
 import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlowScreen';
+import FirefighterRepairFlowScreen from '../screens/firefighterscreens/FirefighterRepairFlowScreen';
 import PPEReportPreviewScreen from '../screens/leadscreens/PPEReportPreviewScreen';
 import RepairDetailsScreen from '../screens/repairscreens/RepairDetailsScreen';
 import { FirefighterRoster } from '../store/inspectionStore';
@@ -37,12 +38,13 @@ export type RootStackParamList = {
   Settings: undefined;
   LeadDetail: { lead: any };
 
-  GearScan: undefined;
+  GearScan: { source?: string } | undefined;
   GearSearch: undefined;
   AddGear: { presetRoster?: any; serialNumber?: string } | undefined;
 
   GearDetail: {gear_id:any};
     FirefighterFlow: {firefighter?:any};
+    FirefighterRepairFlow: {firefighter?:any};
 
 
   UpadateInspection:  { 
@@ -101,6 +103,7 @@ export default function AppNavigator() {
 
       <Stack.Screen name="GearDetail" component={withMainLayout(GearDetailScreen)} options={{ headerShown: false }}/>
       <Stack.Screen name="FirefighterFlow" component={withMainLayout(FirefighterFlowScreen)} />
+      <Stack.Screen name="FirefighterRepairFlow" component={withMainLayout(FirefighterRepairFlowScreen)} />
 
 
       {/* Profile Screen */}

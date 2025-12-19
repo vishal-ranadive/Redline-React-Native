@@ -37,7 +37,7 @@ import {
 } from '../../constants/leadStatuses';
 import { useLeadStore } from '../../store/leadStore';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview' | 'FirefighterFlow'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview' | 'FirefighterFlow' | 'FirefighterRepairFlow'>;
 
 interface Technician {
   id: number;
@@ -1142,7 +1142,7 @@ const LeadDetailScreen = () => {
         >
           {[
             normalizedLeadType === 'REPAIR'
-              ? { label: 'Scan Gear', icon: 'barcode-scan', action: () => navigation.navigate('GearScan' as any, { source: 'REPAIR' }) }
+              ? { label: 'Start Repair', icon: 'wrench', action: () => navigation.navigate('FirefighterRepairFlow', {}) }
               : { label: 'Start Inspection', icon: 'barcode-scan', action: () => navigation.navigate('FirefighterFlow', {}) },
             {
               label: normalizedLeadType === 'REPAIR' ? 'View Repairs' : 'View Inspections',
