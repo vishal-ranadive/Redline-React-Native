@@ -337,25 +337,40 @@ useEffect(() => {
   const getGearsByCategory = (categoryId: string) => {
     const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
     if (!category) return [];
-    
+
     // Direct gear_type_id to category mapping (fallback for known types)
     const gearTypeIdToCategory: { [key: number]: string[] } = {
       8: ['others'], // Hood -> Others
     };
-    
-    return firefighterGears.filter(gear => {
-      // Check direct gear_type_id mapping first
-      const mappedCategories = gearTypeIdToCategory[gear.gear?.gear_type?.gear_type_id];
-      if (mappedCategories && mappedCategories.includes(categoryId)) {
-        return true;
-      }
-      
-      // Find the gear type name from gearTypes store using gear_type_id
-      const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id);
-      const gearTypeName = gearType?.gear_type || gear.gear?.gear_name;
-      
-      return gearMatchesCategory(gearTypeName, category.gearTypes);
-    });
+
+    return firefighterGears
+      .filter(gear => {
+        // Check direct gear_type_id mapping first
+        const mappedCategories = gearTypeIdToCategory[gear.gear?.gear_type?.gear_type_id];
+        if (mappedCategories && mappedCategories.includes(categoryId)) {
+          return true;
+        }
+
+        // Find the gear type name from gearTypes store using gear_type_id
+        const gearType = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id);
+        const gearTypeName = gearType?.gear_type || gear.gear?.gear_name;
+
+        return gearMatchesCategory(gearTypeName, category.gearTypes);
+      })
+      .map(gear => {
+        // Add fallback roster info for uninspected gears
+        if (!gear.current_inspection?.roster && selectedFirefighter) {
+          return {
+            ...gear,
+            current_inspection: {
+              ...gear.current_inspection,
+              roster: selectedFirefighter,
+              tag_color: rosterColor || gear.current_inspection?.tag_color
+            }
+          };
+        }
+        return gear;
+      });
   };
 
   // Get category inspection summary
