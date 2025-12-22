@@ -49,7 +49,7 @@ const RepairDetailsScreen = () => {
   console.log("currentLead", currentLead);
   const { fetchGearById } = useGearStore();
 
-  const { gearId, leadId, leadData } = route.params;
+  const { gearId, leadId, leadData, repairId } = route.params;
 
   // Mobile detection
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
@@ -95,6 +95,10 @@ const RepairDetailsScreen = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, percentage: 0 });
 
+  // Repair mode state
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [existingRepairData, setExistingRepairData] = useState<any>(null);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Fetch gear data
@@ -124,6 +128,62 @@ const RepairDetailsScreen = () => {
 
     fetchGearData();
   }, [gearId, fetchGearById]);
+
+  // Check if we have a repairId and set update mode
+  useEffect(() => {
+    if (repairId) {
+      setIsUpdateMode(true);
+      console.log("RepairDetailsScreen - Update mode activated for repair_id:", repairId);
+    } else {
+      setIsUpdateMode(false);
+    }
+  }, [repairId]);
+
+  // Fetch existing repair data if in update mode
+  useEffect(() => {
+    const fetchExistingRepairData = async () => {
+      if (!isUpdateMode || !repairId) return;
+
+      try {
+        console.log("RepairDetailsScreen - Fetching repair data for repair_id:", repairId);
+
+        const repairResponse = await repairApi.getGearRepair(repairId);
+
+        if (repairResponse.status === true) {
+          const repairData = repairResponse.data;
+          console.log("RepairDetailsScreen - Fetched repair data:", repairData);
+
+          // Pre-populate form with existing repair data
+          setFormData({
+            repairQty: repairData.repair_quantity?.toString() || '',
+            repairTag: repairData.repair_tag || '',
+            spearGear: repairData.spare_gear || false,
+            repairSubTotal: repairData.repair_cost?.toString() || '0',
+            repairStatus: repairData.repair_status || '',
+            remarks: repairData.remarks || '',
+          });
+
+          // Pre-populate images if they exist
+          if (repairData.repair_images && Array.isArray(repairData.repair_images)) {
+            const existingImages = repairData.repair_images.map((img: any) => ({
+              id: `existing-${img.image_id}`,
+              uri: img.image_urls,
+            }));
+            setImages(existingImages);
+          }
+
+          setExistingRepairData(repairData);
+        } else {
+          setError('Failed to load repair data');
+        }
+      } catch (error) {
+        console.error('Error fetching existing repair data:', error);
+        setError('Failed to load existing repair data');
+      }
+    };
+
+    fetchExistingRepairData();
+  }, [isUpdateMode, repairId]);
 
   // Track keyboard visibility
   useEffect(() => {
@@ -223,10 +283,10 @@ const RepairDetailsScreen = () => {
     }
   };
 
-  // Save repair data
-  const handleCreateRepair = async () => {
-    if (!formData.repairQty.trim() || !formData.repairTag.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+  // Save repair data (create or update)
+  const handleSaveRepair = async () => {
+    if (!formData.repairQty.trim()) {
+      Alert.alert('Error', 'Please fill in repair quantity');
       return;
     }
 
@@ -295,7 +355,7 @@ const RepairDetailsScreen = () => {
       setUploadingImages(false);
 
       // Step 2: Prepare repair data
-      const repairData = {
+      const baseRepairData = {
         lead_id: currentLead?.lead_id || leadId,
         firestation_id: currentLead?.firestation?.id || leadData?.firestation_id,
         gear_id: gearId,
@@ -304,38 +364,48 @@ const RepairDetailsScreen = () => {
         repair_status: formData.repairStatus as 'completed' | 'rejected',
         repair_sub_total: parseFloat(formData.repairSubTotal) || 0,
         repair_cost: parseFloat(formData.repairSubTotal) || 0,
-        repair_images: uploadedImageUrls,
         remarks: formData.remarks,
         repair_qty: parseInt(formData.repairQty),
-          repair_tag: formData.repairTag,
-        spare_gear: formData.spearGear,
-
-        /**
-         repair_tag -> need to discuss
-         spare_gear -> need to discuss
-         slug: need to discuss
-         */
+        repair_tag: formData.repairTag,
       };
 
+      // Same field names for both create and update operations
+      const repairData = {
+        ...baseRepairData,
+        repair_images: uploadedImageUrls,
+        spare_gear: formData.spearGear,
+      };
 
       console.log('Repair Data:', repairData);
 
-      // Step 3: Create repair via API
-      const repairResponse = await repairApi.createGearRepair(repairData);
+      // Step 3: Create or update repair via API
+      let repairResponse;
+      if (isUpdateMode && repairId) {
+        // Update existing repair
+        console.log('🔄 Updating existing repair with ID:', repairId);
+        repairResponse = await repairApi.updateGearRepair(repairId, repairData);
+      } else {
+        // Create new repair
+        console.log('➕ Creating new repair');
+        repairResponse = await repairApi.createGearRepair(repairData);
+      }
 
-      if (repairResponse.status === 200) {
-        Alert.alert('Success', repairResponse.msg || 'Repair created successfully!');
+      if (repairResponse.status === true) {
+        const successMessage = isUpdateMode
+          ? (repairResponse.message || 'Repair updated successfully!')
+          : (repairResponse.message || 'Repair created successfully!');
+        Alert.alert('Success', successMessage);
         // Navigate back
         // navigation.goBack();
       } else {
         // Handle specific error cases like duplicates
-        const errorMsg = repairResponse.msg || 'Failed to create repair';
+        const errorMsg = repairResponse.message || `Failed to ${isUpdateMode ? 'update' : 'create'} repair`;
         Alert.alert('Error', errorMsg);
         return; // Don't navigate back on error
       }
     } catch (error: any) {
       setUploadingImages(false);
-      console.error('❌ Error creating repair:', error);
+      console.error(`❌ Error ${isUpdateMode ? 'updating' : 'creating'} repair:`, error);
       Alert.alert('Error', error.message || 'Network error');
     }
   };
@@ -850,11 +920,14 @@ const RepairDetailsScreen = () => {
           </Button>
           <Button
             mode="contained"
-            onPress={handleCreateRepair}
+            onPress={handleSaveRepair}
             loading={uploadingImages}
-            disabled={uploadingImages || !formData.repairQty.trim() || !formData.repairTag.trim()}
+            disabled={uploadingImages || !formData.repairQty.trim()}
           >
-            {uploadingImages ? 'Creating...' : 'Create Repair'}
+            {uploadingImages
+              ? (isUpdateMode ? 'Updating...' : 'Creating...')
+              : (isUpdateMode ? 'Update Repair' : 'Create Repair')
+            }
           </Button>
         </View>
       </ScrollView>

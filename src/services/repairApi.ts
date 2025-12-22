@@ -56,20 +56,31 @@ export const repairApi = {
     return response.data;
   },
 
+  // Get gear repair by ID
+  getGearRepair: async (repairId: number): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-repair/${repairId}/`);
+
+    const response = await axiosInstance.get(`/gear-repair/${repairId}/`);
+
+    console.log(`✅ API Response GET /gear-repair/${repairId}/`, response.data);
+    return response.data;
+  },
+
   // Update gear repair
   updateGearRepair: async (gearRepairId: number, repairData: {
-    lead_id: number;
-    firestation_id: number;
-    gear_id: number;
+    lead_id?: number;
+    firestation_id?: number;
+    gear_id?: number;
     roster_id?: number | null;
     franchise_id: number;
-    repair_status: 'completed' | 'rejected';
-    repair_sub_total: number;
-    repair_image_url: string[];
-    remarks: string;
-    repair_qty: number;
-    repair_tag: string;
-    spear_gear: boolean;
+    repair_status?: 'completed' | 'rejected';
+    repair_sub_total?: number;
+    repair_cost?: number;
+    repair_images?: string[];
+    remarks?: string;
+    repair_qty?: number;
+    repair_tag?: string;
+    spare_gear?: boolean;
     slug?: string;
   }): Promise<any> => {
     console.log(`➡️ API CALL PUT /gear-repair/${gearRepairId}/ with`, repairData);

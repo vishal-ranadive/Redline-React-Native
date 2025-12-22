@@ -391,7 +391,7 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
 
 
-const handleGearPress = (gear: any) => {
+  const handleGearPress = (gear: any) => {
   console.log("handleGearPress for repair",{ gear, selectedFirefighter});
 
   // Use roster from gear's current_repair if available AND valid, otherwise use selectedFirefighter
@@ -410,12 +410,19 @@ const handleGearPress = (gear: any) => {
 
   console.log("handleGearPress_repair_passed_roster", roster);
 
-  // Navigate to repair details screen
-  navigation.navigate("RepairDetails", {
+  // Navigate to repair details screen - pass repair_id if it exists for updates
+  const navigationParams: any = {
     gearId: gear.gear?.gear_id,
     leadId: currentLead?.lead_id,
     leadData: currentLead,
-  });
+  };
+
+  // If there's an existing repair, pass the repair_id for updating
+  if (gear.current_repair?.repair_id) {
+    navigationParams.repairId = gear.current_repair.repair_id;
+  }
+
+  navigation.navigate("RepairDetails", navigationParams);
 };
 
 
