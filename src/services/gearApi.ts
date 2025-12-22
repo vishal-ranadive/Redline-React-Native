@@ -64,11 +64,11 @@ export const gearApi = {
   },
 
   // Scan gear by serial number
-  scanGear: async (firestationId: number, serialNumber: string, leadId: number): Promise<any> => {
-    console.log(`➡️ API CALL GET /scan-gear/${firestationId}/${serialNumber}/?leadId=${leadId}`);
+  scanGear: async (firestationId: number, serialNumber: string, leadId: number, lead_type: string): Promise<any> => {
+    console.log(`➡️ API CALL GET /scan-gear/${firestationId}/${serialNumber}/?leadId=${leadId}&lead_type=${lead_type}`);
     try {
       const response = await axiosInstance.get(`/scan-gear/${firestationId}/${serialNumber}/`, {
-        params: { leadId }
+        params: { leadId, lead_type }
       });
       console.log(`✅ API Response /scan-gear/${firestationId}/${serialNumber}/`, response.data);
       return response.data;

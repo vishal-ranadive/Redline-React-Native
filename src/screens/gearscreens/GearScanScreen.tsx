@@ -149,7 +149,8 @@ const stopScanning = () => {
       }
 
       // Call scan-gear API
-      const scanResponse = await scanGear(firestationId, scannedValue, leadId);
+      const leadType = currentLead?.type || 'Inspection'; // Default to Inspection if not found
+      const scanResponse = await scanGear(firestationId, scannedValue, leadId, leadType);
       printTable("scanGear result", scanResponse);
 
       // Handle different response structures (array or wrapped in status object)
