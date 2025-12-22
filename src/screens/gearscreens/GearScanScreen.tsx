@@ -149,7 +149,7 @@ const stopScanning = () => {
       }
 
       // Call scan-gear API
-      const leadType = currentLead?.type || 'Inspection'; // Default to Inspection if not found
+      const leadType = currentLead?.type.toLowerCase(); // Default to Inspection if not found
       const scanResponse = await scanGear(firestationId, scannedValue, leadId, leadType);
       printTable("scanGear result", scanResponse);
 
