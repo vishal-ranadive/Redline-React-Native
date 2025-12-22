@@ -557,17 +557,16 @@ const GearDetailScreen = () => {
               >
               <View style={styles.tableWrapper}>
                 <View style={styles.tableHeader}>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Date</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Status</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Type</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Technician</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Firefighter</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Images</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created By</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated By</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Date</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Status</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Type</Text>
+                  <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Technician</Text>
+                  <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Firefighter</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created</Text>
+                  <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created By</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated</Text>
+                  <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated By</Text>
                 </View>
 
                 {gearHistory.map((item, index) => (
@@ -579,37 +578,34 @@ const GearDetailScreen = () => {
                     }}
                   >
                     <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
                         {formatDate(item.lead.schedule_date)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: getStatusColor(item.repair_status), fontSize: p(12), fontWeight: '600' }]}>
+                      <Text style={[styles.tableCellMedium, { color: getStatusColor(item.repair_status), fontSize: p(12), fontWeight: '600' }]}>
                         {item.repair_status}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
                         ${item.repair_cost?.toFixed(2) || '0.00'}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
                         {item.record_type}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={1} ellipsizeMode="tail">
                         {item.lead.assigned_technicians?.[0]?.name || 'N/A'}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={1} ellipsizeMode="tail">
                         {item.gear.roster ? `${item.gear.roster.first_name} ${item.gear.roster.last_name}` : 'N/A'}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.repair_images?.length || 0}
-                      </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
                         {formatDate(item.created_at)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={1} ellipsizeMode="tail">
                         {item.created_by}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
                         {formatDate(item.updated_at)}
                       </Text>
-                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                      <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={1} ellipsizeMode="tail">
                         {item.updated_by}
                       </Text>
                     </View>
@@ -799,27 +795,56 @@ const styles = StyleSheet.create({
     paddingBottom: p(8),
   },
   tableWrapper: {
-    minWidth: p(600), // Minimum width to ensure table doesn't get too cramped
+    minWidth: p(900), // Reduced width since we removed one column
   },
   tableHeader: {
     flexDirection: 'row',
     marginBottom: p(8),
   },
-  tableHeaderText: {
-    minWidth: p(80),
+  // Fixed width for specific columns
+  tableHeaderTextMedium: {
+    width: p(100),
     paddingHorizontal: p(8),
     fontWeight: '600',
-    textAlign: 'center',
+    textAlign: 'left',
   },
+  tableHeaderTextWide: {
+    width: p(120),
+    paddingHorizontal: p(8),
+    fontWeight: '600',
+    textAlign: 'left',
+  },
+  // Flexible columns for text content
+  tableHeaderTextFlex: {
+    flex: 1,
+    minWidth: p(100),
+    paddingHorizontal: p(8),
+    fontWeight: '600',
+    textAlign: 'left',
+  },
+
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: p(8),
   },
-  tableCell: {
-    minWidth: p(80),
+  // Fixed width for specific columns
+  tableCellMedium: {
+    width: p(100),
     paddingHorizontal: p(8),
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  tableCellWide: {
+    width: p(120),
+    paddingHorizontal: p(8),
+    textAlign: 'left',
+  },
+  // Flexible columns for text content
+  tableCellFlex: {
+    flex: 1,
+    minWidth: p(100),
+    paddingHorizontal: p(8),
+    textAlign: 'left',
   },
   ctaButton: {
     marginTop: p(20),
