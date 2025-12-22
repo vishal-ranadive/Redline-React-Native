@@ -340,3 +340,6 @@ otherwise I have to create the repair and then i need to upload images -> is tha
 
 # when i add new gear and we are in reapir flow then 
 - redirect -> Repair Details screen instead of inpsection screen 
+
+# Lead Repair Details update the 
+- update the cost 

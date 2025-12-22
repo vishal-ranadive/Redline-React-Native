@@ -79,6 +79,7 @@ interface LeadDetail {
   updatedAt: string;
   createdBy: string;
   updatedBy: string;
+  repair_cost?: number | null;
 }
 
 /**
@@ -142,13 +143,25 @@ const LeadDetailScreen = () => {
   const [hardnessValue, setHardnessValue] = useState(() => {
     // Initialize from initialLead if available, handling null and float numbers
     if (initialLead?.water_hardness !== null && initialLead?.water_hardness !== undefined) {
-      return typeof initialLead.water_hardness === 'number' 
-        ? initialLead.water_hardness.toString() 
+      return typeof initialLead.water_hardness === 'number'
+        ? initialLead.water_hardness.toString()
         : String(initialLead.water_hardness);
     }
     return '';
   });
   const [isEditingHardness, setIsEditingHardness] = useState(false);
+
+  // Repair cost state
+  const [repairCostValue, setRepairCostValue] = useState(() => {
+    // Initialize from initialLead if available, handling null and numbers
+    if (initialLead?.repair_cost !== null && initialLead?.repair_cost !== undefined) {
+      return typeof initialLead.repair_cost === 'number'
+        ? initialLead.repair_cost.toString()
+        : String(initialLead.repair_cost);
+    }
+    return '0';
+  });
+  const [isEditingRepairCost, setIsEditingRepairCost] = useState(false);
 
   // Remarks editing state
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
@@ -238,13 +251,24 @@ const LeadDetailScreen = () => {
         setCurrentStatus(leadDetail?.lead_status);
         // Update water hardness value if available (handle null and float numbers)
         if (leadDetail.water_hardness !== null && leadDetail.water_hardness !== undefined) {
-          const hardnessValue = typeof leadDetail.water_hardness === 'number' 
-            ? leadDetail.water_hardness.toString() 
+          const hardnessValue = typeof leadDetail.water_hardness === 'number'
+            ? leadDetail.water_hardness.toString()
             : String(leadDetail.water_hardness);
           setHardnessValue(hardnessValue);
         } else {
           // Reset to empty string if null or undefined
           setHardnessValue('');
+        }
+
+        // Update repair cost value if available (handle null and numbers)
+        if (leadDetail.repair_cost !== null && leadDetail.repair_cost !== undefined) {
+          const repairCostValue = typeof leadDetail.repair_cost === 'number'
+            ? leadDetail.repair_cost.toString()
+            : String(leadDetail.repair_cost);
+          setRepairCostValue(repairCostValue);
+        } else {
+          // Default to '0' if null or undefined
+          setRepairCostValue('0');
         }
       }
       printTable("currentLead",currentLead)
@@ -483,6 +507,49 @@ const LeadDetailScreen = () => {
   const handleCancelEditHardness = () => {
     setIsEditingHardness(false);
     setShowHardnessInput(false);
+    // Reset to previous value if needed, or keep current
+  };
+
+  /**
+   * Save repair cost value
+   */
+  const handleSaveRepairCost = async () => {
+    try {
+      const cost = parseFloat(repairCostValue);
+
+      if (isNaN(cost) || cost < 0) {
+        Alert.alert('Error', 'Please enter a valid positive number for repair cost');
+        return;
+      }
+
+      setLoading(true);
+
+      // API call to save repair cost
+      await leadApi.updateLead(lead.lead_id, { repair_cost: cost, status: currentStatus });
+
+      setIsEditingRepairCost(false);
+
+      Alert.alert('Success', 'Repair cost saved successfully');
+    } catch (error) {
+      console.error('Error saving repair cost:', error);
+      Alert.alert('Error', 'Failed to save repair cost');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Start editing repair cost
+   */
+  const handleEditRepairCost = () => {
+    setIsEditingRepairCost(true);
+  };
+
+  /**
+   * Cancel editing repair cost
+   */
+  const handleCancelEditRepairCost = () => {
+    setIsEditingRepairCost(false);
     // Reset to previous value if needed, or keep current
   };
 
@@ -1052,6 +1119,86 @@ const LeadDetailScreen = () => {
                       </View>
                     </View>
                   </View>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Repair Cost Section - Only show for repairs */}
+        {normalizedLeadType === 'REPAIR' && (
+          <Card
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: p(3) },
+            ]}
+          >
+            <Card.Content>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: '60%' }}>
+                  <Text style={[styles.sectionTitle, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Repair Cost
+                  </Text>
+                  <Text style={[styles.sectionTitle, { color: "gray", fontSize: p(12), marginTop: p(4) }]}>
+                    Estimated or actual repair cost in USD
+                  </Text>
+                </View>
+
+                {/* Display current repair cost or edit button */}
+                {!isEditingRepairCost ? (
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={handleEditRepairCost}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: p(6),
+                    }}
+                  >
+                    <Text style={{ color: colors.primary, fontWeight: '700', fontSize: p(16) }}>
+                      ${repairCostValue || '0'}
+                    </Text>
+                    <Icon
+                      source="pencil"
+                      size={p(20)}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(8) }}>
+                    <Button
+                      mode="text"
+                      compact
+                      onPress={handleCancelEditRepairCost}
+                      textColor={colors.error}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      mode="contained"
+                      compact
+                      onPress={handleSaveRepairCost}
+                      disabled={!repairCostValue}
+                    >
+                      Save
+                    </Button>
+                  </View>
+                )}
+              </View>
+
+              {/* Expandable input field */}
+              {isEditingRepairCost && (
+                <View style={{ marginTop: p(16) }}>
+                  <TextInput
+                    label="Repair Cost (USD)"
+                    value={repairCostValue}
+                    onChangeText={setRepairCostValue}
+                    keyboardType="numeric"
+                    mode="outlined"
+                    placeholder="Enter repair cost (0.00)"
+                    style={{ fontSize: p(16) }}
+                    left={<TextInput.Affix text="$" />}
+                  />
                 </View>
               )}
             </Card.Content>
