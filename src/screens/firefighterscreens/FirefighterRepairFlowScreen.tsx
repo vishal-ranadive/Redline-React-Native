@@ -31,6 +31,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import AddFirefighterModal from '../../components/common/Modal/AddFirefighterModal';
 import RosterModal from '../../components/common/Modal/RosterModal';
 import { useInspectionStore } from '../../store/inspectionStore';
+import { useRepairStore } from '../../store/repairStore';
 import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
@@ -108,11 +109,17 @@ const FirefighterRepairFlowScreen = () => {
   const { firefighter} = route.params ?? {};
   console.log("Selected_firefighter for repair", firefighter)
   const {
-    firefighterGears,
-    loading,
+    firefighterGears: inspectionGears,
     fetchFirefighterGears,
     clearFirefighterGears
   } = useInspectionStore();
+
+  const {
+    firefighterRepairGears,
+    loading,
+    fetchFirefighterRepairGears,
+    clearFirefighterRepairGears
+  } = useRepairStore();
 
   const [selectedFirefighter, setSelectedFirefighter] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -139,15 +146,15 @@ useFocusEffect(
     if (firefighter) {
       handleFirefighterSelect(firefighter);
     } else if (selectedFirefighter && currentLead) {
-      // Refresh gears when screen is focused and firefighter is already selected
-      console.log("🔧 Repair Screen Focused – Refreshing gears for selected firefighter");
-      fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id || selectedFirefighter.id);
+      // Refresh repair gears when screen is focused and firefighter is already selected
+      console.log("🔧 Repair Screen Focused – Refreshing repair gears for selected firefighter");
+      fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id || selectedFirefighter.id);
     }
 
     return () => {
       // optional cleanup if needed
     };
-  }, [firefighter, selectedFirefighter, currentLead, fetchFirefighterGears])
+  }, [firefighter, selectedFirefighter, currentLead, fetchFirefighterRepairGears])
 );
 
   // Effect for handling screen orientation changes
@@ -179,9 +186,9 @@ useFocusEffect(
     setSelectedCategory(null);
 
     try {
-      await fetchFirefighterGears(currentLead.lead_id, roster.roster_id);
+      await fetchFirefighterRepairGears(currentLead.lead_id, roster.roster_id);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch gears');
+      Alert.alert('Error', 'Failed to fetch repair gears');
     }
   };
 
@@ -194,18 +201,18 @@ useFocusEffect(
 
     setRefreshing(true);
     try {
-      await fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id);
+      await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id);
     } catch (error) {
-      Alert.alert('Error', 'Failed to refresh gears');
+      Alert.alert('Error', 'Failed to refresh repair gears');
     } finally {
       setRefreshing(false);
     }
-  }, [selectedFirefighter, currentLead, fetchFirefighterGears]);
+  }, [selectedFirefighter, currentLead, fetchFirefighterRepairGears]);
 
-  // Clear gears when firefighter is deselected
+  // Clear repair gears when firefighter is deselected
   useEffect(() => {
     if (!selectedFirefighter) {
-      clearFirefighterGears();
+      clearFirefighterRepairGears();
       // Clear color state when firefighter is deselected
       setRosterColor("");
       setColorLocked(false);
@@ -214,7 +221,7 @@ useFocusEffect(
   }, [selectedFirefighter]);
 
 useEffect(() => {
-  if (!firefighterGears || firefighterGears.length === 0) {
+  if (!inspectionGears || inspectionGears.length === 0) {
     // No gears or empty array - clear color state
     setRosterColor("");
     setColorLocked(false);
@@ -222,7 +229,7 @@ useEffect(() => {
   }
 
   // Find first gear with current inspection & tag_color
-  const found = firefighterGears.find(
+  const found = inspectionGears.find(
     g => g?.current_inspection?.tag_color
   );
 
@@ -240,7 +247,7 @@ useEffect(() => {
     // Clear AsyncStorage to avoid using old color
     AsyncStorage.removeItem(TAG_COLOR_STORAGE_KEY);
   }
-}, [firefighterGears]);
+}, [inspectionGears]);
 
 // Save tag color to AsyncStorage whenever rosterColor changes
 useEffect(() => {
@@ -297,7 +304,7 @@ useEffect(() => {
       8: ['others'], // Hood -> Others
     };
 
-    return firefighterGears
+    return firefighterRepairGears
       .filter(gear => {
         // Check direct gear_type_id mapping first
         const mappedCategories = gearTypeIdToCategory[gear.gear?.gear_type?.gear_type_id];
@@ -312,14 +319,13 @@ useEffect(() => {
         return gearMatchesCategory(gearTypeName, category.gearTypes);
       })
       .map(gear => {
-        // Add fallback roster info for uninspected gears
-        if (!gear.current_inspection?.roster && selectedFirefighter) {
+        // Add fallback roster info for unrepaired gears
+        if (!gear.current_repair?.roster && selectedFirefighter) {
           return {
             ...gear,
-            current_inspection: {
-              ...gear.current_inspection,
+            current_repair: {
+              ...gear.current_repair,
               roster: selectedFirefighter,
-              tag_color: rosterColor || gear.current_inspection?.tag_color
             }
           };
         }
@@ -327,8 +333,8 @@ useEffect(() => {
       });
   };
 
-  // Get category inspection summary
-const getCategoryInspectionSummary = (categoryId:string) => {
+  // Get category repair summary
+const getCategoryRepairSummary = (categoryId:string) => {
   const categoryGears = getGearsByCategory(categoryId);
   const category = GEAR_CATEGORIES.find(cat => cat.id === categoryId);
 
@@ -341,8 +347,8 @@ const getCategoryInspectionSummary = (categoryId:string) => {
     const usage = gear.gear_usage || "PRIMARY";
     const name = gear.gear?.gear_name;
 
-    const currentStatus = gear.current_inspection?.gear_status?.status || "No Current Repair";
-    const previousStatus = gear.previous_inspection?.gear_status?.status || "No Previous Repair";
+    const currentStatus = gear.current_repair?.repair_status || "No Current Repair";
+    const previousStatus = gear.previous_repair?.repair_status || "No Previous Repair";
 
     return {
       gear_id: gear.gear?.gear_id,
@@ -358,19 +364,19 @@ const getCategoryInspectionSummary = (categoryId:string) => {
 
 
 
-// Local getStatusColor function removed - use global getStatusColor from constants/inspection instead
+// Local getStatusColor function removed - use global getStatusColor from inspection constants instead
 
 
 
 
-  // Get gear status from current inspection
+  // Get gear repair status from current repair
   const getGearStatus = (gear: any) => {
-    if (!gear.current_inspection) return 'Not Inspected';
+    if (!gear.current_repair) return '';
 
-    const gearStatus = gear.current_inspection.gear_status?.status;
-    if (!gearStatus) return 'Not Inspected';
+    const repairStatus = gear.current_repair.repair_status;
+    if (!repairStatus) return '';
 
-    return gearStatus
+    return repairStatus;
   };
 
   const handleCategoryPress = (categoryId: string) => {
@@ -388,23 +394,23 @@ const getCategoryInspectionSummary = (categoryId:string) => {
 const handleGearPress = (gear: any) => {
   console.log("handleGearPress for repair",{ gear, selectedFirefighter});
 
-  // Use roster from gear's current_inspection if available AND valid, otherwise use selectedFirefighter
-  const roster = gear.current_inspection?.roster?.roster_id
+  // Use roster from gear's current_repair if available AND valid, otherwise use selectedFirefighter
+  const roster = gear.current_repair?.roster?.roster_id
     ? {
-        roster_id: gear.current_inspection.roster.roster_id,
-        id: gear.current_inspection.roster.roster_id,
-        first_name: gear.current_inspection.roster.first_name || '',
-        middle_name: gear.current_inspection.roster.middle_name || '',
-        last_name: gear.current_inspection.roster.last_name || '',
-        email: gear.current_inspection.roster.email || '',
-        phone: gear.current_inspection.roster.phone || '',
-        name: `${gear.current_inspection.roster.first_name || ''} ${gear.current_inspection.roster.middle_name || ''} ${gear.current_inspection.roster.last_name || ''}`.trim() || 'Unknown Firefighter',
+        roster_id: gear.current_repair.roster.roster_id,
+        id: gear.current_repair.roster.roster_id,
+        first_name: gear.current_repair.roster.first_name || '',
+        middle_name: gear.current_repair.roster.middle_name || '',
+        last_name: gear.current_repair.roster.last_name || '',
+        email: gear.current_repair.roster.email || '',
+        phone: gear.current_repair.roster.phone || '',
+        name: `${gear.current_repair.roster.first_name || ''} ${gear.current_repair.roster.middle_name || ''} ${gear.current_repair.roster.last_name || ''}`.trim() || 'Unknown Firefighter',
       }
     : selectedFirefighter;
 
   console.log("handleGearPress_repair_passed_roster", roster);
 
-  // Navigate to repair details screen instead of inspection
+  // Navigate to repair details screen
   navigation.navigate("RepairDetails", {
     gearId: gear.gear?.gear_id,
     leadId: currentLead?.lead_id,
@@ -448,9 +454,9 @@ const handleGearPress = (gear: any) => {
               await gearApi.deleteGear(gearId);
               Alert.alert('Success', 'Gear deleted successfully');
 
-              // Refresh the gear list
+              // Refresh the repair gear list
               if (selectedFirefighter && currentLead) {
-                await fetchFirefighterGears(currentLead.lead_id, selectedFirefighter.roster_id);
+                await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id);
               }
             } catch (error: any) {
               console.error('Error deleting gear:', error);
@@ -548,29 +554,26 @@ const handleGearPress = (gear: any) => {
   }, [colorPickerVisible, colorLocked, fetchUsedColors]);
 
   /**
-   * Render inspection details section
+   * Render repair details section
    */
-  const renderInspectionDetails = useCallback(
-    (inspection: any, isPrevious: boolean = false) => {
-      if (!inspection) return null;
+  const renderRepairDetails = useCallback(
+    (repair: any, isPrevious: boolean = false) => {
+      if (!repair) return null;
 
       const sectionTitle = isPrevious ? 'Previous Repair' : 'Current Repair';
-      const inspectionDate = inspection.inspection_date || 'N/A';
-      const hydroTestResult = inspection.hydro_test_result || 'N/A';
-      const hydroTestPerformed = inspection.hydro_test_performed !== null
-        ? (inspection.hydro_test_performed ? 'Yes' : 'No')
+      const repairDate = repair.created_at ? new Date(repair.created_at).toLocaleDateString() : 'N/A';
+      const repairCost = repair.repair_cost !== null && repair.repair_cost !== undefined
+        ? `$${repair.repair_cost.toFixed(2)}`
         : 'N/A';
-      const inspectionCost = inspection.inspection_cost !== null && inspection.inspection_cost !== undefined
-        ? `$${inspection.inspection_cost.toFixed(2)}`
+      const remarks = repair.remarks || 'N/A';
+      const repairStatus = repair.repair_status || 'N/A';
+      const repairTag = 'N/A'; // No repair_tag field in API response
+      const repairQty = repair.repair_quantity !== null && repair.repair_quantity !== undefined
+        ? repair.repair_quantity.toString()
         : 'N/A';
-      const remarks = inspection.remarks || 'N/A';
-      const serviceType = inspection.service_type?.status || 'N/A';
-      const finding = inspection.finding?.findings || 'N/A';
-      const hydrotestRemarks = inspection.hydrotest_remarks || null;
-      const specialisedCleaningRemarks = inspection.specialisedcleaning_remarks || null;
 
       return (
-        <View style={[styles.inspectionSection, { borderTopColor: colors.outline }]}>
+        <View style={[styles.repairSection, { borderTopColor: colors.outline }]}>
           <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
             {sectionTitle}
           </Text>
@@ -578,29 +581,13 @@ const handleGearPress = (gear: any) => {
           <View style={styles.detailRow}>
             <Icon source="calendar" size={14} color={colors.primary} />
             <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Date:</Text>
-            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{inspectionDate}</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairDate}</Text>
           </View>
-
-          {hydroTestResult !== 'N/A' && (
-            <>
-              <View style={styles.detailRow}>
-                <Icon source="water" size={14} color={colors.primary} />
-                <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Test:</Text>
-                <Text style={[styles.detailValue, { color: colors.onSurface }]}>{hydroTestResult}</Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Icon source="check-circle" size={14} color={colors.primary} />
-                <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Performed:</Text>
-                <Text style={[styles.detailValue, { color: colors.onSurface }]}>{hydroTestPerformed}</Text>
-              </View>
-            </>
-          )}
 
           <View style={styles.detailRow}>
             <Icon source="currency-usd" size={14} color={colors.primary} />
             <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
-            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{inspectionCost}</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairCost}</Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -613,39 +600,21 @@ const handleGearPress = (gear: any) => {
 
           <View style={styles.detailRow}>
             <Icon source="wrench" size={14} color={colors.primary} />
-            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Service:</Text>
-            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{serviceType}</Text>
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Status:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairStatus}</Text>
           </View>
 
-          {finding !== 'N/A' && (
-            <View style={styles.detailRow}>
-              <Icon source="alert-circle" size={14} color={colors.primary} />
-              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Finding:</Text>
-              <Text style={[styles.detailValue, styles.findingText]} numberOfLines={1}>
-                {finding}
-              </Text>
-            </View>
-          )}
+          <View style={styles.detailRow}>
+            <Icon source="tag" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Tag:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairTag}</Text>
+          </View>
 
-          {hydrotestRemarks && (
-            <View style={styles.detailRow}>
-              <Icon source="water" size={14} color={colors.primary} />
-              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Hydro Remarks:</Text>
-              <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
-                {hydrotestRemarks}
-              </Text>
-            </View>
-          )}
-
-          {specialisedCleaningRemarks && (
-            <View style={styles.detailRow}>
-              <Icon source="brush" size={14} color={colors.primary} />
-              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cleaning Remarks:</Text>
-              <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
-                {specialisedCleaningRemarks}
-              </Text>
-            </View>
-          )}
+          <View style={styles.detailRow}>
+            <Icon source="counter" size={14} color={colors.primary} />
+            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Quantity:</Text>
+            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairQty}</Text>
+          </View>
         </View>
       );
     },
@@ -658,7 +627,7 @@ const handleGearPress = (gear: any) => {
   const renderGearCard = useCallback(
     (gear: any) => {
       const gearStatus = getGearStatus(gear);
-      const statusId = gear.current_inspection?.gear_status?.id;
+      const statusId = gear.current_repair?.repair_status?.id;
       const statusColor = getStatusColor(statusId, gearStatus);
       const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
       const tagColor = tagColorName ? getColorHex(tagColorName) : "";
@@ -668,11 +637,11 @@ const handleGearPress = (gear: any) => {
       const gearDetail = gear.gear;
       const serialNumber = gearDetail?.serial_number || 'N/A';
       const manufacturerName = gearDetail?.manufacturer?.manufacturer_name || 'N/A';
-      const gearSize = gear.current_inspection?.gear_size || gearDetail?.gear_size || 'N/A';
+      const gearSize = gear.current_repair?.gear_size || gearDetail?.gear_size || 'N/A';
 
-      // Get inspection images
-      const inspectionImages = gear.current_inspection?.inspection_images || [];
-      const hasImages = inspectionImages.length > 0;
+      // Get repair images (array of objects with image_urls)
+      const repairImages = gear.current_repair?.repair_images || [];
+      const hasImages = repairImages.length > 0;
 
       return (
         <View style={[styles.cardWrapper, { width: isTablet ? '48%' : '100%' }]}>
@@ -759,11 +728,11 @@ const handleGearPress = (gear: any) => {
                     </View>
                   </View>
 
-                  {/* Current Inspection Details */}
-                  {renderInspectionDetails(gear.current_inspection, false)}
+                  {/* Current Repair Details */}
+                  {renderRepairDetails(gear.current_repair, false)}
 
-                  {/* Previous Inspection Details */}
-                  {/* {gear.previous_inspection && renderInspectionDetails(gear.previous_inspection, true)} */}
+                  {/* Previous Repair Details */}
+                  {/* {gear.previous_repair && renderRepairDetails(gear.previous_repair, true)} */}
 
                   {/* Update Button */}
                   <Button
@@ -782,7 +751,7 @@ const handleGearPress = (gear: any) => {
           </View>
       );
     },
-    [colors, navigation, renderInspectionDetails, gearTypes, isTablet],
+    [colors, navigation, renderRepairDetails, gearTypes, isTablet],
   );
 
   // Render category gears in 2-column grid
@@ -831,7 +800,7 @@ const handleGearPress = (gear: any) => {
         <View style={styles.categoriesGrid}>
           {GEAR_CATEGORIES.map((category) => {
             const categoryGears = getGearsByCategory(category.id);
-            const inspectionSummary = getCategoryInspectionSummary(category.id);
+            const repairSummary = getCategoryRepairSummary(category.id);
             const isSelected = selectedCategory === category.id;
 
             return (
@@ -869,9 +838,9 @@ const handleGearPress = (gear: any) => {
                       Current Repair
                     </Text>
 
-                    {inspectionSummary.some(i => i.current_status !== "No Current Repair") ? (
-                      inspectionSummary.map(gear => (
-                        <View key={gear.gear_id} style={styles.inspectionRowItem}>
+                    {repairSummary.some(i => i.current_status !== "No Current Repair") ? (
+                      repairSummary.map(gear => (
+                        <View key={gear.gear_id} style={styles.repairRowItem}>
                           {isPortrait ? (
                             // Portrait: Status below gear name with arrow
                             <View style={styles.gearNameStatusContainerPortrait}>
@@ -1003,9 +972,9 @@ const handleGearPress = (gear: any) => {
                   <Button
                     mode="outlined"
                     icon="pencil"
-                    onPress={() => {
-                      if (!colorLocked) setColorPickerVisible(true);
-                    }}
+                    // onPress={() => {
+                    //   if (!colorLocked) setColorPickerVisible(true);
+                    // }}
                     disabled={colorLocked}
                     style={[styles.changeButton, { flex: 1, backgroundColor: getColorHex(rosterColor) }]}
                     labelStyle={styles.changeButtonLabel}
@@ -1027,9 +996,9 @@ const handleGearPress = (gear: any) => {
                 ) : (
                   <Button
                     mode="outlined"
-                    onPress={() => setColorPickerVisible(true)}
+                    // onPress={() => setColorPickerVisible(true)}
                     icon="palette"
-                    style={[styles.changeButton, { flex: 1 }]}
+                    style={[styles.changeButton, { flex: 1 , opacity: 0 }]}
                     labelStyle={styles.changeButtonLabel}
                   >
                     Select Color
@@ -1445,7 +1414,7 @@ const styles = StyleSheet.create({
   categoryHeaderText: {
     flex: 1,
   },
-  inspectionRowItem: {
+  repairRowItem: {
     marginBottom: p(6),
   },
   gearNameStatusContainer: {
@@ -1559,21 +1528,21 @@ const styles = StyleSheet.create({
     fontSize: p(64),
     textAlign: 'center',
   },
-  inspectionImagesContainer: {
+  repairImagesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
     marginBottom: p(8),
     gap: p(4),
   },
-  inspectionImageBox: {
+  repairImageBox: {
     width: '31%',
     aspectRatio: 1,
     borderRadius: p(6),
     overflow: 'hidden',
     backgroundColor: '#f0f0f0',
   },
-  inspectionImage: {
+  repairImage: {
     width: '100%',
     height: '100%',
   },
@@ -1616,7 +1585,7 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
     fontWeight: '500',
   },
-  inspectionSection: {
+  repairSection: {
     marginTop: p(10),
     marginBottom: p(8),
     paddingTop: p(8),
@@ -1648,12 +1617,12 @@ const styles = StyleSheet.create({
   gearCount: {
     fontSize: p(12),
   },
-  inspectionLabel: {
+  repairLabel: {
     fontSize: p(10),
     fontWeight: '600',
     marginBottom: p(4),
   },
-  inspectionRow: {
+  repairRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

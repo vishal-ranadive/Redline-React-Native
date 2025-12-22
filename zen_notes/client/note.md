@@ -312,3 +312,29 @@ firefireghter List screen
 
 {{base_url}}/api/gear-inspections/rosters/103/?last_name=test&page_size=20
 {{base_url}}/api/gear-inspections/rosters/103/?page_size=20
+
+
+
+# 22-12-2025
+
+Gear-Repair Api
+Post: /api/gear-repair
+    Repair_tag: need to discuss
+    repair status 
+    slug: need to discuss
+
+
+# Not able to add inspection 
+- because I remember i have added firefighter in current inspection which result's in current_inpsection not null 
+- now it's updating instead of creating 
+
+
+# why do we need gear_repair_id here 
+while uploading images 
+Does gear id not sufficient here 
+ 
+otherwise I have to create the repair and then i need to upload images -> is that what we need ?
+
+
+# Repir cost update on lead page 
+

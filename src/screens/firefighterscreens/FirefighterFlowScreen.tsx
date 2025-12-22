@@ -365,7 +365,7 @@ useEffect(() => {
             current_inspection: {
               ...gear.current_inspection,
               roster: selectedFirefighter,
-              tag_color: rosterColor || gear.current_inspection?.tag_color
+              // tag_color: rosterColor || gear.current_inspection?.tag_color
             }
           };
         }

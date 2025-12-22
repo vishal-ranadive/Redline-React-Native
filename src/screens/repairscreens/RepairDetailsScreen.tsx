@@ -233,7 +233,7 @@ const RepairDetailsScreen = () => {
     try {
       setUploadingImages(true);
 
-      // Step 1: Upload new images (local file URIs)
+      // Step 1: Upload new images (local file URIs) using repair-specific endpoint
       const localImages = images.filter(img =>
         img.uri.startsWith('file://') || img.uri.startsWith('content://')
       ).map(img => img.uri);
@@ -247,29 +247,47 @@ const RepairDetailsScreen = () => {
       if (localImages.length > 0) {
         console.log(`📤 Uploading ${localImages.length} repair images...`);
 
-        const uploadResults = await imageUploadApi.uploadMultipleImages(
-          localImages,
-          gearId,
-          (current, total, progress) => {
-            setUploadProgress({
-              current,
-              total,
-              percentage: progress.percentage
-            });
-            console.log(`Uploading image ${current}/${total} - ${progress.percentage}%`);
-          }
-        );
+        // Upload images sequentially using repair upload endpoint
+        for (let i = 0; i < localImages.length; i++) {
+          const imageUri = localImages[i];
+          const filename = imageUri.split('/').pop() || 'image.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
 
-        // Collect successfully uploaded image URLs
-        uploadResults.forEach((result, index) => {
-          if (result.status && result.data?.url) {
-            uploadedImageUrls.push(result.data.url);
-            console.log(`✅ Repair image ${index + 1} uploaded:`, result.data.url);
-          } else {
-            console.error(`❌ Failed to upload repair image ${index + 1}:`, result.message);
-            Alert.alert('Upload Warning', `Failed to upload image ${index + 1}: ${result.message}`);
+          // Create FormData for each image
+          const formData = new FormData();
+          formData.append('image', {
+            uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+            name: filename,
+            type: type,
+          } as any);
+
+          try {
+            setUploadProgress({
+              current: i + 1,
+              total: localImages.length,
+              percentage: Math.round(((i + 1) / localImages.length) * 100)
+            });
+
+            console.log(`📤 Uploading repair image ${i + 1}/${localImages.length}: ${filename}`);
+
+            const uploadResult = await repairApi.uploadRepairImage(formData);
+
+            // Handle different response formats from repair upload endpoint
+            if (uploadResult.status && (uploadResult.data?.url || uploadResult.uploaded?.[0]?.public_image_url)) {
+              const imageUrl = uploadResult.data?.url || uploadResult.uploaded?.[0]?.public_image_url;
+              uploadedImageUrls.push(imageUrl);
+              console.log(`✅ Repair image ${i + 1} uploaded:`, imageUrl);
+            } else {
+              const errorMessage = uploadResult.message || uploadResult.errors?.[0] || 'Upload failed';
+              console.error(`❌ Failed to upload repair image ${i + 1}:`, errorMessage);
+              Alert.alert('Upload Warning', `Failed to upload image ${i + 1}: ${errorMessage}`);
+            }
+          } catch (error: any) {
+            console.error(`❌ Error uploading repair image ${i + 1}:`, error);
+            Alert.alert('Upload Error', `Failed to upload image ${i + 1}: ${error.message || 'Network error'}`);
           }
-        });
+        }
       }
 
       console.log('📷 Final repair image URLs:', uploadedImageUrls);
@@ -285,12 +303,20 @@ const RepairDetailsScreen = () => {
         franchise_id: currentLead?.franchise?.id || leadData?.franchise_id,
         repair_status: formData.repairStatus as 'completed' | 'rejected',
         repair_sub_total: parseFloat(formData.repairSubTotal) || 0,
-        repair_image_url: uploadedImageUrls,
+        repair_cost: parseFloat(formData.repairSubTotal) || 0,
+        repair_images: uploadedImageUrls,
         remarks: formData.remarks,
         repair_qty: parseInt(formData.repairQty),
-        repair_tag: formData.repairTag,
-        spear_gear: formData.spearGear,
+          repair_tag: formData.repairTag,
+        spare_gear: formData.spearGear,
+
+        /**
+         repair_tag -> need to discuss
+         spare_gear -> need to discuss
+         slug: need to discuss
+         */
       };
+
 
       console.log('Repair Data:', repairData);
 

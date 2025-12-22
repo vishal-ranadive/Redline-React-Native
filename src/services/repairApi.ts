@@ -2,6 +2,33 @@
 import { axiosInstance } from './api';
 
 export const repairApi = {
+  // Get firefighter repair information
+  getFirefighterRepairInformation: async (leadId: number, rosterId: number): Promise<any> => {
+    console.log(
+      `➡️ API CALL GET /firefighter-repair-information/?lead_id=${leadId}&roster_id=${rosterId}`,
+    );
+    const response = await axiosInstance.get(`/firefighter-repair-information/`, {
+      params: {
+        lead_id: leadId,
+        roster_id: rosterId,
+      },
+    });
+    console.log('✅ API Response GET /firefighter-repair-information/', response.data);
+    return response.data;
+  },
+
+  // Upload repair image to S3
+  uploadRepairImage: async (formData: FormData): Promise<any> => {
+    console.log('➡️ API CALL POST /upload-repair-image/', formData);
+
+    const response = await axiosInstance.post(`/upload-repair-image/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    console.log('✅ API Response POST /upload-repair-image/', response.data);
+    return response.data;
+  },
+
   // Create gear repair
   createGearRepair: async (repairData: {
     lead_id: number;
@@ -11,11 +38,12 @@ export const repairApi = {
     franchise_id: number;
     repair_status: 'completed' | 'rejected';
     repair_sub_total: number;
-    repair_image_url: string[];
+    repair_cost: number;
+    repair_images: string[];
     remarks: string;
     repair_qty: number;
     repair_tag: string;
-    spear_gear: boolean;
+    spare_gear: boolean;
     slug?: string;
   }): Promise<any> => {
     console.log('➡️ API CALL POST /gear-repair/ with', repairData);
