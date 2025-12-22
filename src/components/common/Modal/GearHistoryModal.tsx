@@ -1,0 +1,377 @@
+import React from 'react';
+import {
+  View,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Dimensions,
+  Alert,
+} from 'react-native';
+import {
+  Text,
+  Icon,
+  useTheme,
+  Card,
+  Divider,
+  Button,
+} from 'react-native-paper';
+import { p } from '../../../utils/responsive';
+import { GearHistoryItem } from '../../../store/gearStore';
+
+interface GearHistoryModalProps {
+  visible: boolean;
+  onClose: () => void;
+  gearHistoryItem: GearHistoryItem | null;
+}
+
+const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
+  visible,
+  onClose,
+  gearHistoryItem,
+}) => {
+  const { colors } = useTheme();
+  const screenWidth = Dimensions.get('window').width;
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `$${amount?.toFixed(2) || '0.00'}`;
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status?.toLowerCase().includes('fail') || status?.toLowerCase().includes('repair')) return '#EA4335';
+    if (status?.toLowerCase().includes('pass') || status?.toLowerCase().includes('good')) return '#34A853';
+    if (status?.toLowerCase().includes('attention') || status?.toLowerCase().includes('requires')) return '#FB8C00';
+    if (status?.toLowerCase().includes('completed')) return '#34A853';
+    return colors.onSurfaceVariant;
+  };
+
+  if (!gearHistoryItem) {
+    return null;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: screenWidth > 600 ? '80%' : '90%' }]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.onSurface, fontSize: p(20) }]}>
+              Gear History Details
+            </Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon source="close" size={p(24)} color={colors.onSurfaceVariant} />
+            </TouchableOpacity>
+          </View>
+
+          <Divider style={{ marginBottom: p(16) }} />
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* History Information */}
+            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+              <Card.Content>
+                <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+                  History Information
+                </Text>
+                <Divider style={{ marginBottom: p(12) }} />
+
+                <View style={styles.infoRow}>
+                  <Icon source="tag" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Repair ID: {gearHistoryItem.repair_id}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="calendar" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Schedule Date: {formatDate(gearHistoryItem.lead.schedule_date)}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="shield-check" size={p(18)} color={getStatusColor(gearHistoryItem.repair_status)} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16), fontWeight: '600' }]}>
+                    Status: {gearHistoryItem.repair_status}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="cash" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Cost: {formatCurrency(gearHistoryItem.repair_cost)}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="package-variant" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Quantity: {gearHistoryItem.repair_quantity}
+                  </Text>
+                </View>
+
+                {gearHistoryItem.spare_gear && (
+                  <View style={styles.infoRow}>
+                    <Icon source="package-variant-closed" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      Spare Gear Used
+                    </Text>
+                  </View>
+                )}
+
+                {gearHistoryItem.remarks && (
+                  <View style={styles.infoRow}>
+                    <Icon source="note-text" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      Remarks: {gearHistoryItem.remarks}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.infoRow}>
+                  <Icon source="calendar-plus" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Created: {formatDate(gearHistoryItem.created_at)} by {gearHistoryItem.created_by}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="calendar-edit" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Updated: {formatDate(gearHistoryItem.updated_at)} by {gearHistoryItem.updated_by}
+                  </Text>
+                </View>
+              </Card.Content>
+            </Card>
+
+            {/* Lead Information */}
+            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+              <Card.Content>
+                <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+                  Lead Information
+                </Text>
+                <Divider style={{ marginBottom: p(12) }} />
+
+                <View style={styles.infoRow}>
+                  <Icon source="account-tie" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Lead ID: {gearHistoryItem.lead.lead_id}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="office-building" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Franchise: {gearHistoryItem.lead.franchise.franchise_name}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="fire-truck" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Fire Station: {gearHistoryItem.lead.firestation.fire_station_name}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="clipboard-check" size={p(18)} color={getStatusColor(gearHistoryItem.lead.lead_status)} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16), fontWeight: '600' }]}>
+                    Lead Status: {gearHistoryItem.lead.lead_status}
+                  </Text>
+                </View>
+
+                {gearHistoryItem.lead.assigned_technicians && gearHistoryItem.lead.assigned_technicians.length > 0 && (
+                  <View style={styles.infoRow}>
+                    <Icon source="account-group" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      Technicians: {gearHistoryItem.lead.assigned_technicians.map(tech => tech.name).join(', ')}
+                    </Text>
+                  </View>
+                )}
+              </Card.Content>
+            </Card>
+
+            {/* Gear Information */}
+            <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+              <Card.Content>
+                <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+                  Gear Information
+                </Text>
+                <Divider style={{ marginBottom: p(12) }} />
+
+                <View style={styles.infoRow}>
+                  <Icon source="tag" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Gear Name: {gearHistoryItem.gear.gear_name}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="barcode" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Serial Number: {gearHistoryItem.gear.serial_number}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="cog" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Type: {gearHistoryItem.gear.gear_type.gear_type}
+                  </Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <Icon source="factory" size={p(18)} color={colors.primary} />
+                  <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                    Manufacturer: {gearHistoryItem.gear.manufacturer.manufacturer_name}
+                  </Text>
+                </View>
+
+                {gearHistoryItem.gear.roster && (
+                  <View style={styles.infoRow}>
+                    <Icon source="account" size={p(18)} color={colors.primary} />
+                    <Text style={[styles.infoText, { color: colors.onSurface, fontSize: p(16) }]}>
+                      Assigned to: {gearHistoryItem.gear.roster.first_name} {gearHistoryItem.gear.roster.last_name}
+                    </Text>
+                  </View>
+                )}
+              </Card.Content>
+            </Card>
+
+            {/* History Images */}
+            {gearHistoryItem.repair_images && gearHistoryItem.repair_images.length > 0 && (
+              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+                <Card.Content>
+                  <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+                    History Images
+                  </Text>
+                  <Divider style={{ marginBottom: p(12) }} />
+
+                  <View style={styles.imagesContainer}>
+                    {gearHistoryItem.repair_images.map((image: any, index: number) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.imageWrapper}
+                        onPress={() => {
+                          // Handle image preview - you can implement image viewer here
+                          Alert.alert('Image Preview', 'Image preview functionality can be implemented here');
+                        }}
+                      >
+                        <Image
+                          source={{ uri: image.image_url || image.uri }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Card.Content>
+              </Card>
+            )}
+          </ScrollView>
+
+          {/* Close Button */}
+          <View style={styles.footer}>
+            <Button
+              mode="contained"
+              onPress={onClose}
+              buttonColor={colors.primary}
+              textColor={colors.surface}
+              style={styles.closeModalButton}
+            >
+              Close
+            </Button>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: p(20),
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: p(600),
+    borderRadius: p(12),
+    elevation: 5,
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: p(16),
+    paddingBottom: p(8),
+  },
+  title: {
+    fontWeight: '700',
+  },
+  closeButton: {
+    padding: p(4),
+  },
+  card: {
+    marginBottom: p(12),
+    borderRadius: p(8),
+    elevation: 2,
+  },
+  cardTitle: {
+    fontWeight: '700',
+    marginBottom: p(8),
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: p(10),
+    gap: p(8),
+  },
+  infoText: {
+    flex: 1,
+  },
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: p(8),
+  },
+  imageWrapper: {
+    width: p(100),
+    height: p(100),
+    borderRadius: p(8),
+    overflow: 'hidden',
+    elevation: 2,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  footer: {
+    padding: p(16),
+    paddingTop: p(8),
+  },
+  closeModalButton: {
+    borderRadius: p(8),
+  },
+});
+
+export default GearHistoryModal;

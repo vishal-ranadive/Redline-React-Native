@@ -79,4 +79,19 @@ export const gearApi = {
       throw error;
     }
   },
+
+  // Get gear history by gear ID
+  getGearHistory: async (gearId: number, params?: any): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-history/${gearId}/`);
+    try {
+      const response = await axiosInstance.get(`/gear-history/${gearId}/`, { params });
+      console.log(`✅ API Response /gear-history/${gearId}/`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.log('❌ API Error /gear-history/:', error);
+      console.log('❌ Error message:', error.message);
+      console.log('❌ Error response:', error.response?.data);
+      throw error;
+    }
+  },
 };

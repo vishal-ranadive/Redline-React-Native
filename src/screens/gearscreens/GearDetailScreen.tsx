@@ -14,8 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../utils/responsive';
 import RosterModal from '../../components/common/Modal/RosterModal';
+import GearHistoryModal from '../../components/common/Modal/GearHistoryModal';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { useGearStore } from '../../store/gearStore';
+import Pagination from '../../components/common/Pagination';
+import { useGearStore, GearHistoryItem } from '../../store/gearStore';
 import { printTable } from '../../utils/printTable';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -32,10 +34,14 @@ const GearDetailScreen = () => {
   const route = useRoute();
   const { gear_id } = route.params as any;
   
-  const { currentGear, loading, fetchGearById, updateGear } = useGearStore();
+  const { currentGear, loading, fetchGearById, updateGear, gearHistory, gearHistoryLoading, gearHistoryPagination, fetchGearHistory } = useGearStore();
   
   const [rosterModalVisible, setRosterModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<GearHistoryItem | null>(null);
+  const [currentHistoryPage, setCurrentHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
   
   // Detect if device is mobile (width < 600)
   const screenWidth = Dimensions.get('window').width;
@@ -47,39 +53,18 @@ const GearDetailScreen = () => {
   useFocusEffect(React.useCallback(() => {
     if (gear_id) {
       fetchGearById(gear_id);
+      fetchGearHistory(gear_id, { page: currentHistoryPage, page_size: historyPageSize });
     }
-  }, [gear_id]));
+  }, [gear_id, currentHistoryPage, historyPageSize]));
 
   console.log("currentGear", currentGear)
 
-  // Mock inspection history (keep as is)
-  const inspectionHistory = [
-    {
-      id: 'INSP006',
-      date: '2024-05-10',
-      critStatus: 'Requires Repair',
-      preStatus: 'Requires Attention',
-      hydroStatus: 'Failed',
-      cost: '$50',
-      inspectStatus: 'Cracked visor',
-      lead: 'John Smith',
-    },
-    {
-      id: 'INSP005',
-      date: '2024-02-12',
-      critStatus: 'Pass',
-      preStatus: 'Good',
-      hydroStatus: 'Pass',
-      cost: '$0',
-      inspectStatus: 'OK',
-      lead: 'John Smith',
-    },
-  ];
 
   const getStatusColor = (status: string) => {
-    if (status.toLowerCase().includes('fail') || status.toLowerCase().includes('repair')) return '#EA4335';
-    if (status.toLowerCase().includes('pass') || status.toLowerCase().includes('good')) return '#34A853';
-    if (status.toLowerCase().includes('attention') || status.toLowerCase().includes('requires')) return '#FB8C00';
+    if (status?.toLowerCase().includes('fail') || status?.toLowerCase().includes('repair')) return '#EA4335';
+    if (status?.toLowerCase().includes('pass') || status?.toLowerCase().includes('good')) return '#34A853';
+    if (status?.toLowerCase().includes('completed')) return '#34A853';
+    if (status?.toLowerCase().includes('attention') || status?.toLowerCase().includes('requires')) return '#FB8C00';
     return colors.onSurfaceVariant;
   };
 
@@ -543,66 +528,110 @@ const GearDetailScreen = () => {
         {/* Inspection History */}
         <Card style={[styles.fullCard, { backgroundColor: colors.surface }]}>
           <Card.Content>
-            
+
             <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
               Gear History
             </Text>
             <Divider style={{ marginVertical: p(12) }} />
-            
-            {/* Horizontal scrollable table for mobile */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={true}
-              contentContainerStyle={styles.tableScrollContainer}
-            >
+
+            {gearHistoryLoading ? (
+              <View style={styles.historyLoadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ color: colors.onSurfaceVariant, marginTop: p(8) }}>
+                  Loading gear history...
+                </Text>
+              </View>
+            ) : gearHistory.length === 0 ? (
+              <View style={styles.noHistoryContainer}>
+                <Icon source="clipboard-text-off" size={p(48)} color={colors.onSurfaceVariant} />
+                <Text style={[styles.noHistoryText, { color: colors.onSurfaceVariant, fontSize: p(16) }]}>
+                  No gear history found
+                </Text>
+              </View>
+            ) : (
+              /* Horizontal scrollable table for mobile */
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={styles.tableScrollContainer}
+              >
               <View style={styles.tableWrapper}>
                 <View style={styles.tableHeader}>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>ID</Text>
                   <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Date</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Critical</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Visual</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Hydro</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
                   <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Status</Text>
-                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Lead</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Cost</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Type</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Technician</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Firefighter</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Images</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Created By</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated</Text>
+                  <Text style={[styles.tableHeaderText, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Updated By</Text>
                 </View>
 
-                {inspectionHistory.map((item, index) => (
-                  <View key={index}>
+                {gearHistory.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => {
+                      setSelectedHistoryItem(item);
+                      setHistoryModalVisible(true);
+                    }}
+                  >
                     <View style={styles.tableRow}>
-                      <Text 
-                        style={[styles.tableCell, { color: colors.primary, fontSize: p(12) }]}
-                        onPress={() => {/* Navigate to inspection details */}}
-                      >
-                        {item.id}
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {formatDate(item.lead.schedule_date)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: getStatusColor(item.repair_status), fontSize: p(12), fontWeight: '600' }]}>
+                        {item.repair_status}
                       </Text>
                       <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.date}
-                      </Text>
-                      <Text style={[styles.tableCell, { color: getStatusColor(item.critStatus), fontSize: p(12), fontWeight: '600' }]}>
-                        {item.critStatus}
+                        ${item.repair_cost?.toFixed(2) || '0.00'}
                       </Text>
                       <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.preStatus}
-                      </Text>
-                      <Text style={[styles.tableCell, { color: getStatusColor(item.hydroStatus), fontSize: p(12), fontWeight: '600' }]}>
-                        {item.hydroStatus}
+                        {item.record_type}
                       </Text>
                       <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.cost}
+                        {item.lead.assigned_technicians?.[0]?.name || 'N/A'}
                       </Text>
                       <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.inspectStatus}
+                        {item.gear.roster ? `${item.gear.roster.first_name} ${item.gear.roster.last_name}` : 'N/A'}
                       </Text>
                       <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
-                        {item.lead}
+                        {item.repair_images?.length || 0}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {formatDate(item.created_at)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.created_by}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {formatDate(item.updated_at)}
+                      </Text>
+                      <Text style={[styles.tableCell, { color: colors.onSurface, fontSize: p(12) }]}>
+                        {item.updated_by}
                       </Text>
                     </View>
-                    {index < inspectionHistory.length - 1 && <Divider />}
-                  </View>
+                    {index < gearHistory.length - 1 && <Divider />}
+                  </TouchableOpacity>
                 ))}
               </View>
             </ScrollView>
+            )}
+
+            {/* Pagination */}
+            {gearHistory.length > 0 && gearHistoryPagination && (
+              <View style={styles.paginationContainer}>
+                <Pagination
+                  page={currentHistoryPage}
+                  total={gearHistoryPagination.total}
+                  itemsPerPage={historyPageSize}
+                  onPageChange={setCurrentHistoryPage}
+                  onItemsPerPageChange={setHistoryPageSize}
+                />
+              </View>
+            )}
           </Card.Content>
         </Card>
 
@@ -663,6 +692,13 @@ const GearDetailScreen = () => {
         onClose={() => setRosterModalVisible(false)}
         onRosterSelect={handleRosterSelect}
         onAddRosterManual={handleAddRosterManual}
+      />
+
+      {/* Gear History Modal */}
+      <GearHistoryModal
+        visible={historyModalVisible}
+        onClose={() => setHistoryModalVisible(false)}
+        gearHistoryItem={selectedHistoryItem}
       />
     </SafeAreaView>
   );
@@ -826,6 +862,22 @@ const styles = StyleSheet.create({
   actionModalText: {
     fontSize: p(16),
     fontWeight: '500',
+  },
+  historyLoadingContainer: {
+    alignItems: 'center',
+    paddingVertical: p(32),
+  },
+  noHistoryContainer: {
+    alignItems: 'center',
+    paddingVertical: p(32),
+  },
+  noHistoryText: {
+    marginTop: p(16),
+    textAlign: 'center',
+  },
+  paginationContainer: {
+    marginTop: p(16),
+    paddingHorizontal: p(16),
   },
 });
 

@@ -321,6 +321,7 @@ const RepairDetailsScreen = () => {
             name: filename,
             type: type,
           } as any);
+          formData.append('gear_id', gearId.toString());
 
           try {
             setUploadProgress({

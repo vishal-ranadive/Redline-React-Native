@@ -902,7 +902,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         roster_id: resolvedRosterId,
         
         inspection_date: new Date().toISOString().split('T')[0],
-        inspection_status: mode === 'create' ? 'PRE-INSPECTION' : 'ONGOING-INSPECTION',
+        inspection_status: !inspectionId ? 'PRE-INSPECTION' : 'ONGOING-INSPECTION',
         
         hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,
         hydro_test_performed: formData.hydroPerformed ? "YES" : "NO",
@@ -929,21 +929,21 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
       // Step 3: Create or update inspection
       let response;
-      if (mode === 'create') {
+      if (!inspectionId) {
         response = await inspectionApi.createGearInspection(inspectionData);
       } else {
         response = await inspectionApi.updateGearInspection(inspectionId, inspectionData);
       }
 
       if (response.status) {
-        Alert.alert('Success', `Inspection ${mode === 'create' ? 'created' : 'updated'} successfully!`);
+        Alert.alert('Success', `Inspection ${!inspectionId ? 'created' : 'updated'} successfully!`);
         // Go back to the previous screen (wherever we came from)
         navigation.goBack();
       } else {
         Alert.alert('Error', response.message || 'Failed to save inspection');
       }
 
-      console.log(`InspectionResponse ${mode === 'create' ? 'created' : 'updated'} successfully!`, response);
+      console.log(`InspectionResponse ${!inspectionId ? 'created' : 'updated'} successfully!`, response);
     } catch (error: any) {
       setUploadingImages(false);
       console.error('❌ Error saving inspection:', error);
@@ -1008,8 +1008,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   if (!gear) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header 
-          title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
+        <Header
+          title={!inspectionId ? 'Create Inspection' : 'Update Inspection'}
           showBackButton={true}
         />
         <View style={styles.errorContainer}>
@@ -1031,7 +1031,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     );
   }
 
-  const saveButtonText = mode === 'create' ? 'Create Inspection' : 'Save Changes';
+  const saveButtonText = !inspectionId ? 'Create Inspection' : 'Save Changes';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

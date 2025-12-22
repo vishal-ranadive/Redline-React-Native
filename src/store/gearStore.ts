@@ -62,6 +62,192 @@ export interface GearFinding {
   findings: string;
 }
 
+export interface GearHistoryItem {
+  repair_id: number;
+  lead: {
+    lead_id: number;
+    franchise: {
+      franchise_id: number;
+      corporate: {
+        corporate_id: number;
+        corporate_name: string;
+      };
+      franchise_name: string;
+      email: string;
+      phone: string;
+      address: string;
+      city: string;
+      zip_code: string;
+      state: string;
+      country: string;
+      latitude: string;
+      longitude: string;
+      active_status: boolean;
+      is_deleted: boolean;
+      created_at: string;
+      updated_at: string;
+      created_by: string;
+      updated_by: string;
+    };
+    firestation: {
+      firestation_id: number;
+      fire_station_name: string;
+      email: string;
+      phone: string;
+      address: string;
+      city: string;
+      zip_code: string;
+      state: string;
+      country: string;
+      latitude: string;
+      longitude: string;
+      active_status: boolean;
+      is_deleted: boolean;
+      created_at: string;
+      updated_at: string;
+      created_by: string;
+      updated_by: string;
+      franchise: {
+        id: number;
+        name: string;
+        city: string;
+        state: string;
+        country: string;
+        zip_code: string;
+      };
+    };
+    assigned_technicians: Array<{
+      id: number;
+      name: string;
+    }>;
+    type: string;
+    schedule_date: string;
+    lead_status: string;
+    repair_cost: number;
+    remarks: string;
+    water_hardness: null;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string;
+  };
+  firestation: {
+    firestation_id: number;
+    fire_station_name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    zip_code: string;
+    state: string;
+    country: string;
+    latitude: string;
+    longitude: string;
+    active_status: boolean;
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string;
+    franchise: {
+      id: number;
+      name: string;
+      city: string;
+      state: string;
+      country: string;
+      zip_code: string;
+    };
+  };
+  gear: {
+    gear_id: number;
+    roster: {
+      roster_id: number;
+      first_name: string;
+      middle_name: string;
+      last_name: string;
+      email: string;
+      phone: string;
+      rank: string;
+    };
+    gear_name: string;
+    manufacturer: {
+      manufacturer_id: number;
+      manufacturer_name: string;
+    };
+    franchise: {
+      id: number;
+      name: string;
+      city: string;
+      state: string;
+      country: string;
+      zip_code: string;
+    };
+    firestation: {
+      id: number;
+      name: string;
+      address: string;
+    };
+    gear_type: {
+      gear_type_id: number;
+      gear_type: string;
+      is_harness: boolean;
+      is_hydrotest: boolean;
+    };
+    manufacturing_date: string;
+    gear_size: null | string;
+    active_status: boolean;
+    is_deleted: boolean;
+    serial_number: string;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string;
+  };
+  roster: {
+    roster_id: number;
+    franchise: {
+      id: number;
+      name: string;
+      city: string;
+      state: string;
+      country: string;
+      zip_code: string;
+    };
+    firestation: {
+      id: number;
+      name: string;
+      address: string;
+    };
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    rank: string;
+    active_status: boolean;
+    is_deleted: boolean;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string;
+    roster_name: string;
+    tag_color: null | string;
+  };
+  repair_status: string;
+  repair_subtotal_cost: number;
+  repair_quantity: number;
+  repair_cost: number;
+  spare_gear: boolean;
+  remarks: string;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+  record_type: string;
+  repair_images: Array<any>; // Array of image objects
+}
+
 interface GearState {
   // State
   gearTypes: GearType[];
@@ -79,7 +265,15 @@ interface GearState {
   gearFindingsLoading: boolean;
 
     gearStatus: [];             
-    gearStatusLoading: boolean;   
+    gearStatusLoading: boolean;
+
+    gearHistory: GearHistoryItem[];
+    gearHistoryLoading: boolean;
+    gearHistoryPagination: {
+      page: number;
+      page_size: number;
+      total: number;
+    } | null;   
 
   
 
@@ -87,7 +281,8 @@ interface GearState {
   // Actions
   fetchGearTypes: () => Promise<void>;
   fetchGearStatus: ()=> Promise<void>;
-  fetchGearFindings: (gearTypeId: number) => Promise<void>; 
+  fetchGearFindings: (gearTypeId: number) => Promise<void>;
+  fetchGearHistory: (gearId: number, params?: any) => Promise<void>;
   createGear: (gearData: any) => Promise<Gear | null>;
   updateGear: (id: number, gearData: any) => Promise<Gear | null>;
   fetchGearById: (id: number) => Promise<Gear | null>;
@@ -100,6 +295,7 @@ interface GearState {
   clearError: () => void;
   clearCurrentGear: () => void;
   clearGears: () => void;
+  clearGearHistory: () => void;
 }
 
 
@@ -117,8 +313,12 @@ export const useGearStore = create<GearState>()(
       gearFindings:[],
       gearFindingsLoading: false, 
 
-      gearStatus: [],              
-      gearStatusLoading: false,    
+      gearStatus: [],
+      gearStatusLoading: false,
+
+      gearHistory: [],
+      gearHistoryLoading: false,
+      gearHistoryPagination: null,
 
 
       // Fetch gear types
@@ -368,11 +568,38 @@ export const useGearStore = create<GearState>()(
         }
       },
 
+      // Fetch gear history
+      fetchGearHistory: async (gearId: number, params?: any) => {
+        set({ gearHistoryLoading: true, error: null });
+        try {
+          const response = await gearApi.getGearHistory(gearId, params);
+          if (response.status) {
+            set({
+              gearHistory: response.list || [],
+              gearHistoryPagination: response.pagination || null,
+              gearHistoryLoading: false,
+              error: null,
+            });
+          } else {
+            set({
+              error: response.message || 'Failed to fetch gear history',
+              gearHistoryLoading: false,
+            });
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || 'Network error',
+            gearHistoryLoading: false,
+          });
+        }
+      },
+
       setLoading: (loading: boolean) => set({ loading }),
       setError: (error: string | null) => set({ error }),
       clearError: () => set({ error: null }),
       clearCurrentGear: () => set({ currentGear: null }),
       clearGears: () => set({ gears: [], pagination: null }),
+      clearGearHistory: () => set({ gearHistory: [], gearHistoryPagination: null }),
     }),
     {
       name: 'gear-storage',
