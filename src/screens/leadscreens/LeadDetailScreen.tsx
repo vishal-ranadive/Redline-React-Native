@@ -1018,7 +1018,13 @@ const LeadDetailScreen = () => {
                   <TextInput
                     label="Water Hardness (ppm)"
                     value={hardnessValue}
-                    onChangeText={setHardnessValue}
+                    onChangeText={(text) => {
+                      // Limit to 999
+                      const numericValue = text.replace(/[^0-9]/g, '');
+                      if (numericValue.length <= 3) {
+                        setHardnessValue(numericValue);
+                      }
+                    }}
                     keyboardType="numeric"
                     mode="outlined"
                     placeholder="Enter ppm value (0-425+)"
