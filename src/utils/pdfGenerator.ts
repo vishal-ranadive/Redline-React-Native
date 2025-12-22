@@ -139,7 +139,7 @@ export const generateReportHTML = (
       return `
         <div class="roster-section">
           <div class="roster-header">
-            <span class="roster-name-label">Roster Name:</span>
+            <span class="roster-name-label">Firefighter Name:</span>
             <span class="text-bold">${escapeHtml(roster.name || '')}</span>
             ${operationType}
           </div>

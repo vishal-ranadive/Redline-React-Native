@@ -614,11 +614,11 @@ const PPEReportPreviewScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
-        {/* Roster & Gear Assignments Section */}
+        {/* Firefighter & Gear Assignments Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-              Roster & Gear Assignments
+              Firefighter & Gear Assignments
             </Text>
             <Divider style={{ marginVertical: p(10) }} />
             
@@ -638,9 +638,9 @@ const PPEReportPreviewScreen: React.FC = () => {
                     <View style={[styles.rosterHeader, { backgroundColor: '#fee2e2', borderLeftColor: '#ed2c2a' }]}>
                       <View style={styles.rosterHeaderContent}>
                         <Text style={[styles.rosterNameLabel, { color: '#991b1b', fontSize: p(11) }]}>
-                          ROSTER NAME:
+                          FIREFIGHTER NAME:
                         </Text>
-                        <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(15), fontWeight: '700' }]}>
+                        <Text style={[styles.rosterName, { color: "#222222", fontSize: p(15), fontWeight: '700' }]}>
                           {roster.name || 'N/A'}
                         </Text>
                       </View>
