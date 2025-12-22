@@ -296,14 +296,27 @@ const AddGearScreen = () => {
           type: 'success',
           text1: 'Gear added successfully!',
         });
-        // Reset form and navigate back after success
+        // Reset form and navigate based on lead type
         setTimeout(() => {
           resetForm();
-          navigation.navigate('UpadateInspection', {
-            gearId: Number(createdGear.gear_id),
-            firefighter: assignedRoster, 
-            mode:"create"
-          });
+
+          // Navigate based on lead type (case insensitive)
+          const leadType = currentLead?.type?.toLowerCase();
+          if (leadType === 'repair') {
+            // Navigate to Repair Details screen
+            navigation.navigate('RepairDetails', {
+              gearId: Number(createdGear.gear_id),
+              leadId: currentLead.lead_id,
+              leadData: currentLead
+            });
+          } else {
+            // Default to Update Inspection screen for inspection leads
+            navigation.navigate('UpadateInspection', {
+              gearId: Number(createdGear.gear_id),
+              firefighter: assignedRoster,
+              mode: "create"
+            });
+          }
         }, 500);
       } else {
         // showSnackbar('Failed to add gear. Please try again.');

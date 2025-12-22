@@ -8,6 +8,7 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   Searchbar,
@@ -185,7 +186,7 @@ const FirestationSelectorModal: React.FC<FirestationSelectorModalProps> = ({
       onRequestClose={onClose}
       supportedOrientations={supportedOrientations}
     >
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.modalHeader, { backgroundColor: colors.surface }]}>
           <Text style={[styles.modalTitle, { color: colors.onSurface, fontSize: p(20) }]}>
@@ -251,7 +252,7 @@ const FirestationSelectorModal: React.FC<FirestationSelectorModalProps> = ({
             </View>
           )}
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };

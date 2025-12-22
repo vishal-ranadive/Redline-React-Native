@@ -59,9 +59,9 @@ export const firestationApi = {
       page_size?: number;
     }
   ): Promise<FirestationResponse> => {
-    console.log(`➡️ API CALL /firestation/franchise/${franchiseId} with`, params);
-    const response = await axiosInstance.get(`/firestation/franchise/${franchiseId}`, { params });
-    console.log(`✅ API Response /firestation/franchise/${franchiseId}`, response.data);
+    console.log(`➡️ API CALL /firestation/franchise/${franchiseId}/ with`, params);
+    const response = await axiosInstance.get(`/firestation/franchise/${franchiseId}/`, { params });
+    console.log(`✅ API Response /firestation/franchise/${franchiseId}/`, response.data);
     return response.data;
   },
 
