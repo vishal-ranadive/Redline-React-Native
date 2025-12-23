@@ -331,11 +331,11 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
             </Card.Content>
           </Card>
 
-          {/* Roster & Gear Assignments */}
+          {/* Firefighter & Gear Assignments */}
           <Card style={[styles.card, { backgroundColor: colors.surface }]}>
             <Card.Content>
               <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-                Roster & Gear Assignments
+                Firefighter & Gear Assignments
               </Text>
               <Divider style={{ marginVertical: p(10) }} />
               
@@ -343,9 +343,9 @@ const PPEReportPreviewModal: React.FC<PPEReportPreviewModalProps> = ({
                 <View key={roster.id || rosterIndex} style={styles.rosterSection}>
                   <View style={[styles.rosterHeader, { backgroundColor: '#fee2e2', borderLeftColor: colors.primary }]}>
                     <Text style={[styles.rosterNameLabel, { color: '#991b1b', fontSize: p(10) }]}>
-                      ROSTER NAME:
+                      FIREFIGHTER NAME:
                     </Text>
-                    <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(14) }]}>
+                    <Text style={[styles.rosterName, { color: "#222222", fontSize: p(14) }]}>
                       {roster.name || 'N/A'}
                     </Text>
                     {roster.operation_type && (
