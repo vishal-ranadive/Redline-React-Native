@@ -176,7 +176,8 @@ const PPEReportPreviewScreen: React.FC = () => {
     );
   }
 
-  const firestation = ppeData?.firestation || {};
+  // Get firestation data - try ppeData first, then leadData as fallback
+  const firestation = ppeData?.firestation || leadData?.firestation || {};
   const analytics = analyticsData || {};
   const rosters = ppeData?.roster || [];
   const assignedTechnicians = ppeData?.assigned_technicians || [];
@@ -186,10 +187,22 @@ const PPEReportPreviewScreen: React.FC = () => {
     .map((tech: any) => tech.name)
     .join(', ') || 'N/A';
 
-  // Parse address
+  // Parse address - try location string first, then fall back to individual fields
   const address = firestation?.location || '';
-  const addressParts = address.split(',').map((part: string) => part.trim());
-
+  let addressParts = address ? address.split(',').map((part: string) => part.trim()) : [];
+  
+  // If location string is empty or doesn't have enough parts, use individual fields from leadData
+  if (addressParts.length < 4 && leadData?.firestation) {
+    addressParts = [
+      leadData.firestation.address || '',
+      leadData.firestation.city || '',
+      leadData.firestation.state || '',
+      leadData.firestation.zip_code || ''
+    ].filter(part => part.trim() !== '');
+  }
+  // Get email - try ppeData first, then leadData (though leadData might not have email)
+  const firestationEmail = ppeData?.firestation?.email || leadData?.firestation?.email || '';
+  
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -279,14 +292,14 @@ const PPEReportPreviewScreen: React.FC = () => {
               </View>
               {[
                 { label: 'MEU', value: leadData?.lead?.meu || (ppeData?.meu?.name || 'N/A') },
-                { label: 'Department Name', value: firestation?.name || 'N/A' },
-                { label: 'Street', value: addressParts[0] || 'N/A' },
-                { label: 'City', value: addressParts[1] || 'N/A' },
-                { label: 'State', value: addressParts[2] || 'N/A' },
-                { label: 'Zip', value: addressParts[3] || 'N/A' },
+                { label: 'Department Name', value: firestation?.name || firestation?.fire_station_name || 'N/A' },
+                { label: 'Street', value: addressParts[0] || firestation?.address || 'N/A' },
+                { label: 'City', value: addressParts[1] || firestation?.city || 'N/A' },
+                { label: 'State', value: addressParts[2] || firestation?.state || 'N/A' },
+                { label: 'Zip', value: addressParts[3] || firestation?.zip_code || 'N/A' },
                 { label: 'Contact Name (Chief)', value: firestation?.contact || 'N/A' },
-                { label: 'Phone', value: firestation?.contact || 'N/A' },
-                { label: 'Email', value: firestation?.email || 'N/A' },
+                { label: 'Phone', value: firestation?.phone || firestation?.contact || 'N/A' },
+                { label: 'Email', value: firestationEmail || 'N/A' },
                 { label: 'Inspection Date', value: firestation?.inspectionDate || 
                   (leadData?.schedule_date ? new Date(leadData.schedule_date).toLocaleDateString('en-US', {
                     year: 'numeric',
