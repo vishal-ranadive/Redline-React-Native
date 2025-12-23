@@ -38,34 +38,12 @@ import { ColorPickerModal } from '../../components/common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
-import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
+import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import { gearApi } from '../../services/gearApi';
 import { getStatusColor } from '../../constants/inspection';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_repair_tag_color';
 
-// Custom function to get gear icon URL based on gear type
-const getGearIconUrl = (gearType: string | null) => {
-  if (!gearType) return GEAR_IMAGE_URLS.jacket;
-
-  const type = gearType.toUpperCase();
-
-  // Check for specific gear types
-  if (type.includes('HELMET')) return GEAR_IMAGE_URLS.helmet;
-  if (type.includes('GLOVES')) return GEAR_IMAGE_URLS.gloves;
-  if (type.includes('BOOTS')) return GEAR_IMAGE_URLS.boots;
-  if (type.includes('HOOD') || type.includes('SCBA')) return GEAR_IMAGE_URLS.hood;
-
-  // Check for jacket variants
-  if (type.includes('JACKET') && type.includes('LINER')) return GEAR_IMAGE_URLS.jacket_liner;
-  if (type.includes('JACKET')) return GEAR_IMAGE_URLS.jacket;
-
-  // Check for pants variants
-  if (type.includes('PANT') && type.includes('LINER')) return GEAR_IMAGE_URLS.pants_liner;
-  if (type.includes('PANT')) return GEAR_IMAGE_URLS.pants;
-
-  return GEAR_IMAGE_URLS.other; // fallback
-};
 
 // Gear categories with images and matching gear types
 const GEAR_CATEGORIES = [
@@ -722,13 +700,13 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
                   </View>
 
-                  <View style={styles.gearImageContainer}>
-                    <Image
-                      source={{ uri: getGearIconUrl(gearTypeName) }}
-                      style={styles.gearImage}
-                      resizeMode="cover"
-                    />
-                  </View>
+                <View style={styles.gearImageContainer}>
+                  <Image
+                    source={getGearIconImage(gearTypeName)}
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
+                </View>
 
                   {/* Gear Details */}
                   <View style={styles.gearDetails}>

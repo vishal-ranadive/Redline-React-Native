@@ -63,7 +63,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
     }
   }, [visible]);
 
-  const numberOfItemsPerPageList = [200, 300, 400, 500];
+  const numberOfItemsPerPageList = [10, 20, 30, 40, 50];
 
   // Rosters are now filtered server-side, so we use them directly
   const filteredRosters = rosters;
@@ -86,7 +86,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
     }
-  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch]);
+  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch, numberOfItemsPerPage]);
 
   // Reset when modal opens
   useEffect(() => {

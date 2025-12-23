@@ -126,22 +126,6 @@ const getGearEmoji = (gearType: string | null) => {
   return '📦'; // Default for others
 };
 
-// Function to get appropriate image URL based on gear type
-const getGearImageUrl = (gearType: string | null) => {
-  if (!gearType) return GEAR_IMAGE_URLS.other;
-  
-  const type = gearType.toUpperCase();
-  if (type.includes('JACKET') && type.includes('LINER')) return GEAR_IMAGE_URLS.jacket_liner;
-  if (type.includes('JACKET')) return GEAR_IMAGE_URLS.jacket;
-  if (type.includes('PANT') && type.includes('LINER')) return GEAR_IMAGE_URLS.pants_liner;
-  if (type.includes('PANT')) return GEAR_IMAGE_URLS.pants;
-  if (type.includes('HELMET')) return GEAR_IMAGE_URLS.helmet;
-  if (type.includes('GLOVE')) return GEAR_IMAGE_URLS.gloves;
-  if (type.includes('BOOT')) return GEAR_IMAGE_URLS.boots;
-  if (type.includes('HOOD')) return GEAR_IMAGE_URLS.hood;
-  
-  return GEAR_IMAGE_URLS.other; // Default for others
-};
 
 const FirefighterFlowScreen = () => {
   
@@ -842,7 +826,7 @@ const handleGearPress = (gear: any) => {
                 ) : (
                   <View style={styles.gearImageContainer}>
                     <Image
-                      source={{ uri: getGearImageUrl(gearTypeName) }}
+                      source={getGearIconImage(gearTypeName)}
                       style={styles.gearImage}
                       resizeMode="cover"
                     />

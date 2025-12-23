@@ -23,22 +23,37 @@ export const GEAR_ICONS = {
   jacket_liner: require('../assets/gears/jacket_shell.jpg'),
   pants: require('../assets/gears/pants.jpg'),
   pants_liner: require('../assets/gears/pants_shell.jpg'),
+  helmet: require('../assets/gears/helmet.jpg'),
+  gloves: require('../assets/gears/gloves.jpg'),
+  boots: require('../assets/gears/boots.jpg'),
+  hood: require('../assets/gears/hood.jpg'),
+  other: require('../assets/gears/other.jpg'), // fallback - uses jacket as generic gear icon
 } as const;
 
 /**
  * Get appropriate local gear icon based on gear type
- * @param gearType - The gear type string (e.g., "JACKET", "PANT LINER")
+ * @param gearType - The gear type string (e.g., "JACKET", "PANT LINER", "HELMET")
  * @returns The appropriate gear icon or default jacket icon
  */
 export const getGearIconImage = (gearType: string | null) => {
   if (!gearType) return GEAR_ICONS.jacket; // default
 
   const type = gearType.toUpperCase();
+
+  // Check for specific gear types in order of specificity
+  if (type.includes('HELMET')) return GEAR_ICONS.helmet;
+  if (type.includes('GLOVES') || type.includes('GLOVE')) return GEAR_ICONS.gloves;
+  if (type.includes('BOOTS') || type.includes('BOOT')) return GEAR_ICONS.boots;
+  if (type.includes('HOOD') || type.includes('SCBA')) return GEAR_ICONS.hood;
+
+  // Handle jacket variants
   if (type.includes('JACKET') && type.includes('LINER')) return GEAR_ICONS.jacket_liner;
   if (type.includes('JACKET')) return GEAR_ICONS.jacket;
-  if (type.includes('PANT') && type.includes('LINER')) return GEAR_ICONS.pants_liner;
-  if (type.includes('PANT')) return GEAR_ICONS.pants;
 
-  return GEAR_ICONS.jacket; // default
+  // Handle pants variants
+  if (type.includes('PANT') && type.includes('LINER')) return GEAR_ICONS.pants_liner;
+  if (type.includes('PANT') || type.includes('PANTS')) return GEAR_ICONS.pants;
+
+  return GEAR_ICONS.other; // default fallback for unknown gear types
 };
 

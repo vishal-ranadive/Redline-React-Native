@@ -814,22 +814,21 @@ const LeadDetailScreen = () => {
             </View>
             
               <Button
-                mode={actionButtonsDisabled ? "outlined" : "contained"}
-                buttonColor={actionButtonsDisabled ? "#E0E0E0" : "#10b981"}
+                mode="contained"
+                buttonColor="#10b981"
                 onPress={handleCompleteInspection}
-                disabled={actionButtonsDisabled}
                 style={[
                   styles.completeButton,
                   {
-                    opacity: actionButtonsDisabled ? 0.6 : 1,
-                    borderColor: actionButtonsDisabled ? "#BDBDBD" : "#10b981",
+                    opacity: 1,
+                    borderColor: "#10b981",
                   }
                 ]}
                 contentStyle={{ paddingHorizontal: p(16), paddingVertical: p(4) }}
                 labelStyle={{
                   fontSize: p(14),
                   fontWeight: '600',
-                  color: actionButtonsDisabled ? '#9E9E9E' : '#fff',
+                  color: '#fff',
                 }}
                 icon="check-circle"
               >
