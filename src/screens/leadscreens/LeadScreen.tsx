@@ -289,6 +289,41 @@ const LeadScreen = () => {
   }, [statusFilters.length, orderTypeFilter, search, dateFilter]);
 
   /**
+   * Generate full address string from firestation data
+   * Combines: address, city, state, zip_code
+   */
+  const generateFullAddress = (firestation: any): string => {
+    if (!firestation) return 'Unknown Address';
+    
+    const addressParts: string[] = [];
+    
+    // Add street address
+    if (firestation.address) {
+      addressParts.push(firestation.address);
+    }
+    
+    // Add city
+    if (firestation.city) {
+      addressParts.push(firestation.city);
+    }
+    
+    // Add state
+    if (firestation.state) {
+      addressParts.push(firestation.state);
+    }
+    
+    // Add zip code
+    if (firestation.zip_code) {
+      addressParts.push(firestation.zip_code);
+    }
+    
+    // Join all parts with comma and space, or return fallback
+    return addressParts.length > 0 
+      ? addressParts.join(', ') 
+      : 'Unknown Address';
+  };
+
+  /**
    * Convert API lead data to frontend format
    * Adds missing fields and formats data for display
    * Also filters by search term (lead ID) and date if provided
@@ -300,7 +335,7 @@ const LeadScreen = () => {
       // phone: '555-000-0000', // Placeholder - update with actual data if available
       // email: 'customer@example.com', // Placeholder - update with actual data if available
       station: lead?.firestation?.name || 'Unknown Station',
-      address: lead?.firestation?.address || 'Unknown Address',
+      address: generateFullAddress(lead?.firestation),
       status: lead?.lead_status || 'Unknown',
       leadType: normalizeLeadType(lead?.type), // Normalize to consistent uppercase
       technicianDetails: [],
@@ -436,9 +471,9 @@ const LeadScreen = () => {
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                <Icon source="map-marker" size={18} color={colors.onSurfaceVariant} />
-                <Text style={{ marginLeft: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
+                <Icon source="map-marker" size={18} color={colors.onSurfaceVariant}/>
+                <Text style={{ marginLeft: 6, flex: 1 }}>
                   {item.address}
                 </Text>
               </View>
