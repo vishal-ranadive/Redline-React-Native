@@ -251,7 +251,7 @@ const LeadScreen = () => {
    */
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [page, numberOfItemsPerPage, orderTypeFilter, statusFilters, search, fetchData]);
 
   /**
    * Refresh leads when screen comes into focus (e.g., when navigating back)
