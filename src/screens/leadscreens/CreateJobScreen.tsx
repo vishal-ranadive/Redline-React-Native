@@ -476,93 +476,95 @@ const CreateJobScreen: React.FC = () => {
       <Portal>
         <Modal
           visible={datePickerVisible}
-          animationType="slide"
           onDismiss={() => setDatePickerVisible(false)}
-          style={[
+          contentContainerStyle={[
             styles.datePickerModalContainer,
             isMobile && styles.datePickerModalContainerMobile,
             {
               backgroundColor: colors.surface,
-              height: modalHeight,
+              height: isMobile ? '70%' : '60%',
             },
           ]}
         >
-          {/* Modal Header */}
-          <View style={[styles.datePickerModalHeader, { borderBottomColor: colors.outline }]}>
-            <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
-              Select Date
-            </Text>
-            <Button
-              mode="text"
-              onPress={() => setDatePickerVisible(false)}
-              icon="close"
-              textColor={colors.onSurface}
-              style={styles.datePickerModalCloseButton}
-            >
-              Close
-            </Button>
-          </View>
+          <SafeAreaView style={[styles.datePickerSafeArea, { backgroundColor: colors.surface }]}>
+            {/* Modal Header */}
+            <View style={[styles.datePickerModalHeader, { borderBottomColor: colors.outline }]}>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
+                Select Date
+              </Text>
+              <Button
+                mode="text"
+                onPress={() => setDatePickerVisible(false)}
+                icon="close"
+                textColor={colors.onSurface}
+                style={styles.datePickerModalCloseButton}
+              >
+                Close
+              </Button>
+            </View>
 
-          {/* Calendar */}
-          <View style={styles.datePickerCalendarContainer}>
-            <Calendar
-              current={scheduleDate ? scheduleDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
-              markedDates={scheduleDate ? {
-                [scheduleDate.toISOString().split('T')[0]]: {
-                  selected: true,
-                  selectedColor: colors.primary,
-                  selectedTextColor: colors.onPrimary,
-                }
-              } : {}}
-              onDayPress={(day) => {
-                const selectedDate = new Date(day.dateString);
-                setScheduleDate(selectedDate);
-                setDatePickerVisible(false);
-              }}
-              theme={{
-                backgroundColor: colors.surface,
-                calendarBackground: colors.surface,
-                textSectionTitleColor: colors.onSurface,
-                selectedDayBackgroundColor: colors.primary,
-                selectedDayTextColor: colors.onPrimary,
-                todayTextColor: colors.primary,
-                dayTextColor: colors.onSurface,
-                textDisabledColor: colors.outline,
-                dotColor: colors.primary,
-                selectedDotColor: colors.onPrimary,
-                arrowColor: colors.primary,
-                monthTextColor: colors.onSurface,
-                indicatorColor: colors.primary,
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14,
-              }}
-              style={styles.calendar}
-            />
-          </View>
+            {/* Calendar */}
+            <View style={styles.datePickerCalendarContainer}>
+              <Calendar
+                current={scheduleDate ? scheduleDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                markedDates={scheduleDate ? {
+                  [scheduleDate.toISOString().split('T')[0]]: {
+                    selected: true,
+                    selectedColor: colors.primary,
+                    selectedTextColor: colors.onPrimary,
+                  }
+                } : {}}
+                onDayPress={(day) => {
+                  const selectedDate = new Date(day.dateString);
+                  setScheduleDate(selectedDate);
+                  setDatePickerVisible(false);
+                }}
+                monthFormat={'MMMM yyyy'}
+                theme={{
+                  backgroundColor: colors.surface,
+                  calendarBackground: colors.surface,
+                  textSectionTitleColor: colors.onSurface,
+                  selectedDayBackgroundColor: colors.primary,
+                  selectedDayTextColor: colors.onPrimary,
+                  todayTextColor: colors.primary,
+                  dayTextColor: colors.onSurface,
+                  textDisabledColor: colors.outline,
+                  dotColor: colors.primary,
+                  selectedDotColor: colors.onPrimary,
+                  arrowColor: colors.primary,
+                  monthTextColor: colors.onSurface,
+                  indicatorColor: colors.primary,
+                  textDayFontSize: 16,
+                  textMonthFontSize: 18,
+                  textDayHeaderFontSize: 14,
+                }}
+                style={styles.calendar}
+              />
+            </View>
 
-          {/* Modal Footer */}
-          <View style={[styles.datePickerModalFooter, { borderTopColor: colors.outline }]}>
-            <Button
-              mode="text"
-              onPress={() => {
-                setScheduleDate(null);
-                setDatePickerVisible(false);
-              }}
-              textColor={colors.error}
-              disabled={!scheduleDate}
-            >
-              Clear
-            </Button>
-            <Button
-              mode="contained"
-              onPress={() => setDatePickerVisible(false)}
-              buttonColor={colors.primary}
-              textColor={colors.onPrimary}
-            >
-              Done
-            </Button>
-          </View>
+            {/* Modal Footer */}
+            <View style={[styles.datePickerModalFooter, { borderTopColor: colors.outline }]}>
+              <Button
+                mode="text"
+                onPress={() => {
+                  setScheduleDate(null);
+                  setDatePickerVisible(false);
+                }}
+                textColor={colors.error}
+                disabled={!scheduleDate}
+              >
+                Clear
+              </Button>
+              <Button
+                mode="contained"
+                onPress={() => setDatePickerVisible(false)}
+                buttonColor={colors.primary}
+                textColor={colors.onPrimary}
+              >
+                Done
+              </Button>
+            </View>
+          </SafeAreaView>
         </Modal>
       </Portal>
     </SafeAreaView>
@@ -749,6 +751,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
+  },
+  datePickerSafeArea: {
+    flex: 1,
   },
 });
 

@@ -946,88 +946,91 @@ const LeadScreen = () => {
             isMobile && styles.modalContainerMobile,
             {
               backgroundColor: colors.surface,
-              height: modalHeight,
+              height: isMobile ? '70%' : '60%',
             },
           ]}
         >
-          {/* Modal Header */}
-          <View style={[styles.modalHeader, { borderBottomColor: colors.outline }]}>
-            <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
-              Select Date
-            </Text>
-            <Button
-              mode="text"
-              onPress={() => setDatePickerVisible(false)}
-              icon="close"
-              textColor={colors.onSurface}
-              style={styles.modalCloseButton}
-            >
-              Close
-            </Button>
-          </View>
+          <SafeAreaView style={[styles.modalSafeArea, { backgroundColor: colors.surface }]}>
+            {/* Modal Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: colors.outline }]}>
+              <Text variant="titleLarge" style={{ fontWeight: 'bold', color: colors.onSurface }}>
+                Select Date
+              </Text>
+              <Button
+                mode="text"
+                onPress={() => setDatePickerVisible(false)}
+                icon="close"
+                textColor={colors.onSurface}
+                style={styles.modalCloseButton}
+              >
+                Close
+              </Button>
+            </View>
 
-          {/* Calendar */}
-          <View style={styles.calendarContainer}>
-            <Calendar
-              current={dateFilter || new Date().toISOString().split('T')[0]}
-              markedDates={dateFilter ? {
-                [dateFilter]: {
-                  selected: true,
-                  selectedColor: colors.primary,
-                  selectedTextColor: colors.onPrimary,
-                }
-              } : {}}
-              onDayPress={(day) => {
-                const selectedDate = day.dateString;
-                setDateFilter(selectedDate);
-                setDatePickerVisible(false);
-                setPage(1);
-              }}
-              theme={{
-                backgroundColor: colors.surface,
-                calendarBackground: colors.surface,
-                textSectionTitleColor: colors.onSurface,
-                selectedDayBackgroundColor: colors.primary,
-                selectedDayTextColor: colors.onPrimary,
-                todayTextColor: colors.primary,
-                dayTextColor: colors.onSurface,
-                textDisabledColor: colors.outline,
-                dotColor: colors.primary,
-                selectedDotColor: colors.onPrimary,
-                arrowColor: colors.primary,
-                monthTextColor: colors.onSurface,
-                indicatorColor: colors.primary,
-                textDayFontSize: 16,
-                textMonthFontSize: 18,
-                textDayHeaderFontSize: 14,
-              }}
-              style={styles.calendar}
-            />
-          </View>
+            {/* Calendar */}
+            <View style={styles.calendarContainer}>
+              <Calendar
+                current={dateFilter || new Date().toISOString().split('T')[0]}
+                markedDates={dateFilter ? {
+                  [dateFilter]: {
+                    selected: true,
+                    selectedColor: colors.primary,
+                    selectedTextColor: colors.onPrimary,
+                  }
+                } : {}}
+                onDayPress={(day) => {
+                  const selectedDate = day.dateString;
+                  setDateFilter(selectedDate);
+                  setDatePickerVisible(false);
+                  setPage(1);
+                }}
+                monthFormat={'MMMM yyyy'}
+                theme={{
+                  backgroundColor: colors.surface,
+                  calendarBackground: colors.surface,
+                  textSectionTitleColor: colors.onSurface,
+                  selectedDayBackgroundColor: colors.primary,
+                  selectedDayTextColor: colors.onPrimary,
+                  todayTextColor: colors.primary,
+                  dayTextColor: colors.onSurface,
+                  textDisabledColor: colors.outline,
+                  dotColor: colors.primary,
+                  selectedDotColor: colors.onPrimary,
+                  arrowColor: colors.primary,
+                  monthTextColor: colors.onSurface,
+                  indicatorColor: colors.primary,
+                  textDayFontSize: 16,
+                  textMonthFontSize: 18,
+                  textDayHeaderFontSize: 14,
+                }}
+                style={styles.calendar}
+              />
+            </View>
 
-          {/* Modal Footer */}
-          <View style={[styles.modalFooter, { borderTopColor: colors.outline }]}>
-            <Button
-              mode="text"
-              onPress={() => {
-                setDateFilter('');
-                setDatePickerVisible(false);
-                setPage(1);
-              }}
-              textColor={colors.error}
-              disabled={!dateFilter}
-            >
-              Clear
-            </Button>
-            <Button
-              mode="contained"
-              onPress={() => setDatePickerVisible(false)}
-              buttonColor={colors.primary}
-              textColor={colors.onPrimary}
-            >
-              Done
-            </Button>
-          </View>
+            {/* Modal Footer */}
+            <View style={[styles.modalFooter, { borderTopColor: colors.outline }]}>
+              <Button
+                mode="text"
+                onPress={() => {
+                  setDateFilter('');
+                  setDatePickerVisible(false);
+                  setPage(1);
+                }}
+                textColor={colors.error}
+                disabled={!dateFilter}
+              >
+                Clear
+              </Button>
+              <Button
+                mode="contained"
+                onPress={() => setDatePickerVisible(false)}
+                buttonColor={colors.primary}
+                textColor={colors.onPrimary}
+              >
+                Done
+              </Button>
+            </View>
+          </SafeAreaView>
         </Modal>
       </Portal>
 
@@ -1318,6 +1321,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
+  },
+  modalSafeArea: {
+    flex: 1,
   },
 });
 
