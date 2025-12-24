@@ -85,7 +85,7 @@ export default function ViewRepairScreen() {
 
         <FlowCard
           title="View All"
-          description="View all repairs across all loads"
+          description="View all repairs by current firestation"
           icon="📦"
           gradient={[colors.surface, dark ? '#15202b' : '#eef2f7']}
           onPress={() => navigation.navigate('AllGearRepairScreen' as never)}

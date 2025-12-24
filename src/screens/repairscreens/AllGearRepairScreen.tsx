@@ -28,7 +28,7 @@ export default function AllGearRepairScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<any>(null);
+  const [pagination, setPagination] = useState<any>({ page: 1, page_size: 10, total: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
@@ -42,15 +42,18 @@ export default function AllGearRepairScreen() {
 
   useEffect(() => {
     fetchAllRepairs();
-  }, [currentLead]);
+  }, [currentLead, page, numberOfItemsPerPage]);
 
   useEffect(() => {
     fetchGearTypes();
   }, [fetchGearTypes]);
 
+  // Reset to page 1 when page size changes
   useEffect(() => {
-    setPage(0);
-  }, [numberOfItemsPerPage, searchQuery]);
+    if (page !== 1) {
+      setPage(1);
+    }
+  }, [numberOfItemsPerPage]);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -72,25 +75,28 @@ export default function AllGearRepairScreen() {
       }
       setError(null);
 
-      const response = await repairApi.getAllGearRepairs(currentLead.firestation.id);
+      const response = await repairApi.getAllGearRepairs(currentLead.firestation.id, {
+        page: page,
+        page_size: numberOfItemsPerPage
+      });
 
       if (response?.status && response?.data) {
         // Handle paginated response
         setRepairs(response.data);
-        setPagination(response.pagination);
+        setPagination(response.pagination || { page: 1, page_size: numberOfItemsPerPage, total: 0 });
       } else if (response && Array.isArray(response)) {
         // Handle direct array response (fallback)
         setRepairs(response);
-        setPagination(null);
+        setPagination({ page: 1, page_size: numberOfItemsPerPage, total: response.length });
       } else {
         setRepairs([]);
-        setPagination(null);
+        setPagination({ page: 1, page_size: numberOfItemsPerPage, total: 0 });
       }
     } catch (error: any) {
       console.error('Error fetching repairs:', error);
       setError(error?.message || 'Failed to fetch repairs');
       setRepairs([]);
-      setPagination(null);
+      setPagination({ page: 1, page_size: numberOfItemsPerPage, total: 0 });
     } finally {
       if (!skipLoader) {
         setLoading(false);
@@ -160,8 +166,10 @@ export default function AllGearRepairScreen() {
     );
   };
 
-  // Filter repairs by search query
+  // Filter repairs by search query (client-side search on current page data)
   const filteredRepairs = repairs.filter(repair => {
+    if (!searchQuery) return true; // If no search query, show all
+
     const gearId = repair.gear_id?.toString() || '';
     const repairId = repair.repair_id?.toString() || '';
     const repairStatus = repair.repair_status || '';
@@ -172,12 +180,6 @@ export default function AllGearRepairScreen() {
       repairStatus.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
-
-  // Pagination calculations
-  const totalItems = filteredRepairs.length;
-  const from = (page - 1) * numberOfItemsPerPage;
-  const to = Math.min(page * numberOfItemsPerPage, totalItems);
-  const currentRepairs = filteredRepairs.slice(from, to);
 
   const renderGearCard = ({ item: repair }: { item: any }) => {
     try {
@@ -355,7 +357,7 @@ export default function AllGearRepairScreen() {
         </View>
       ) : (
         <FlatList
-          data={currentRepairs}
+          data={filteredRepairs}
           renderItem={renderGearCard}
           keyExtractor={(item) => item.repair_id.toString()}
           numColumns={numColumns}
@@ -388,14 +390,18 @@ export default function AllGearRepairScreen() {
       )}
 
       {/* Pagination */}
-      {!loading && filteredRepairs.length > 0 && (
+      {!loading && pagination && pagination.total > 0 && (
         <Pagination
-          page={page}
-          total={filteredRepairs.length}
-          itemsPerPage={numberOfItemsPerPage}
+          page={pagination.page}
+          total={pagination.total}
+          itemsPerPage={pagination.page_size}
           itemsPerPageList={numberOfItemsPerPageList}
           onPageChange={setPage}
           onItemsPerPageChange={setNumberOfItemsPerPage}
+          containerStyle={[
+            styles.paginationContainer,
+            isMobile && styles.paginationContainerMobile,
+          ]}
         />
       )}
     </SafeAreaView>
@@ -551,6 +557,19 @@ const styles = StyleSheet.create({
   },
   updateButtonContent: {
     paddingVertical: p(4),
+  },
+
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    marginInline:'auto',
+    marginBottom:p(48), // Space for bottom bar on desktop
+    zIndex: 10,
+  },
+  paginationContainerMobile: {
+    marginBottom: p(45), // 65px (bottom bar) + 10px (spacing between pagination and bottom bar)
   },
 });
 
