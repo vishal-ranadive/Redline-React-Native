@@ -1299,7 +1299,7 @@ const LeadDetailScreen = () => {
             {
               label: normalizedLeadType === 'REPAIR' ? 'View Repairs' : 'View Inspections',
               icon: normalizedLeadType === 'REPAIR' ? 'wrench' : 'clipboard-check-outline',
-              action: () => navigation.navigate('ViewInspectionScreen'),
+              action: () => navigation.navigate(normalizedLeadType === 'REPAIR' ? 'ViewRepairScreen' : 'ViewInspectionScreen'),
             },
           ].map((action, i) => (
             <Button

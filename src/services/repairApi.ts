@@ -56,6 +56,20 @@ export const repairApi = {
     return response.data;
   },
 
+  // Get all gear repairs for a firestation
+  getAllGearRepairs: async (firestationId: number): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-repair/?firestation_id=${firestationId}`);
+
+    const response = await axiosInstance.get(`/gear-repair/`, {
+      params: {
+        firestation_id: firestationId,
+      },
+    });
+
+    console.log('✅ API Response GET /gear-repair/', response.data);
+    return response.data;
+  },
+
   // Get gear repair by ID
   getGearRepair: async (repairId: number): Promise<any> => {
     console.log(`➡️ API CALL GET /gear-repair/${repairId}/`);

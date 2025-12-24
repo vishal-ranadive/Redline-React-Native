@@ -26,6 +26,9 @@ import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlow
 import FirefighterRepairFlowScreen from '../screens/firefighterscreens/FirefighterRepairFlowScreen';
 import PPEReportPreviewScreen from '../screens/leadscreens/PPEReportPreviewScreen';
 import RepairDetailsScreen from '../screens/repairscreens/RepairDetailsScreen';
+import FirefighterListRepairScreen from '../screens/repairscreens/FirefighterListRepairScreen';
+import AllGearRepairScreen from '../screens/repairscreens/AllGearRepairScreen';
+import ViewRepairScreen from '../screens/repairscreens/ViewRepairScreen';
 import CreateJobScreen from '../screens/leadscreens/CreateJobScreen';
 import { FirefighterRoster } from '../store/inspectionStore';
 
@@ -75,8 +78,12 @@ export type RootStackParamList = {
   PPEReportPreview: { leadId: number; leadData: any };
 
   //Repair Details
-  RepairDetails: { gearId: number; leadId?: number; leadData?: any };
+  RepairDetails: { gearId: number; leadId?: number; leadData?: any; repairId?: number; loadId?: number; loadData?: any };
 
+  // Repair Flow
+  ViewRepairScreen: undefined;
+  FirefighterListRepairScreen: undefined;
+  AllGearRepairScreen: undefined;
 
 };
 
@@ -128,6 +135,11 @@ export default function AppNavigator() {
 
       {/* Repair Details Screen */}
       <Stack.Screen name="RepairDetails" component={withMainLayout(RepairDetailsScreen)} />
+
+      {/* Repair Flow Screens */}
+      <Stack.Screen name="ViewRepairScreen" component={withMainLayout(ViewRepairScreen)} />
+      <Stack.Screen name="FirefighterListRepairScreen" component={withMainLayout(FirefighterListRepairScreen)} />
+      <Stack.Screen name="AllGearRepairScreen" component={withMainLayout(AllGearRepairScreen)} />
 
     </Stack.Navigator>
   );
