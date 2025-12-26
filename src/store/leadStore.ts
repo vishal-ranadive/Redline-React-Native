@@ -74,7 +74,7 @@ export const useLeadStore = create<LeadState>()(
           const response = await leadApi.getLeadById(id);
 
           set({
-            currentLead: response || null,
+            currentLead: response.leads[0] || null,
             loadingDetail: false,
             error: null,
           });

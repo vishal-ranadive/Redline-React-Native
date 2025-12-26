@@ -81,7 +81,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
         page: 1,
         page_size: numberOfItemsPerPage, // Fetch a large number to get all rosters
         leadId: currentLead.lead_id, // Pass leadId to get tag_color in response
-        last_name: debouncedSearch.trim() || undefined, // Add debounced search to API call
+        name: debouncedSearch.trim() || undefined, // Add debounced search to API call
       };
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
@@ -205,7 +205,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Searchbar
-            placeholder="Search by firefighter's last name"
+            placeholder="Search by firefighter's name"
             value={searchQuery}
             onChangeText={setSearchQuery}
             style={styles.searchBar}

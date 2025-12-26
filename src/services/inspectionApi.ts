@@ -79,14 +79,14 @@ export const inspectionApi = {
   },
 
   // Get firefighter roster list for inspections for a lead
-  getInspectionRosters: async (leadId: number, page: number = 1, pageSize: number = 20, lastName?: string): Promise<any> => {
+  getInspectionRosters: async (leadId: number, page: number = 1, pageSize: number = 20, name?: string): Promise<any> => {
     const params: any = {
       page: page,
       page_size: pageSize,
     };
 
-    if (lastName?.trim()) {
-      params.last_name = lastName.trim();
+    if (name?.trim()) {
+      params.name = name.trim();
     }
 
     console.log(`➡️ API CALL GET /gear-inspections/rosters/${leadId}/`, params);

@@ -85,7 +85,7 @@ export default function FirefighterListScreen() {
   // Track if this is the first mount
   const isFirstMount = useRef(true);
 
-  const fetchAllGears = useCallback(async (leadId: number, showLoading: boolean = true, lastName?: string) => {
+  const fetchAllGears = useCallback(async (leadId: number, showLoading: boolean = true, name?: string) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -93,7 +93,7 @@ export default function FirefighterListScreen() {
       setError(null);
 
       // Fetch rosters with gears included
-      const rostersResponse = await inspectionApi.getInspectionRosters(leadId, page, numberOfItemsPerPage, lastName);
+      const rostersResponse = await inspectionApi.getInspectionRosters(leadId, page, numberOfItemsPerPage, name);
       const rosters: Roster[] = Array.isArray(rostersResponse?.roster)
         ? rostersResponse.roster
         : [];
@@ -301,7 +301,7 @@ export default function FirefighterListScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by firefighter's last name"
+          placeholder="Search by firefighter's name"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
