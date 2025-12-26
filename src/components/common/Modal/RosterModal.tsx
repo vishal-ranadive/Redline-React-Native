@@ -69,7 +69,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
   const filteredRosters = rosters;
 
   // Calculate pagination range based on filtered results
-  const totalFiltered = filteredRosters.length;
+  const totalFiltered = pagination?.total || filteredRosters.length;
   const from = (page - 1) * numberOfItemsPerPage;
   const to = Math.min(page * numberOfItemsPerPage, totalFiltered);
   const paginatedRosters = filteredRosters.slice(from, to);
