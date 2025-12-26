@@ -1,5 +1,5 @@
 // src/screens/repairscreens/RepairDetailsScreen.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -39,6 +39,7 @@ import { p } from "../../utils/responsive";
 import { imageUploadApi } from '../../services/imageUploadApi';
 import { repairApi } from '../../services/repairApi';
 import { RepairHeader } from './components/RepairHeader';
+import RepairPricingCalculator from './components/RepairPricingCalculator';
 
 const RepairDetailsScreen = () => {
   const { colors } = useTheme();
@@ -69,13 +70,16 @@ const RepairDetailsScreen = () => {
 
   // Form state for repair details
   const [formData, setFormData] = useState({
-    repairQty: '',
     repairTag: '',
     spearGear: false,
-    repairSubTotal: '0',
     repairStatus: '',
     remarks: '',
   });
+
+  // Repair pricing state
+  const [repairItems, setRepairItems] = useState<any>({});
+  const [repairTotal, setRepairTotal] = useState(0);
+  const [isPricingCollapsed, setIsPricingCollapsed] = useState(false);
 
   // UI state
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -155,13 +159,16 @@ const RepairDetailsScreen = () => {
 
           // Pre-populate form with existing repair data
           setFormData({
-            repairQty: repairData.repair_quantity?.toString() || '',
             repairTag: repairData.repair_tag || '',
             spearGear: repairData.spare_gear || false,
-            repairSubTotal: repairData.repair_cost?.toString() || '0',
             repairStatus: repairData.repair_status || '',
             remarks: repairData.remarks || '',
           });
+
+          // Pre-populate repair items if they exist
+          if (repairData.repair_items) {
+            setRepairItems(repairData.repair_items);
+          }
 
           // Pre-populate images if they exist
           if (repairData.repair_images && Array.isArray(repairData.repair_images)) {
@@ -212,6 +219,12 @@ const RepairDetailsScreen = () => {
       [field]: value
     }));
   };
+
+  // Handle repair pricing changes
+  const handleRepairTotalChange = useCallback((total: number, items: any[]) => {
+    setRepairTotal(total);
+    setRepairItems(items);
+  }, []);
 
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
@@ -285,8 +298,13 @@ const RepairDetailsScreen = () => {
 
   // Save repair data (create or update)
   const handleSaveRepair = async () => {
-    if (!formData.repairQty.trim()) {
-      Alert.alert('Error', 'Please fill in repair quantity');
+    if (repairTotal === 0) {
+      Alert.alert('Error', 'Please add at least one repair item');
+      return;
+    }
+
+    if (!formData.repairTag.trim()) {
+      Alert.alert('Error', 'Please fill in repair tag');
       return;
     }
 
@@ -363,11 +381,14 @@ const RepairDetailsScreen = () => {
         roster_id: gear?.roster?.roster_id || null,
         franchise_id: currentLead?.franchise?.id || leadData?.franchise_id,
         repair_status: formData.repairStatus as 'completed' | 'rejected',
-        repair_sub_total: parseFloat(formData.repairSubTotal) || 0,
-        repair_cost: parseFloat(formData.repairSubTotal) || 0,
+        repair_sub_total: repairTotal,
+        repair_cost: repairTotal,
         remarks: formData.remarks,
-        repair_qty: parseInt(formData.repairQty),
         repair_tag: formData.repairTag,
+        repair_qty: Object.values(repairItems as any).reduce((total: number, items: any) => {
+          return total + Object.values(items).reduce((catTotal: number, item: any) => catTotal + (item.quantity || 0), 0);
+        }, 0),
+        repair_items: repairItems, // New field for detailed repair items
       };
 
       // Same field names for both create and update operations
@@ -520,379 +541,139 @@ const RepairDetailsScreen = () => {
           </View>
         )}
 
-        {/* Main form grid */}
-        {isMobile ? (
-          /* Mobile Layout - Single Column */
-          <View style={styles.mobileContainer}>
-            {/* Top 3 Fields */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Form</Text>
+        {/* Repair Pricing Calculator */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
 
-              {/* Repair Quantity */}
-              <Input
-                label="Repair Quantity *"
-                value={formData.repairQty}
-                onChangeText={(text) => handleFieldChange('repairQty', text)}
-                keyboardType="numeric"
-                placeholder="Enter quantity"
-                style={{ marginBottom: 16 }}
+          <RepairPricingCalculator
+            onTotalChange={handleRepairTotalChange}
+            initialData={existingRepairData}
+            isCollapsed={isPricingCollapsed}
+            onToggleCollapse={() => setIsPricingCollapsed(!isPricingCollapsed)}
+          />
+        </View>
+
+        {/* Basic Repair Details */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Details</Text>
+
+          {/* Repair Tag */}
+          <Input
+            label="Repair Tag *"
+            value={formData.repairTag}
+            onChangeText={(text) => handleFieldChange('repairTag', text)}
+            placeholder="Enter repair tag"
+            style={{ marginBottom: 16 }}
+          />
+
+          {/* Spear Gear Toggle */}
+          <View style={styles.rowSpace}>
+            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spare Gear</Text>
+            <View style={styles.toggleContainer}>
+              <Switch
+                value={formData.spearGear}
+                onValueChange={(value) => handleFieldChange('spearGear', value)}
               />
-
-              {/* Repair Tag */}
-              <Input
-                label="Repair Tag *"
-                value={formData.repairTag}
-                onChangeText={(text) => handleFieldChange('repairTag', text)}
-                placeholder="Enter repair tag"
-                style={{ marginBottom: 16 }}
-              />
-
-              {/* Repair Cost */}
-              <Input
-                label="Repair Cost"
-                value={formData.repairSubTotal}
-                onChangeText={(text) => handleFieldChange('repairSubTotal', text)}
-                keyboardType="numeric"
-                placeholder="Enter repair cost"
-                style={{ marginBottom: 16 }}
-              />
-
-              {/* Spear Gear Toggle */}
-              <View style={styles.rowSpace}>
-                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spear Gear</Text>
-                <View style={styles.toggleContainer}>
-                  <Switch
-                    value={formData.spearGear}
-                    onValueChange={(value) => handleFieldChange('spearGear', value)}
-                  />
-                </View>
-              </View>
             </View>
+          </View>
+        </View>
 
-            {/* Repair Images */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Images</Text>
+        {/* Repair Images */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Images</Text>
 
-              {/* Active Images */}
-              <View style={styles.imagesContainer}>
-                {images.map((image) => (
-                  <View key={image.id} style={styles.imageWrapper}>
-                    <TouchableOpacity
-                      style={styles.imageBox}
-                      onPress={() => handleImagePress(image.uri)}
-                    >
-                      <Image
-                        source={{ uri: image.uri }}
-                        style={styles.previewImage}
-                        resizeMode="cover"
-                      />
-                    </TouchableOpacity>
-                    {/* Remove Button */}
-                    <TouchableOpacity
-                      style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                      onPress={() => handleRemoveImage(image.id)}
-                    >
-                      <IconButton
-                        icon="close"
-                        size={16}
-                        iconColor="#fff"
-                        style={styles.removeIcon}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+          <View style={styles.imagesContainer}>
+            {images.map((image) => (
+              <View key={image.id} style={styles.imageWrapper}>
                 <TouchableOpacity
-                  style={[styles.imageBox, styles.addImageBox]}
-                  onPress={addNewImage}
+                  style={styles.imageBox}
+                  onPress={() => handleImagePress(image.uri)}
                 >
-                  <Text style={styles.addImageText}>+</Text>
-                  <Text style={styles.addImageLabel}>Add Image</Text>
+                  <Image
+                    source={{ uri: image.uri }}
+                    style={styles.previewImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                  onPress={() => handleRemoveImage(image.id)}
+                >
+                  <IconButton
+                    icon="close"
+                    size={16}
+                    iconColor="#fff"
+                    style={styles.removeIcon}
+                  />
                 </TouchableOpacity>
               </View>
+            ))}
+            <TouchableOpacity
+              style={[styles.imageBox, styles.addImageBox]}
+              onPress={addNewImage}
+            >
+              <Text style={styles.addImageText}>+</Text>
+              <Text style={styles.addImageLabel}>Add Image</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-              {/* Deleted Images - Show with Restore Option */}
-              {deletedImages.length > 0 && (
-                <View style={styles.deletedImagesSection}>
-                  <Divider style={{ marginVertical: 12 }} />
-                  <Text style={[styles.deletedImagesTitle, { color: colors.onSurfaceVariant }]}>
-                    Recently Deleted ({deletedImages.length})
-                  </Text>
-                  <View style={styles.imagesContainer}>
-                    {deletedImages.map((image) => (
-                      <View key={image.id} style={styles.imageWrapper}>
-                        <View style={styles.imageBox}>
-                          <Image
-                            source={{ uri: image.uri }}
-                            style={styles.previewImage}
-                            resizeMode="cover"
-                          />
-                        </View>
-                        {/* Restore Button */}
-                        <TouchableOpacity
-                          style={[styles.restoreImageButton, { backgroundColor: colors.primary }]}
-                          onPress={() => handleRestoreImage(image.id)}
-                        >
-                          <IconButton
-                            icon="restore"
-                            size={16}
-                            iconColor="#fff"
-                            style={styles.removeIcon}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
+        {/* Remarks */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
+          <Input
+            placeholder="Add notes or remarks..."
+            value={formData.remarks}
+            onChangeText={(text) => handleFieldChange('remarks', text)}
+            multiline
+            numberOfLines={4}
+            style={{ minHeight: 90, fontSize: p(14) }}
+            containerStyle={{ alignItems: 'flex-start' }}
+            enableVoice={true}
+          />
+        </View>
 
-            {/* Remarks */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
-              <Input
-                placeholder="Add notes or remarks..."
-                value={formData.remarks}
-                onChangeText={(text) => handleFieldChange('remarks', text)}
-                multiline
-                numberOfLines={4}
-                style={{ minHeight: 90, fontSize: p(14) }}
-                containerStyle={{ alignItems: 'flex-start' }}
-                enableVoice={true}
-              />
-            </View>
+        {/* Repair Status */}
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Status</Text>
 
-            {/* Repair Status - At the end */}
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Status</Text>
-
-              <View style={styles.rowSpace}>
-                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
-                <View style={styles.rowWrap}>
-                  <Chip
-                    selected={formData.repairStatus === 'completed'}
-                    onPress={() => handleFieldChange('repairStatus', 'completed')}
-                    style={[
-                      styles.smallChoice,
-                      {
-                        backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
-                      }
-                    ]}
-                    textStyle={{
-                      color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: 12
-                    }}
-                  >
-                    Completed
-                  </Chip>
-                  <Chip
-                    selected={formData.repairStatus === 'rejected'}
-                    onPress={() => handleFieldChange('repairStatus', 'rejected')}
-                    style={[
-                      styles.smallChoice,
-                      {
-                        backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
-                      }
-                    ]}
-                    textStyle={{
-                      color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
-                      fontSize: 12
-                    }}
-                  >
-                    Rejected
-                  </Chip>
-                </View>
-              </View>
+          <View style={styles.rowSpace}>
+            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
+            <View style={styles.rowWrap}>
+              <Chip
+                selected={formData.repairStatus === 'completed'}
+                onPress={() => handleFieldChange('repairStatus', 'completed')}
+                style={[
+                  styles.smallChoice,
+                  {
+                    backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
+                  }
+                ]}
+                textStyle={{
+                  color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
+                  fontSize: 12
+                }}
+              >
+                Completed
+              </Chip>
+              <Chip
+                selected={formData.repairStatus === 'rejected'}
+                onPress={() => handleFieldChange('repairStatus', 'rejected')}
+                style={[
+                  styles.smallChoice,
+                  {
+                    backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
+                  }
+                ]}
+                textStyle={{
+                  color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
+                  fontSize: 12
+                }}
+              >
+                Rejected
+              </Chip>
             </View>
           </View>
-        ) : (
-          /* Tablet/iPad Layout - Two Columns */
-          <View style={styles.row}>
-            {/* Left Column */}
-            <View style={[styles.col, { marginRight: 8 }]}>
-              <View style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Form</Text>
-
-                {/* Repair Quantity */}
-                <Input
-                  label="Repair Quantity *"
-                  value={formData.repairQty}
-                  onChangeText={(text) => handleFieldChange('repairQty', text)}
-                  keyboardType="numeric"
-                  placeholder="Enter quantity"
-                  style={{ marginBottom: 16 }}
-                />
-
-                {/* Repair Tag */}
-                <Input
-                  label="Repair Tag *"
-                  value={formData.repairTag}
-                  onChangeText={(text) => handleFieldChange('repairTag', text)}
-                  placeholder="Enter repair tag"
-                  style={{ marginBottom: 16 }}
-                />
-
-                {/* Repair Cost */}
-                <Input
-                  label="Repair Cost"
-                  value={formData.repairSubTotal}
-                  onChangeText={(text) => handleFieldChange('repairSubTotal', text)}
-                  keyboardType="numeric"
-                  placeholder="Enter repair cost"
-                  style={{ marginBottom: 16 }}
-                />
-
-                {/* Spear Gear Toggle */}
-                <View style={styles.rowSpace}>
-                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spear Gear</Text>
-                  <View style={styles.toggleContainer}>
-                    <Switch
-                      value={formData.spearGear}
-                      onValueChange={(value) => handleFieldChange('spearGear', value)}
-                    />
-                  </View>
-                </View>
-
-                {/* Remarks */}
-                <View style={{ marginTop: 16 }}>
-                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Remarks</Text>
-                  <Input
-                    placeholder="Add notes or remarks..."
-                    value={formData.remarks}
-                    onChangeText={(text) => handleFieldChange('remarks', text)}
-                    multiline
-                    numberOfLines={4}
-                    style={{ minHeight: 90, fontSize: p(14) }}
-                    containerStyle={{ alignItems: 'flex-start' }}
-                    enableVoice={true}
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Right Column */}
-            <View style={styles.col}>
-              {/* Repair Images */}
-              <View style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Images</Text>
-
-                {/* Active Images */}
-                <View style={styles.imagesContainer}>
-                  {images.map((image) => (
-                    <View key={image.id} style={styles.imageWrapper}>
-                      <TouchableOpacity
-                        style={styles.imageBox}
-                        onPress={() => handleImagePress(image.uri)}
-                      >
-                        <Image
-                          source={{ uri: image.uri }}
-                          style={styles.previewImage}
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                      {/* Remove Button */}
-                      <TouchableOpacity
-                        style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                        onPress={() => handleRemoveImage(image.id)}
-                      >
-                        <IconButton
-                          icon="close"
-                          size={16}
-                          iconColor="#fff"
-                          style={styles.removeIcon}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                  <TouchableOpacity
-                    style={[styles.imageBox, styles.addImageBox]}
-                    onPress={addNewImage}
-                  >
-                    <Text style={styles.addImageText}>+</Text>
-                    <Text style={styles.addImageLabel}>Add Image</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Deleted Images - Show with Restore Option */}
-                {deletedImages.length > 0 && (
-                  <View style={styles.deletedImagesSection}>
-                    <Divider style={{ marginVertical: 12 }} />
-                    <Text style={[styles.deletedImagesTitle, { color: colors.onSurfaceVariant }]}>
-                      Recently Deleted ({deletedImages.length})
-                    </Text>
-                    <View style={styles.imagesContainer}>
-                      {deletedImages.map((image) => (
-                        <View key={image.id} style={styles.imageWrapper}>
-                          <View style={styles.imageBox}>
-                            <Image
-                              source={{ uri: image.uri }}
-                              style={styles.previewImage}
-                              resizeMode="cover"
-                            />
-                          </View>
-                          {/* Restore Button */}
-                          <TouchableOpacity
-                            style={[styles.restoreImageButton, { backgroundColor: colors.primary }]}
-                            onPress={() => handleRestoreImage(image.id)}
-                          >
-                            <IconButton
-                              icon="restore"
-                              size={16}
-                              iconColor="#fff"
-                              style={styles.removeIcon}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              {/* Repair Status */}
-              <View style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Status</Text>
-
-                <View style={styles.rowSpace}>
-                  <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
-                  <View style={styles.rowWrap}>
-                    <Chip
-                      selected={formData.repairStatus === 'completed'}
-                      onPress={() => handleFieldChange('repairStatus', 'completed')}
-                      style={[
-                        styles.smallChoice,
-                        {
-                          backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
-                        }
-                      ]}
-                      textStyle={{
-                        color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
-                        fontSize: 12
-                      }}
-                    >
-                      Completed
-                    </Chip>
-                    <Chip
-                      selected={formData.repairStatus === 'rejected'}
-                      onPress={() => handleFieldChange('repairStatus', 'rejected')}
-                      style={[
-                        styles.smallChoice,
-                        {
-                          backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
-                        }
-                      ]}
-                      textStyle={{
-                        color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
-                        fontSize: 12
-                      }}
-                    >
-                      Rejected
-                    </Chip>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
+        </View>
 
         {/* Upload Progress Indicator */}
         {uploadingImages && (
@@ -923,7 +704,7 @@ const RepairDetailsScreen = () => {
             mode="contained"
             onPress={handleSaveRepair}
             loading={uploadingImages}
-            disabled={uploadingImages || !formData.repairQty.trim()}
+            disabled={uploadingImages || repairTotal === 0 || !formData.repairTag.trim()}
           >
             {uploadingImages
               ? (isUpdateMode ? 'Updating...' : 'Creating...')
