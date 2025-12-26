@@ -473,8 +473,8 @@ const LeadScreen = () => {
 
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
                 <Icon source="map-marker" size={18} color={colors.onSurfaceVariant}/>
-                <Text style={{ marginLeft: 6, flex: 1 }}>
-                  {item.address}
+                <Text style={{ marginLeft: 6, flexWrap: 'wrap' }}>
+                  {item.address  }
                 </Text>
               </View>
 
@@ -1255,7 +1255,7 @@ const styles = StyleSheet.create({
     gap: p(10),
   },
   leadsContainer: {
-    paddingRight: p(10),
+    // paddingRight: p(10),
     paddingBottom: p(300),
   },
   leadsContainerMobile: {
