@@ -65,28 +65,21 @@ const RosterModal: React.FC<RosterModalProps> = ({
 
   const numberOfItemsPerPageList = [10, 20, 30, 40, 50];
 
-  // Rosters are now filtered server-side, so we use them directly
-  const filteredRosters = rosters;
-
-  // Calculate pagination range based on filtered results
-  const totalFiltered = pagination?.total || filteredRosters.length;
-  const from = (page - 1) * numberOfItemsPerPage;
-  const to = Math.min(page * numberOfItemsPerPage, totalFiltered);
-  const paginatedRosters = filteredRosters.slice(from, to);
+  // All pagination is handled server-side
 
   // Fetch rosters when modal opens or search changes (server-side search and pagination)
   useEffect(() => {
     if (visible && currentLead?.firestation?.id && currentLead?.lead_id) {
       const searchParams: any = {
-        page: 1,
-        page_size: numberOfItemsPerPage, // Fetch a large number to get all rosters
+        page: page,
+        page_size: numberOfItemsPerPage,
         leadId: currentLead.lead_id, // Pass leadId to get tag_color in response
         name: debouncedSearch.trim() || undefined, // Add debounced search to API call
       };
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
     }
-  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch, numberOfItemsPerPage]);
+  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch, numberOfItemsPerPage, page]);
 
   // Reset when modal opens
   useEffect(() => {
@@ -223,10 +216,10 @@ const RosterModal: React.FC<RosterModalProps> = ({
                 Loading fire fighters...
               </Text>
             </View>
-          ) : filteredRosters.length > 0 ? (
+          ) : rosters.length > 0 ? (
             <>
               <FlatList
-                data={paginatedRosters}
+                data={rosters}
                 keyExtractor={(item) => item.roster_id.toString()}
                 renderItem={renderRosterItem}
                 ItemSeparatorComponent={() => <Divider />}
@@ -234,10 +227,10 @@ const RosterModal: React.FC<RosterModalProps> = ({
               />
               
               {/* Pagination Controls */}
-              {totalFiltered > 0 && (
+              {(pagination?.total || 0) > 0 && (
                 <Pagination
                   page={page}
-                  total={totalFiltered}
+                  total={pagination?.total || 0}
                   itemsPerPage={numberOfItemsPerPage}
                   itemsPerPageList={numberOfItemsPerPageList}
                   onPageChange={setPage}
