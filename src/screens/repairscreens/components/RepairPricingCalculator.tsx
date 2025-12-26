@@ -26,53 +26,53 @@ import { p } from '../../../utils/responsive';
 // Repair data structure
 const REPAIR_DATA = {
   velcro: {
-    "Velcro - Sm. (1\"-2\")": 10,
-    "Velcro - Md. (3\"-12\")": 20,
-    "Velcro - Lg. (13\"-20\")": 40,
-    "Velcro - XL (21\"-24\")": 50,
-    "Velcro - XXL/Jumpsuit": 60
+    "Velcro - Sm. (1\"-2\")": null,
+    "Velcro - Md. (3\"-12\")": null,
+    "Velcro - Lg. (13\"-20\")": null,
+    "Velcro - XL (21\"-24\")": null,
+    "Velcro - XXL/Jumpsuit": null
   },
   patches: {
-    "Patch - Sm. (2\"x2\")": 29,
-    "Patch - Md. (3\"x3\")": 38,
-    "Patch - Lg. (4\"x4\")": 45,
-    "Patch - XL (5\"x5\")": 60,
-    "Patch - XXL (6\"x6\")": 70,
-    "Patch - Full Pocket": 85
+    "Patch - Sm. (2\"x2\")": null,
+    "Patch - Md. (3\"x3\")": null,
+    "Patch - Lg. (4\"x4\")": null,
+    "Patch - XL (5\"x5\")": null,
+    "Patch - XXL (6\"x6\")": null,
+    "Patch - Full Pocket": null
   },
   "reflective-trim": {
-    "Reflective Trim - Sm.": 75,
-    "Reflective Trim - Md.": 90,
-    "Reflective Trim - Lg.": 125,
-    "Reflective Trim - Pocket": 100,
-    "Complete Jacket Trim": 145,
-    "Complete Pants Trim": 350
+    "Reflective Trim - Sm.": null,
+    "Reflective Trim - Md.": null,
+    "Reflective Trim - Lg.": null,
+    "Reflective Trim - Pocket": null,
+    "Complete Jacket Trim": null,
+    "Complete Pants Trim": null
   },
   zipper: {
-    "Zipper Repair": 20,
-    "Zipper Replacement": 48,
-    "Zipper Key": 10,
-    "Zipper Pull": 6
+    "Zipper Repair": null,
+    "Zipper Replacement": null,
+    "Zipper Key": null,
+    "Zipper Pull": null
   },
   stitching: {
-    "Stitching - Sm.": 15,
-    "Stitching - Md.": 20,
-    "Stitching - Lg.": 30
+    "Stitching - Sm.": null,
+    "Stitching - Md.": null,
+    "Stitching - Lg.": null
   },
   miscellaneous: {
-    "Button/Snap": 10,
-    "Rivet": 10,
-    "D-Ring": 15,
-    "Belt Loop": 10,
-    "Knee Pad": 104,
-    "Knee Pad Foam": 20,
-    "Name Plate": 50,
-    "Lettering": 10,
-    "Mfr. Label (Re-Attach)": 10,
-    "Postman Buckle": 10,
-    "Postman Buckle Strap": 25,
-    "Harness Loop Set (8-Piece)": 150,
-    "Jacket Clasp": 25
+    "Button/Snap": null,
+    "Rivet": null,
+    "D-Ring": null,
+    "Belt Loop": null,
+    "Knee Pad": null,
+    "Knee Pad Foam": null,
+    "Name Plate": null,
+    "Lettering": null,
+    "Mfr. Label (Re-Attach)": null,
+    "Postman Buckle": null,
+    "Postman Buckle Strap": null,
+    "Harness Loop Set (8-Piece)": null,
+    "Jacket Clasp": null
   }
 };
 
@@ -180,7 +180,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
               name: itemName,
               quantity: itemData.quantity || 1,
               price: itemData.price?.toString() || '',
-              originalPrice: (REPAIR_DATA[category as keyof typeof REPAIR_DATA] as any)?.[itemName] || 0
+              originalPrice: 0 // No original prices available
             };
           });
         }
@@ -240,7 +240,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       const existingItem = currentItems[itemName];
       itemConfigs[itemName] = {
         quantity: existingItem?.quantity || 1,
-        price: existingItem?.price || ((REPAIR_DATA[category as keyof typeof REPAIR_DATA] as any)?.[itemName]?.toString() || '0')
+        price: existingItem?.price || '0'
       };
     });
 
@@ -265,7 +265,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         name: itemName,
         quantity: config.quantity,
         price: config.price,
-        originalPrice: (categoryData as any)[itemName] || 0
+        originalPrice: 0 // No original prices available
       };
     });
 
@@ -290,7 +290,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       itemConfigs: {
         ...prev.itemConfigs,
         [itemName]: {
-          ...prev.itemConfigs[itemName] || { quantity: 1, price: (REPAIR_DATA[prev.category as keyof typeof REPAIR_DATA] as any)?.[itemName]?.toString() || '0' },
+          ...prev.itemConfigs[itemName] || { quantity: 1, price: '0' },
           [field]: field === 'quantity' ? Math.max(1, Number(value) || 1) : value
         }
       }
@@ -320,8 +320,8 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   };
 
   const populatePrice = (category: string, itemName: string) => {
-    const originalPrice = categoryItems[category]?.[itemName]?.originalPrice || 0;
-    updatePrice(category, itemName, originalPrice.toString());
+    // No original prices available, do nothing
+    return;
   };
 
   const changeQuantity = (category: string, itemName: string, delta: number) => {
@@ -639,7 +639,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                   </View>
 
                   {Object.entries(categoryData).map(([itemName, price]) => {
-                    const config = itemConfigs[itemName] || { quantity: 1, price: price.toString() };
+                    const config = itemConfigs[itemName] || { quantity: 1, price: '0' };
                     return (
                       <View key={itemName} style={styles.tableRow}>
                         <View style={styles.tableCellNarrow}>
@@ -666,7 +666,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                                     ...prev.itemConfigs,
                                     [itemName]: {
                                       quantity: 1,
-                                      price: price.toString()
+                                      price: '0'
                                     }
                                   }
                                 }));

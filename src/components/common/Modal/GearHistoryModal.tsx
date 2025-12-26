@@ -68,7 +68,7 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: screenWidth > 600 ? '80%' : '90%' }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface, height: screenWidth > 600 ? '80%' : '90%' }]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.onSurface, fontSize: p(20) }]}>
@@ -81,7 +81,11 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
 
           <Divider style={{ marginBottom: p(16) }} />
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={styles.scrollContent}
+          >
             {/* History Information */}
             <Card style={[styles.card, { backgroundColor: colors.surface }]}>
               <Card.Content>
@@ -371,6 +375,12 @@ const styles = StyleSheet.create({
   },
   closeModalButton: {
     borderRadius: p(8),
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: p(16),
   },
 });
 
