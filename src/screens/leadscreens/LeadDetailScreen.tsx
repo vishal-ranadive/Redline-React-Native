@@ -124,7 +124,6 @@ const LeadDetailScreen = () => {
   const { fetchLeadById, currentLead } = useLeadStore();
 
   const { lead: initialLead } = route.params as any;
-  // printTable("initialLead",initialLead)
   const [lead, setLead] = useState<LeadDetail>(initialLead);
 
   // Normalize lead type to handle case sensitivity issues
@@ -136,7 +135,7 @@ const LeadDetailScreen = () => {
   const [technicianDialogVisible, setTechnicianDialogVisible] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.lead_status);
+  const [currentStatus, setCurrentStatus] = React.useState<LeadStatus>(initialLead?.lead_status || 'Scheduled');
 
   // Water hardness state
   const [showHardnessInput, setShowHardnessInput] = useState(false);
@@ -245,15 +244,18 @@ const LeadDetailScreen = () => {
         setLoading(true);
       }
       const leadDetail:any = await fetchLeadById(leadId);
-      // printTable('Lead Details', leadDetail);
-      if(leadDetail){
-        setLead(leadDetail);
-        setCurrentStatus(leadDetail?.lead_status);
+
+      // Extract the lead from the API response (leads[0])
+      const leadData = leadDetail?.leads?.[0];
+      if(leadData){
+        setLead(leadData);
+        setCurrentStatus(leadData.lead_status);
+
         // Update water hardness value if available (handle null and float numbers)
-        if (leadDetail.water_hardness !== null && leadDetail.water_hardness !== undefined) {
-          const hardnessValue = typeof leadDetail.water_hardness === 'number'
-            ? leadDetail.water_hardness.toString()
-            : String(leadDetail.water_hardness);
+        if (leadData.water_hardness !== null && leadData.water_hardness !== undefined) {
+          const hardnessValue = typeof leadData.water_hardness === 'number'
+            ? leadData.water_hardness.toString()
+            : String(leadData.water_hardness);
           setHardnessValue(hardnessValue);
         } else {
           // Reset to empty string if null or undefined
@@ -261,17 +263,16 @@ const LeadDetailScreen = () => {
         }
 
         // Update repair cost value if available (handle null and numbers)
-        if (leadDetail.repair_cost !== null && leadDetail.repair_cost !== undefined) {
-          const repairCostValue = typeof leadDetail.repair_cost === 'number'
-            ? leadDetail.repair_cost.toString()
-            : String(leadDetail.repair_cost);
+        if (leadData.repair_cost !== null && leadData.repair_cost !== undefined) {
+          const repairCostValue = typeof leadData.repair_cost === 'number'
+            ? leadData.repair_cost.toString()
+            : String(leadData.repair_cost);
           setRepairCostValue(repairCostValue);
         } else {
           // Default to '0' if null or undefined
           setRepairCostValue('0');
         }
       }
-      printTable("currentLead",currentLead)
     } catch (error) {
       console.error('Error fetching lead details:', error);
       Alert.alert('Error', 'Failed to fetch lead details');

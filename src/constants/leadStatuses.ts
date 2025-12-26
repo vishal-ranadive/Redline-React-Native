@@ -108,17 +108,22 @@ export const isValidStatusForType = (status: LeadStatus, leadType: 'REPAIR' | 'I
  * @param status - The status to get color for
  * @returns Hex color code
  */
-export const getStatusColor = (status: LeadStatus): string => {
-  const statusColors: Record<LeadStatus, string> = {
+export const getStatusColor = (status: LeadStatus | string): string => {
+  // Handle null, undefined, or empty string
+  if (!status || status.trim() === '') {
+    return '#9E9E9E'; // Default gray color for unknown status
+  }
+
+  const statusColors: Record<string, string> = {
     // Common Status Colors
     'Scheduled': '#FB8C00',
-    
+
     // Inspection Status Colors
     'Ongoing': '#FFC107',
     'Completed': '#34A853',
     'Canceled': '#EA4335',
     'Rescheduled': '#1E88E5',
-    
+
     // Repair Status Colors
     'IntransitPre': '#FF9800',
     'RecievedByCorporate': '#2196F3',
@@ -128,7 +133,7 @@ export const getStatusColor = (status: LeadStatus): string => {
     'RepairComplete': '#34A853',
     'IntransitPostRepair': '#4CAF50',
   };
-  
+
   return statusColors[status] || '#9E9E9E';
 };
 
@@ -137,8 +142,12 @@ export const getStatusColor = (status: LeadStatus): string => {
  * @param status - The status to format
  * @returns Formatted display text
  */
-export const formatStatus = (status: LeadStatus): string => {
-  
+export const formatStatus = (status: LeadStatus | string): string => {
+  // Handle null, undefined, or empty string
+  if (!status || status.trim() === '') {
+    return 'Unknown Status';
+  }
+
   // printTable("status", status)
   return status
     .replace(/([A-Z])/g, ' $1')
