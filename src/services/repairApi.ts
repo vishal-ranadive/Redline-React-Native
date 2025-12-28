@@ -2,6 +2,16 @@
 import { axiosInstance } from './api';
 
 export const repairApi = {
+  // Get repair findings
+  getRepairFindings: async (): Promise<any> => {
+    console.log('➡️ API CALL GET /repair-findings/');
+
+    const response = await axiosInstance.get('/repair-findings/');
+
+    console.log('✅ API Response GET /repair-findings/', response.data);
+    return response.data;
+  },
+
   // Get firefighter repair information
   getFirefighterRepairInformation: async (leadId: number, rosterId: number): Promise<any> => {
     console.log(

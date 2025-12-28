@@ -23,77 +23,35 @@ import {
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 
-// Repair data structure
-const REPAIR_DATA = {
-  velcro: {
-    "Velcro - Sm. (1\"-2\")": null,
-    "Velcro - Md. (3\"-12\")": null,
-    "Velcro - Lg. (13\"-20\")": null,
-    "Velcro - XL (21\"-24\")": null,
-    "Velcro - XXL/Jumpsuit": null
-  },
-  patches: {
-    "Patch - Sm. (2\"x2\")": null,
-    "Patch - Md. (3\"x3\")": null,
-    "Patch - Lg. (4\"x4\")": null,
-    "Patch - XL (5\"x5\")": null,
-    "Patch - XXL (6\"x6\")": null,
-    "Patch - Full Pocket": null
-  },
-  "reflective-trim": {
-    "Reflective Trim - Sm.": null,
-    "Reflective Trim - Md.": null,
-    "Reflective Trim - Lg.": null,
-    "Reflective Trim - Pocket": null,
-    "Complete Jacket Trim": null,
-    "Complete Pants Trim": null
-  },
-  zipper: {
-    "Zipper Repair": null,
-    "Zipper Replacement": null,
-    "Zipper Key": null,
-    "Zipper Pull": null
-  },
-  stitching: {
-    "Stitching - Sm.": null,
-    "Stitching - Md.": null,
-    "Stitching - Lg.": null
-  },
-  miscellaneous: {
-    "Button/Snap": null,
-    "Rivet": null,
-    "D-Ring": null,
-    "Belt Loop": null,
-    "Knee Pad": null,
-    "Knee Pad Foam": null,
-    "Name Plate": null,
-    "Lettering": null,
-    "Mfr. Label (Re-Attach)": null,
-    "Postman Buckle": null,
-    "Postman Buckle Strap": null,
-    "Harness Loop Set (8-Piece)": null,
-    "Jacket Clasp": null
-  }
-};
-
-const CATEGORY_DISPLAY_NAMES = {
-  velcro: 'Velcro',
-  patches: 'Patches',
-  'reflective-trim': 'Reflective Trim',
-  zipper: 'Zipper',
-  stitching: 'Stitching',
-  miscellaneous: 'Miscellaneous'
-};
+// Import repair API
+import { repairApi } from '../../../services/repairApi';
 
 interface RepairItem {
+  repair_finding_id: number;
   name: string;
-  quantity: number;
-  price: string;
-  originalPrice: number;
+  repair_quantity: number;
+  repair_cost: string;
+  images?: string[];
+}
+
+interface RepairFinding {
+  repair_finding_id: number;
+  repair_finding_name: string;
+  repair_group: string;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string | null;
+}
+
+interface RepairGroup {
+  group_name: string;
+  findings: RepairFinding[];
 }
 
 interface CategoryItems {
-  [itemName: string]: RepairItem;
+  [repairFindingId: string]: RepairItem;
 }
 
 interface RepairPricingCalculatorProps {
@@ -110,13 +68,19 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   onToggleCollapse
 }) => {
   const { colors } = useTheme();
+
+  // Repair findings data from API
+  const [repairGroups, setRepairGroups] = useState<RepairGroup[]>([]);
+  const [repairDataLoading, setRepairDataLoading] = useState(true);
+  const [repairDataError, setRepairDataError] = useState<string | null>(null);
+
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [categoryItems, setCategoryItems] = useState<{ [category: string]: CategoryItems }>({});
   const [itemSelectionModal, setItemSelectionModal] = useState<{
     visible: boolean;
     category: string;
     selectedItems: Set<string>;
-    itemConfigs: { [itemName: string]: { quantity: number; price: string } };
+    itemConfigs: { [itemId: string]: { quantity: number; price: string; images: string[] } };
   }>({
     visible: false,
     category: '',
@@ -155,6 +119,31 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     return () => subscription.remove();
   }, []);
 
+  // Fetch repair findings data
+  useEffect(() => {
+    const fetchRepairFindings = async () => {
+      try {
+        setRepairDataLoading(true);
+        setRepairDataError(null);
+
+        const response = await repairApi.getRepairFindings();
+
+        if (response.status === true) {
+          setRepairGroups(response.repair_group || []);
+        } else {
+          setRepairDataError('Failed to load repair findings');
+        }
+      } catch (error) {
+        console.error('Error fetching repair findings:', error);
+        setRepairDataError('Error loading repair findings');
+      } finally {
+        setRepairDataLoading(false);
+      }
+    };
+
+    fetchRepairFindings();
+  }, []);
+
   // Lock modal to portrait when it opens
   useEffect(() => {
     if (itemSelectionModal.visible) {
@@ -177,10 +166,11 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
 
           Object.entries(categoryData).forEach(([itemName, itemData]: [string, any]) => {
             newCategoryItems[category][itemName] = {
+              repair_finding_id: itemData.repair_finding_id || 0,
               name: itemName,
-              quantity: itemData.quantity || 1,
-              price: itemData.price?.toString() || '',
-              originalPrice: 0 // No original prices available
+              repair_quantity: itemData.repair_quantity || itemData.quantity || 1,
+              repair_cost: itemData.repair_cost || itemData.price?.toString() || '',
+              images: itemData.images || []
             };
           });
         }
@@ -200,8 +190,8 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     Object.entries(categoryItems).forEach(([category, categoryItems]) => {
       let categoryTotal = 0;
       Object.values(categoryItems).forEach(item => {
-        const price = parseFloat(item.price) || 0;
-        categoryTotal += price * item.quantity;
+        const price = parseFloat(item.repair_cost) || 0;
+        categoryTotal += price * item.repair_quantity;
         items.push(item);
       });
       totals[category] = categoryTotal;
@@ -233,14 +223,15 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   const showItemSelectionModal = (category: string) => {
     const currentItems = categoryItems[category] || {};
     const selectedItems = new Set(Object.keys(currentItems));
-    const itemConfigs: { [itemName: string]: { quantity: number; price: string } } = {};
+    const itemConfigs: { [itemId: string]: { quantity: number; price: string; images: string[] } } = {};
 
     // Initialize configs for selected items
-    selectedItems.forEach(itemName => {
-      const existingItem = currentItems[itemName];
-      itemConfigs[itemName] = {
-        quantity: existingItem?.quantity || 1,
-        price: existingItem?.price || '0'
+    selectedItems.forEach(itemId => {
+      const existingItem = currentItems[itemId];
+      itemConfigs[itemId] = {
+        quantity: existingItem?.repair_quantity || 1,
+        price: existingItem?.repair_cost || '0',
+        images: existingItem?.images || []
       };
     });
 
@@ -254,25 +245,28 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
 
   const addSelectedItems = () => {
     const { category, selectedItems, itemConfigs } = itemSelectionModal;
-    const categoryData = REPAIR_DATA[category as keyof typeof REPAIR_DATA] || {};
+    const groupData = repairGroups.find(group => group.group_name.toLowerCase().replace(/\s+/g, '-') === category);
 
     const newItems: CategoryItems = { ...categoryItems[category] };
 
     // Add new selected items with configured values
-    selectedItems.forEach(itemName => {
-      const config = itemConfigs[itemName] || { quantity: 1, price: (categoryData as any)[itemName]?.toString() || '0' };
-      newItems[itemName] = {
-        name: itemName,
-        quantity: config.quantity,
-        price: config.price,
-        originalPrice: 0 // No original prices available
+    selectedItems.forEach(itemId => {
+      const config = itemConfigs[itemId] || { quantity: 1, price: '0', images: [] };
+      const finding = groupData?.findings.find(f => f.repair_finding_id.toString() === itemId);
+
+      newItems[itemId] = {
+        repair_finding_id: parseInt(itemId),
+        name: finding?.repair_finding_name || itemId,
+        repair_quantity: config.quantity,
+        repair_cost: config.price,
+        images: config.images
       };
     });
 
     // Remove unselected items
-    Object.keys(newItems).forEach(itemName => {
-      if (!selectedItems.has(itemName)) {
-        delete newItems[itemName];
+    Object.keys(newItems).forEach(itemId => {
+      if (!selectedItems.has(itemId)) {
+        delete newItems[itemId];
       }
     });
 
@@ -313,7 +307,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         ...prev[category],
         [itemName]: {
           ...prev[category][itemName],
-          price: cleanValue
+          repair_cost: cleanValue
         }
       }
     }));
@@ -327,7 +321,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   const changeQuantity = (category: string, itemName: string, delta: number) => {
     setCategoryItems(prev => {
       const newItems = { ...prev };
-      const currentQuantity = newItems[category][itemName].quantity;
+      const currentQuantity = newItems[category][itemName].repair_quantity;
       const newQuantity = Math.max(0, currentQuantity + delta);
 
       if (newQuantity === 0) {
@@ -342,7 +336,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
           });
         }
       } else {
-        newItems[category][itemName].quantity = newQuantity;
+        newItems[category][itemName].repair_quantity = newQuantity;
       }
 
       return newItems;
@@ -420,41 +414,59 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   };
 
   const renderCategoryGrid = () => {
-    const categories = Object.keys(REPAIR_DATA);
-    const itemsPerRow = isMobile ? 2 : 3; // Keep 3 columns for portrait/tablet, 2 for mobile
+    if (repairDataLoading) {
+      return (
+        <View style={styles.categoryContainer}>
+          <View style={styles.loadingContainer}>
+            <Text style={{ color: colors.onSurfaceVariant }}>Loading repair categories...</Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (repairDataError) {
+      return (
+        <View style={styles.categoryContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={{ color: colors.error }}>{repairDataError}</Text>
+          </View>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.categoryContainer}>
-
-        <View style={[styles.categoryGrid, { flexDirection: 'row', flexWrap : 'wrap', }]}>
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.categoryButton,
-                {
-                //   width: `${100 / 4}%`,
-                  backgroundColor: selectedCategories.has(category)
-                    ? colors.primary
-                    : colors.surfaceVariant
-                }
-              ]}
-              onPress={() => toggleCategory(category)}
-            >
-              <Text
+        <View style={[styles.categoryGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+          {repairGroups.map((group) => {
+            const categoryKey = group.group_name.toLowerCase().replace(/\s+/g, '-');
+            return (
+              <TouchableOpacity
+                key={categoryKey}
                 style={[
-                  styles.categoryButtonText,
+                  styles.categoryButton,
                   {
-                    color: selectedCategories.has(category)
-                      ? colors.onPrimary
-                      : colors.onSurfaceVariant
+                    backgroundColor: selectedCategories.has(categoryKey)
+                      ? colors.primary
+                      : colors.surfaceVariant
                   }
                 ]}
+                onPress={() => toggleCategory(categoryKey)}
               >
-                {CATEGORY_DISPLAY_NAMES[category as keyof typeof CATEGORY_DISPLAY_NAMES]}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    {
+                      color: selectedCategories.has(categoryKey)
+                        ? colors.onPrimary
+                        : colors.onSurfaceVariant
+                    }
+                  ]}
+                >
+                  {group.group_name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
     );
@@ -482,7 +494,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 style={{ margin: 0, marginRight: p(4) }}
               />
               <Text style={[styles.categoryTitle, { color: colors.onSurface }]}>
-                {CATEGORY_DISPLAY_NAMES[category as keyof typeof CATEGORY_DISPLAY_NAMES]}
+                {repairGroups.find(group => group.group_name.toLowerCase().replace(/\s+/g, '-') === category)?.group_name || category}
               </Text>
               <Text style={[styles.categoryTotalText, { color: colors.primary }]}>
                 ${categoryTotal.toFixed(2)}
@@ -520,12 +532,12 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 {Object.entries(items).map(([itemName, item]) => (
                   <View key={itemName} style={styles.tableRow}>
                     <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
-                      {itemName}
+                      {item.name}
                     </Text>
 
                     <View style={styles.tableCellMedium}>
                       <TextInput
-                        value={item.price}
+                        value={item.repair_cost}
                         onChangeText={(value) => updatePrice(category, itemName, value)}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
@@ -543,7 +555,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                         >
                           <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
                         </TouchableOpacity>
-                        <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.quantity}</Text>
+                        <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
                         <TouchableOpacity
                           style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
                           onPress={() => changeQuantity(category, itemName, 1)}
@@ -554,7 +566,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                     </View>
 
                     <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
-                      ${(parseFloat(item.price) || 0) * item.quantity}
+                      ${(parseFloat(item.repair_cost) || 0) * item.repair_quantity}
                     </Text>
 
                     <View style={styles.tableCellMedium}>
@@ -577,7 +589,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
 
   const renderItemSelectionModal = () => {
     const { visible, category, selectedItems, itemConfigs } = itemSelectionModal;
-    const categoryData = REPAIR_DATA[category as keyof typeof REPAIR_DATA] || {};
+    const groupData = repairGroups.find(group => group.group_name.toLowerCase().replace(/\s+/g, '-') === category);
     const selectedItemsArray = Array.from(selectedItems);
 
     return (
@@ -607,7 +619,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 styles.statusModalTitle,
                 { color: colors.onSurface, fontSize: p(18) }
               ]}>
-                Select {CATEGORY_DISPLAY_NAMES[category as keyof typeof CATEGORY_DISPLAY_NAMES]} Items
+                Select {groupData?.group_name || category} Items
               </Text>
               <Button
                 mode="text"
@@ -638,35 +650,37 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                     <Text style={[styles.tableHeaderTextNarrow, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
                   </View>
 
-                  {Object.entries(categoryData).map(([itemName, price]) => {
-                    const config = itemConfigs[itemName] || { quantity: 1, price: '0' };
+                  {groupData?.findings.map((finding) => {
+                    const itemId = finding.repair_finding_id.toString();
+                    const config = itemConfigs[itemId] || { quantity: 1, price: '0', images: [] };
                     return (
-                      <View key={itemName} style={styles.tableRow}>
+                      <View key={itemId} style={styles.tableRow}>
                         <View style={styles.tableCellNarrow}>
                           <TouchableOpacity
                             onPress={() => {
                               const newSelected = new Set(selectedItems);
-                              if (newSelected.has(itemName)) {
-                                newSelected.delete(itemName);
+                              if (newSelected.has(itemId)) {
+                                newSelected.delete(itemId);
                                 // Remove config when deselected
                                 const newConfigs = { ...itemConfigs };
-                                delete newConfigs[itemName];
+                                delete newConfigs[itemId];
                                 setItemSelectionModal(prev => ({
                                   ...prev,
                                   selectedItems: newSelected,
                                   itemConfigs: newConfigs
                                 }));
                               } else {
-                                newSelected.add(itemName);
+                                newSelected.add(itemId);
                                 // Initialize config when selected
                                 setItemSelectionModal(prev => ({
                                   ...prev,
                                   selectedItems: newSelected,
                                   itemConfigs: {
                                     ...prev.itemConfigs,
-                                    [itemName]: {
+                                    [itemId]: {
                                       quantity: 1,
-                                      price: '0'
+                                      price: '0',
+                                      images: []
                                     }
                                   }
                                 }));
@@ -676,40 +690,40 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                             <View style={[
                               styles.checkbox,
                               {
-                                backgroundColor: selectedItems.has(itemName) ? colors.primary : 'transparent',
+                                backgroundColor: selectedItems.has(itemId) ? colors.primary : 'transparent',
                                 borderColor: colors.outline
                               }
                             ]}>
-                              {selectedItems.has(itemName) && (
+                              {selectedItems.has(itemId) && (
                                 <Text style={[styles.checkmark, { color: colors.onPrimary }]}>✓</Text>
                               )}
                             </View>
                           </TouchableOpacity>
                         </View>
                         <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
-                          {itemName}
+                          {finding.repair_finding_name}
                         </Text>
                         <View style={styles.tableCellMedium}>
                           <TextInput
                             value={config.price}
-                            onChangeText={(value) => updateItemConfig(itemName, 'price', value)}
+                            onChangeText={(value) => updateItemConfig(itemId, 'price', value)}
                             keyboardType="decimal-pad"
                             style={[styles.tableInput, { backgroundColor: colors.surfaceVariant, color: colors.onSurface }]}
                             mode="outlined"
                             dense
                             left={<TextInput.Affix text="$" />}
-                            disabled={!selectedItems.has(itemName)}
+                            disabled={!selectedItems.has(itemId)}
                           />
                         </View>
                         <View style={styles.tableCellNarrow}>
                           <TextInput
                             value={config.quantity.toString()}
-                            onChangeText={(value) => updateItemConfig(itemName, 'quantity', value)}
+                            onChangeText={(value) => updateItemConfig(itemId, 'quantity', value)}
                             keyboardType="numeric"
                             style={[styles.tableInput, { backgroundColor: colors.surfaceVariant, color: colors.onSurface }]}
                             mode="outlined"
                             dense
-                            disabled={!selectedItems.has(itemName)}
+                            disabled={!selectedItems.has(itemId)}
                           />
                         </View>
                       </View>
@@ -815,7 +829,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
             <Text>
               Are you sure you want to delete{' '}
               {deleteDialog.type === 'category'
-                ? `the entire ${CATEGORY_DISPLAY_NAMES[deleteDialog.category as keyof typeof CATEGORY_DISPLAY_NAMES]} category and all its items`
+                ? `the entire ${repairGroups.find(group => group.group_name.toLowerCase().replace(/\s+/g, '-') === deleteDialog.category)?.group_name || deleteDialog.category} category and all its items`
                 : `the item "${deleteDialog.itemName}"`
               }?
             </Text>
@@ -897,6 +911,16 @@ const styles = StyleSheet.create({
     fontSize: p(12),
     fontWeight: '600',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: p(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorContainer: {
+    padding: p(16),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryCard: {
     marginHorizontal: p(0),
