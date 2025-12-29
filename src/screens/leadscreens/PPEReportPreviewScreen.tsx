@@ -54,20 +54,25 @@ const PPEReportPreviewScreen: React.FC = () => {
   const fetchReportData = async () => {
     try {
       setLoading(true);
-      
+
       // Call first API: PPE Inspection
       console.log('Calling PPE Inspection API...');
       const ppeInspectionData = await leadApi.getPpeInspection(leadId);
       setPpeData(ppeInspectionData);
-      
-      // Call second API: Inspection Analytics
+
+      // Call second API: Inspection Analytics (optional)
       console.log('Calling Inspection Analytics API...');
-      const analyticsResult = await leadApi.getInspectionAnalytics(leadId);
-      setAnalyticsData(analyticsResult);
-      
+      try {
+        const analyticsResult = await leadApi.getInspectionAnalytics(leadId);
+        setAnalyticsData(analyticsResult);
+      } catch (analyticsError: any) {
+        console.warn('Analytics data not available:', analyticsError?.message);
+        setAnalyticsData(null); // Explicitly set to null to indicate no analytics data
+      }
+
     } catch (error) {
-      console.error('Error fetching report data:', error);
-      Alert.alert('Error', 'Failed to fetch report data. Please try again.');
+      console.error('Error fetching PPE inspection data:', error);
+      Alert.alert('Error', 'Failed to fetch PPE inspection data. Please try again.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -75,8 +80,8 @@ const PPEReportPreviewScreen: React.FC = () => {
   };
 
   const handleDownloadPDF = async () => {
-    if (!ppeData || !analyticsData) {
-      Alert.alert('Error', 'Report data is not available. Please try again.');
+    if (!ppeData) {
+      Alert.alert('Error', 'PPE inspection data is not available. Please try again.');
       return;
     }
 
@@ -156,13 +161,13 @@ const PPEReportPreviewScreen: React.FC = () => {
     );
   }
 
-  if (!ppeData || !analyticsData) {
+  if (!ppeData) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <Icon source="alert-circle" size={p(48)} color={colors.error} />
           <Text style={{ marginTop: 16, color: colors.error, fontSize: p(16) }}>
-            No report data available
+            No PPE inspection data available
           </Text>
           <Button
             mode="outlined"
@@ -321,13 +326,34 @@ const PPEReportPreviewScreen: React.FC = () => {
           </Card.Content>
         </Card>
 
+        {/* Analytics Data Warning */}
+        {!analyticsData && (
+          <Card style={[styles.card, { backgroundColor: '#fff3cd', borderColor: '#ffeaa7', borderWidth: 1 }]}>
+            <Card.Content>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: p(12) }}>
+                <Icon source="alert-circle" size={p(24)} color="#856404" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.warningTitle, { color: '#856404', fontSize: p(16) }]}>
+                    Limited Report Data
+                  </Text>
+                  <Text style={[styles.warningText, { color: '#856404', fontSize: p(14) }]}>
+                    Inspection analytics are not available for this lead. The report will show basic information only.
+                    You can still download the report, but it will not include inspection statistics or gear breakdowns.
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
+
         {/* Summary Statistics */}
-        <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Card.Content>
-            <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-              Inspection Summary
-            </Text>
-            <Divider style={{ marginVertical: p(10) }} />
+        {analyticsData && (
+          <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Card.Content>
+              <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
+                Inspection Summary
+              </Text>
+              <Divider style={{ marginVertical: p(10) }} />
             
             {/* First Row Container - Primary Stats */}
             <View style={[styles.summaryRowContainer, { backgroundColor: '#fff5f5', borderColor: '#ed2c2a' }]}>
@@ -624,8 +650,9 @@ const PPEReportPreviewScreen: React.FC = () => {
               </View>
             </View>
             </View>
-          </Card.Content>
-        </Card>
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Firefighter & Gear Assignments Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -1106,6 +1133,13 @@ const styles = StyleSheet.create({
     minWidth: p(140),
     maxWidth: p(140),
     flexShrink: 0,
+  },
+  warningTitle: {
+    fontWeight: '700',
+    marginBottom: p(4),
+  },
+  warningText: {
+    lineHeight: p(20),
   },
 });
 
