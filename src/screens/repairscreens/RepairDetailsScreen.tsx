@@ -566,7 +566,7 @@ const RepairDetailsScreen = () => {
         gear_id: gearId,
         roster_id: gear?.roster?.roster_id || null,
         franchise_id: currentLead?.franchise?.id || leadData?.franchise_id,
-        repair_status: formData.repairStatus as 'completed' | 'rejected',
+        repair_status: formData.repairStatus as 'complete' | 'incomplete',
         repair_sub_total: repairTotal,
         repair_cost: repairTotal,
         remarks: formData.remarks,
@@ -787,36 +787,36 @@ const RepairDetailsScreen = () => {
                 <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
                 <View style={styles.rowWrap}>
                   <Chip
-                    selected={formData.repairStatus === 'completed'}
-                    onPress={() => handleFieldChange('repairStatus', 'completed')}
+                    selected={formData.repairStatus === 'complete'}
+                    onPress={() => handleFieldChange('repairStatus', 'complete')}
                     style={[
                       styles.smallChoice,
                       {
-                        backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
+                        backgroundColor: formData.repairStatus === 'complete' ? '#34A853' : colors.surfaceVariant
                       }
                     ]}
                     textStyle={{
-                      color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
+                      color: formData.repairStatus === 'complete' ? '#fff' : colors.onSurfaceVariant,
                       fontSize: 12
                     }}
                   >
-                    Completed
+                    Complete
                   </Chip>
                   <Chip
-                    selected={formData.repairStatus === 'rejected'}
-                    onPress={() => handleFieldChange('repairStatus', 'rejected')}
+                    selected={formData.repairStatus === 'incomplete'}
+                    onPress={() => handleFieldChange('repairStatus', 'incomplete')}
                     style={[
                       styles.smallChoice,
                       {
-                        backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
+                        backgroundColor: formData.repairStatus === 'incomplete' ? '#EA4335' : colors.surfaceVariant
                       }
                     ]}
                     textStyle={{
-                      color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
+                      color: formData.repairStatus === 'incomplete' ? '#fff' : colors.onSurfaceVariant,
                       fontSize: 12
                     }}
                   >
-                    Rejected
+                    Incomplete
                   </Chip>
                 </View>
               </View>

@@ -11,7 +11,7 @@ import { repairApi } from '../../services/repairApi';
 import { gearApi } from '../../services/gearApi';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
-import { getStatusColor } from '../../constants/inspection';
+import { getRepairStatusColor } from '../../constants/inspection';
 import { p } from '../../utils/responsive';
 import { useGearStore } from '../../store/gearStore';
 import Pagination from '../../components/common/Pagination';
@@ -197,7 +197,7 @@ export default function AllGearRepairScreen() {
   const renderGearCard = ({ item: repair }: { item: any }) => {
     try {
       const gearStatus = repair.repair_status || 'Unknown';
-      const statusColor = getStatusColor(null, gearStatus);
+      const statusColor = getRepairStatusColor(gearStatus);
       const tagColor = ""; // No tag color info available in current API response
       const gearTypeName = repair.gear?.gear_name || repair.gear?.gear_type?.gear_type || 'Gear';
 

@@ -63,7 +63,7 @@ export const repairApi = {
     gear_id: number;
     roster_id?: number | null;
     franchise_id: number;
-    repair_status: 'completed' | 'rejected';
+    repair_status: 'complete' | 'incomplete';
     repair_sub_total: number;
     repair_cost: number;
     remarks: string;
@@ -134,7 +134,7 @@ export const repairApi = {
     gear_id?: number;
     roster_id?: number | null;
     franchise_id: number;
-    repair_status?: 'completed' | 'rejected';
+    repair_status?: 'complete' | 'incomplete';
     repair_sub_total?: number;
     repair_cost?: number;
     repair_images?: string[];

@@ -52,8 +52,8 @@ const statusColorMap: { [key: string]: string } = {
   'Recommended Out Of Service': '#f15719ff',
   'Corrective Action Required': '#F9A825',
   Fail: '#8B4513',
-  completed: '#34A853',
-  rejected: '#EA4335',
+  complete: '#34A853',
+  incomplete: '#EA4335',
 };
 
 export default function FirefighterListRepairScreen() {

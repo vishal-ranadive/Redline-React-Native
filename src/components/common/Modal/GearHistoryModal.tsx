@@ -45,10 +45,9 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
   };
 
   const getStatusColor = (status: string) => {
-    if (status?.toLowerCase().includes('fail') || status?.toLowerCase().includes('repair')) return '#EA4335';
-    if (status?.toLowerCase().includes('pass') || status?.toLowerCase().includes('good')) return '#34A853';
+    if (status?.toLowerCase().includes('fail') || status?.toLowerCase().includes('repair') || status?.toLowerCase().includes('incomplete')) return '#EA4335';
+    if (status?.toLowerCase().includes('pass') || status?.toLowerCase().includes('good') || status?.toLowerCase().includes('complete')) return '#34A853';
     if (status?.toLowerCase().includes('attention') || status?.toLowerCase().includes('requires')) return '#FB8C00';
-    if (status?.toLowerCase().includes('completed')) return '#34A853';
     return colors.onSurfaceVariant;
   };
 

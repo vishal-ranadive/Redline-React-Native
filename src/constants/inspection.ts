@@ -89,6 +89,12 @@ export const STATUS_COLOR_BY_STRING: { [key: string]: string } = {
   'OOS': '#666666',
 };
 
+// Repair status color mapping
+export const REPAIR_STATUS_COLORS: { [key: string]: string } = {
+  'complete': '#34A853',    // Light green
+  'incomplete': '#EA4335',  // Red
+};
+
 /**
  * Get status color by ID (preferred) or by status string (fallback)
  * @param statusId - Status ID (number) - optional
@@ -100,12 +106,24 @@ export const getStatusColor = (statusId?: number | null, statusString?: string |
   if (statusId != null && STATUS_COLOR_BY_ID[statusId]) {
     return STATUS_COLOR_BY_ID[statusId];
   }
-  
+
   // Fallback to string-based lookup
   if (statusString) {
     return STATUS_COLOR_BY_STRING[statusString] || '#666666';
   }
-  
+
   // Default fallback
+  return '#666666';
+};
+
+/**
+ * Get repair status color by status string
+ * @param statusString - Repair status string (e.g., "complete", "incomplete")
+ * @returns Color hex code or default gray
+ */
+export const getRepairStatusColor = (statusString?: string | null): string => {
+  if (statusString) {
+    return REPAIR_STATUS_COLORS[statusString.toLowerCase()] || '#666666';
+  }
   return '#666666';
 };

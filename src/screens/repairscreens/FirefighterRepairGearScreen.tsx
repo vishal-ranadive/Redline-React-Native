@@ -11,12 +11,12 @@ import { repairApi } from '../../services/repairApi';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
-import { getStatusColor } from '../../constants/inspection';
+import { getRepairStatusColor } from '../../constants/inspection';
 import Pagination from '../../components/common/Pagination';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'RepairDetails'>;
 
-// Status color mapping moved to global constants - use getStatusColor() instead
+// Status color mapping moved to global constants - use getRepairStatusColor() instead
 
 // Function to get appropriate emoji based on gear type
 const getGearEmoji = (gearType: string | null) => {
@@ -463,7 +463,7 @@ export default function FirefighterRepairGearScreen() {
       const isOtherType = gearTypeName.toLowerCase().trim() === 'other';
       const displayTypeOrName = isOtherType ? gearName : gearTypeName;
       const statusId = gear.current_repair?.repair_status?.id;
-      const statusColor = getStatusColor(statusId, item.gearStatus);
+      const statusColor = getRepairStatusColor(item.gearStatus);
 
       // Get repair images
       const repairImages = gear.current_repair?.repair_images || [];
