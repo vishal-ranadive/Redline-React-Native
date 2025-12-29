@@ -28,9 +28,14 @@ interface RepairState {
   firefighterRepairGears: GearRepair[];
   loading: boolean;
   error: string | null;
+  pagination: {
+    page: number;
+    page_size: number;
+    total: number;
+  } | null;
 
   // Actions
-  fetchFirefighterRepairGears: (leadId: number, rosterId: number) => Promise<void>;
+  fetchFirefighterRepairGears: (leadId: number, rosterId: number, page?: number, pageSize?: number) => Promise<void>;
   clearFirefighterRepairGears: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -41,16 +46,25 @@ export const useRepairStore = create<RepairState>((set, get) => ({
   firefighterRepairGears: [],
   loading: false,
   error: null,
+  pagination: null,
 
   // Fetch firefighter repair gears
-  fetchFirefighterRepairGears: async (leadId: number, rosterId: number) => {
+  fetchFirefighterRepairGears: async (leadId: number, rosterId: number, page?: number, pageSize?: number) => {
     set({ loading: true, error: null });
     try {
-      const response = await repairApi.getFirefighterRepairInformation(leadId, rosterId);
+      const params = {
+        lead_id: leadId,
+        roster_id: rosterId,
+        ...(page && { page }),
+        ...(pageSize && { page_size: pageSize }),
+      };
+
+      const response = await repairApi.getFirefighterRepairInformationWithPagination(params);
 
       if (response.status) {
         set({
           firefighterRepairGears: response.gear || [],
+          pagination: response.pagination || null,
           loading: false,
           error: null,
         });
@@ -70,7 +84,7 @@ export const useRepairStore = create<RepairState>((set, get) => ({
 
   // Clear firefighter repair gears
   clearFirefighterRepairGears: () => {
-    set({ firefighterRepairGears: [], error: null });
+    set({ firefighterRepairGears: [], pagination: null, error: null });
   },
 
   setLoading: (loading: boolean) => set({ loading }),

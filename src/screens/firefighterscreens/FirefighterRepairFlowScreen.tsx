@@ -35,6 +35,7 @@ import { useRepairStore } from '../../store/repairStore';
 import { useLeadStore } from '../../store/leadStore';
 import { useGearStore } from '../../store/gearStore';
 import { ColorPickerModal } from '../../components/common';
+import Pagination from '../../components/common/Pagination';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
@@ -118,6 +119,7 @@ const FirefighterRepairFlowScreen = () => {
   const {
     firefighterRepairGears,
     loading,
+    pagination,
     fetchFirefighterRepairGears,
     clearFirefighterRepairGears
   } = useRepairStore();
@@ -138,6 +140,8 @@ const FirefighterRepairFlowScreen = () => {
   const [isTablet, setIsTablet] = useState<boolean>(
     Math.min(Dimensions.get('window').width, Dimensions.get('window').height) >= 600
   );
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(50); // Items per page
+  const numberOfItemsPerPageList = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500]; // Page size options
 
 
 useFocusEffect(
@@ -149,13 +153,13 @@ useFocusEffect(
     } else if (selectedFirefighter && currentLead) {
       // Refresh repair gears when screen is focused and firefighter is already selected
       console.log("🔧 Repair Screen Focused – Refreshing repair gears for selected firefighter");
-      fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id || selectedFirefighter.id);
+      fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id || selectedFirefighter.id, 1, numberOfItemsPerPage);
     }
 
     return () => {
       // optional cleanup if needed
     };
-  }, [firefighter, selectedFirefighter, currentLead, fetchFirefighterRepairGears])
+  }, [firefighter, selectedFirefighter, currentLead, fetchFirefighterRepairGears, numberOfItemsPerPage])
 );
 
   // Effect for handling screen orientation changes
@@ -190,7 +194,7 @@ useFocusEffect(
     setSelectedCategory(null);
 
     try {
-      await fetchFirefighterRepairGears(currentLead.lead_id, roster.roster_id);
+      await fetchFirefighterRepairGears(currentLead.lead_id, roster.roster_id, 1, numberOfItemsPerPage);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch repair gears');
     }
@@ -205,13 +209,13 @@ useFocusEffect(
 
     setRefreshing(true);
     try {
-      await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id);
+      await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id, 1, numberOfItemsPerPage);
     } catch (error) {
       Alert.alert('Error', 'Failed to refresh repair gears');
     } finally {
       setRefreshing(false);
     }
-  }, [selectedFirefighter, currentLead, fetchFirefighterRepairGears]);
+  }, [selectedFirefighter, currentLead, fetchFirefighterRepairGears, numberOfItemsPerPage]);
 
   // Clear repair gears when firefighter is deselected
   useEffect(() => {
@@ -467,7 +471,7 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
               // Refresh the repair gear list
               if (selectedFirefighter && currentLead) {
-                await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id);
+                await fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id, pagination?.page || 1, numberOfItemsPerPage);
               }
             } catch (error: any) {
               console.error('Error deleting gear:', error);
@@ -490,6 +494,19 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
   const handleCancel = () => {
     navigation.goBack();
+  };
+
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    if (!selectedFirefighter || !currentLead) return;
+    fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id, page, numberOfItemsPerPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setNumberOfItemsPerPage(newItemsPerPage);
+    if (!selectedFirefighter || !currentLead) return;
+    fetchFirefighterRepairGears(currentLead.lead_id, selectedFirefighter.roster_id, 1, newItemsPerPage);
   };
 
   const handleOpenRosterModal = () => {
@@ -1121,6 +1138,18 @@ const getCategoryRepairSummary = (categoryId:string) => {
         ) : (
           // When no category selected, show categories in 2 columns
           renderCategories()
+        )}
+
+        {/* Pagination */}
+        {pagination && selectedFirefighter && (
+          <Pagination
+            page={pagination.page}
+            total={pagination.total}
+            itemsPerPage={numberOfItemsPerPage}
+            itemsPerPageList={numberOfItemsPerPageList}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
         )}
 
         {/* Bottom Action Buttons */}
