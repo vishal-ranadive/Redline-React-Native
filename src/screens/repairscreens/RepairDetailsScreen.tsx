@@ -56,6 +56,7 @@ const RepairDetailsScreen = () => {
   // Mobile detection
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const isMobile = screenWidth < 600;
+  const isTablet = screenWidth >= 600 && screenWidth < 1024;
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -764,24 +765,64 @@ const RepairDetailsScreen = () => {
           />
         </View>
 
-        {/* Basic Repair Details */}
+        {/* Repair Settings - Spare Gear and Status */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Details</Text>
+          <View style={[styles.responsiveRow, isTablet && styles.tabletRow]}>
+            {/* Spare Gear Toggle */}
+            <View style={[styles.responsiveColumn, isTablet && styles.tabletColumn]}>
+              <View style={styles.rowSpace}>
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spare Gear</Text>
+                <View style={styles.toggleContainer}>
+                  <Switch
+                    value={formData.spearGear}
+                    onValueChange={(value) => handleFieldChange('spearGear', value)}
+                  />
+                </View>
+              </View>
+            </View>
 
-
-          {/* Spear Gear Toggle */}
-          <View style={styles.rowSpace}>
-            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spare Gear</Text>
-            <View style={styles.toggleContainer}>
-              <Switch
-                value={formData.spearGear}
-                onValueChange={(value) => handleFieldChange('spearGear', value)}
-              />
+            {/* Repair Status */}
+            <View style={[styles.responsiveColumn, isTablet && { ...styles.tabletColumn, marginRight: 0 }]}>
+              <View style={styles.rowSpace}>
+                <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
+                <View style={styles.rowWrap}>
+                  <Chip
+                    selected={formData.repairStatus === 'completed'}
+                    onPress={() => handleFieldChange('repairStatus', 'completed')}
+                    style={[
+                      styles.smallChoice,
+                      {
+                        backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
+                      }
+                    ]}
+                    textStyle={{
+                      color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
+                      fontSize: 12
+                    }}
+                  >
+                    Completed
+                  </Chip>
+                  <Chip
+                    selected={formData.repairStatus === 'rejected'}
+                    onPress={() => handleFieldChange('repairStatus', 'rejected')}
+                    style={[
+                      styles.smallChoice,
+                      {
+                        backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
+                      }
+                    ]}
+                    textStyle={{
+                      color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
+                      fontSize: 12
+                    }}
+                  >
+                    Rejected
+                  </Chip>
+                </View>
+              </View>
             </View>
           </View>
         </View>
-
-
 
         {/* Remarks */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -796,49 +837,6 @@ const RepairDetailsScreen = () => {
             containerStyle={{ alignItems: 'flex-start' }}
             enableVoice={true}
           />
-        </View>
-
-        {/* Repair Status */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Status</Text>
-
-          <View style={styles.rowSpace}>
-            <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
-            <View style={styles.rowWrap}>
-              <Chip
-                selected={formData.repairStatus === 'completed'}
-                onPress={() => handleFieldChange('repairStatus', 'completed')}
-                style={[
-                  styles.smallChoice,
-                  {
-                    backgroundColor: formData.repairStatus === 'completed' ? '#34A853' : colors.surfaceVariant
-                  }
-                ]}
-                textStyle={{
-                  color: formData.repairStatus === 'completed' ? '#fff' : colors.onSurfaceVariant,
-                  fontSize: 12
-                }}
-              >
-                Completed
-              </Chip>
-              <Chip
-                selected={formData.repairStatus === 'rejected'}
-                onPress={() => handleFieldChange('repairStatus', 'rejected')}
-                style={[
-                  styles.smallChoice,
-                  {
-                    backgroundColor: formData.repairStatus === 'rejected' ? '#EA4335' : colors.surfaceVariant
-                  }
-                ]}
-                textStyle={{
-                  color: formData.repairStatus === 'rejected' ? '#fff' : colors.onSurfaceVariant,
-                  fontSize: 12
-                }}
-              >
-                Rejected
-              </Chip>
-            </View>
-          </View>
         </View>
 
         {/* Upload Progress Indicator */}
@@ -1033,6 +1031,22 @@ const styles = StyleSheet.create({
   },
   smallChoice: {
     marginRight: 6
+  },
+
+  // Responsive layout styles
+  responsiveRow: {
+    flexDirection: 'column',
+  },
+  tabletRow: {
+    flexDirection: 'row',
+  },
+  responsiveColumn: {
+    marginBottom: 16,
+  },
+  tabletColumn: {
+    flex: 1,
+    marginBottom: 0,
+    marginRight: 16,
   },
 
   // Toggle styles

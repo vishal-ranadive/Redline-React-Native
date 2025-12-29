@@ -573,15 +573,11 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
       const sectionTitle = isPrevious ? 'Previous Repair' : 'Current Repair';
       const repairDate = repair.created_at ? new Date(repair.created_at).toLocaleDateString() : 'N/A';
-      const repairCost = repair.repair_cost !== null && repair.repair_cost !== undefined
-        ? `$${repair.repair_cost.toFixed(2)}`
+      const repairCost = repair.total_repair_cost !== null && repair.total_repair_cost !== undefined
+        ? `$${repair.total_repair_cost.toFixed(2)}`
         : 'N/A';
       const remarks = repair.remarks || 'N/A';
       const repairStatus = repair.repair_status || 'N/A';
-      const repairTag = 'N/A'; // No repair_tag field in API response
-      const repairQty = repair.repair_quantity !== null && repair.repair_quantity !== undefined
-        ? repair.repair_quantity.toString()
-        : 'N/A';
 
       return (
         <View style={[styles.repairSection, { borderTopColor: colors.outline }]}>
@@ -614,18 +610,6 @@ const getCategoryRepairSummary = (categoryId:string) => {
             <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Status:</Text>
             <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairStatus}</Text>
           </View>
-
-          <View style={styles.detailRow}>
-            <Icon source="tag" size={14} color={colors.primary} />
-            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Tag:</Text>
-            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairTag}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Icon source="counter" size={14} color={colors.primary} />
-            <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Quantity:</Text>
-            <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairQty}</Text>
-          </View>
         </View>
       );
     },
@@ -640,8 +624,6 @@ const getCategoryRepairSummary = (categoryId:string) => {
       const gearStatus = getGearStatus(gear);
       const statusId = gear.current_repair?.repair_status?.id;
       const statusColor = getStatusColor(statusId, gearStatus);
-      const tagColorName = gear.current_inspection?.tag_color?.toLowerCase().trim() || '';
-      const tagColor = tagColorName ? getColorHex(tagColorName) : "";
       const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id)?.gear_type || gear.gear?.gear_name || 'Other';
 
       // Get gear details from top-level gear object (now always available in API response)
@@ -661,7 +643,6 @@ const getCategoryRepairSummary = (categoryId:string) => {
               onPress={() => handleGearPress(gear)}
               style={[styles.gearCardNew, styles.shadow, { borderColor: colors.outline }]}
             >
-              <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
               <Card style={{ backgroundColor: colors.surface }}>
                 <Card.Content>
                   {/* Card Header with Gear Status */}
@@ -752,7 +733,6 @@ const getCategoryRepairSummary = (categoryId:string) => {
                     icon="clipboard-edit-outline"
                     style={styles.updateButton}
                     contentStyle={styles.updateButtonContent}
-                    buttonColor={tagColor}
                   >
                     Repair
                   </Button>
