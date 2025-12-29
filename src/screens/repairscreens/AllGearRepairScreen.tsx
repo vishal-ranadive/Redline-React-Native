@@ -255,7 +255,11 @@ export default function AllGearRepairScreen() {
 
               {/* Gear Image */}
               <View style={styles.gearImageContainer}>
-                <Icon source="wrench" size={p(60)} color={colors.primary} />
+                <Image
+                  source={getGearIconImage(repair.gear?.gear_type?.gear_type ?? repair.gear?.gear_name ?? null)}
+                  style={styles.gearImage}
+                  resizeMode="cover"
+                />
               </View>
 
               {/* Gear Details */}

@@ -39,7 +39,6 @@ const CreateJobScreen: React.FC = () => {
   const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
   // Job type state - matches API requirements: 'Repair' | 'Inspection'
   const [jobType, setJobType] = useState<'Repair' | 'Inspection'>('Inspection');
-  const [repairCost, setRepairCost] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   // Modal states
@@ -168,10 +167,6 @@ const CreateJobScreen: React.FC = () => {
       Alert.alert('Error', 'Please select a schedule date');
       return false;
     }
-    if (jobType === 'Repair' && (!repairCost || parseFloat(repairCost) <= 0)) {
-      Alert.alert('Error', 'Please enter a valid repair cost');
-      return false;
-    }
     return true;
   };
 
@@ -186,7 +181,6 @@ const CreateJobScreen: React.FC = () => {
         firestation_id: selectedFirestation!.firestation_id,
         schedule_date: scheduleDate!.toISOString().split('T')[0], // Format as YYYY-MM-DD
         type: jobType,
-        ...(jobType === 'Repair' && { repair_cost: parseFloat(repairCost) }),
       };
 
       console.log('🔄 Creating job with data:', jobData);
@@ -197,7 +191,30 @@ const CreateJobScreen: React.FC = () => {
           {
             text: 'OK',
             onPress: () => {
-              navigation.goBack();
+              // Navigate to LeadDetailScreen with the created lead
+              navigation.navigate('LeadDetail', {
+                lead: {
+                  lead_id: response.lead_id,
+                  // Add other required fields for LeadDetailScreen
+                  type: jobType,
+                  schedule_date: scheduleDate!.toISOString().split('T')[0],
+                  franchies: {
+                    id: selectedFranchise!.franchise_id,
+                    name: selectedFranchise!.franchise_name,
+                  },
+                  firestation: {
+                    id: selectedFirestation!.firestation_id,
+                    name: selectedFirestation!.fire_station_name,
+                    address: selectedFirestation!.address,
+                    city: selectedFirestation!.city,
+                    state: selectedFirestation!.state,
+                    country: selectedFirestation!.country,
+                    zip_code: selectedFirestation!.zip_code,
+                  },
+                  lead_status: 'Scheduled',
+                  remarks: '',
+                }
+              });
             },
           },
         ]);
@@ -410,23 +427,6 @@ const CreateJobScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Repair Cost - Only show for Repair type */}
-          {jobType === 'Repair' && (
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
-                Repair Cost *
-              </Text>
-              <TextInput
-                mode="outlined"
-                placeholder="Enter repair cost"
-                value={repairCost}
-                onChangeText={setRepairCost}
-                keyboardType="numeric"
-                style={styles.textInput}
-                activeOutlineColor={colors.primary}
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
 
@@ -477,7 +477,7 @@ const CreateJobScreen: React.FC = () => {
         <Modal
           visible={datePickerVisible}
           onDismiss={() => setDatePickerVisible(false)}
-          contentContainerStyle={[
+          style={[
             styles.datePickerModalContainer,
             isMobile && styles.datePickerModalContainerMobile,
             {
