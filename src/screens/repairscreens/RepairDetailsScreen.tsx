@@ -70,7 +70,6 @@ const RepairDetailsScreen = () => {
 
   // Form state for repair details
   const [formData, setFormData] = useState({
-    repairTag: '',
     spearGear: false,
     repairStatus: '',
     remarks: '',
@@ -106,6 +105,12 @@ const RepairDetailsScreen = () => {
   // Repair mode state
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [existingRepairData, setExistingRepairData] = useState<any>(null);
+
+  // Image assignment tracking
+  const [currentItemForImages, setCurrentItemForImages] = useState<{
+    category: string;
+    itemName: string;
+  } | null>(null);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -163,7 +168,6 @@ const RepairDetailsScreen = () => {
 
           // Pre-populate form with existing repair data
           setFormData({
-            repairTag: repairData.repair_tag || '',
             spearGear: repairData.spare_gear || false,
             repairStatus: repairData.repair_status || '',
             remarks: repairData.remarks || '',
@@ -226,22 +230,77 @@ const RepairDetailsScreen = () => {
 
   // Handle repair pricing changes
   const handleRepairTotalChange = useCallback((total: number, items: any[]) => {
+    console.log('🔄 handleRepairTotalChange called with items:', items);
     setRepairTotal(total);
-    setRepairItems(items);
+    // items is already the flattened array from RepairPricingCalculator
+    setRepairItemsArray(items);
+  }, []);
 
-    // Update the flat array for image assignment display
-    const flatArray = Object.values(items as any).reduce((allItems: any[], categoryItems: any) => {
-      return allItems.concat(
-        Object.values(categoryItems).map((item: any) => ({
-          repair_finding_id: parseInt(item.repair_finding_id || item.id),
-          repair_quantity: item.repair_quantity || item.quantity,
-          repair_cost: item.repair_cost || item.price,
-          name: item.name,
-          images: item.images || []
-        }))
-      );
-    }, []);
-    setRepairItemsArray(flatArray);
+  // Handle repair items change from RepairPricingCalculator
+  const handleRepairItemsChange = useCallback((repairItems: any) => {
+    console.log('🔄 handleRepairItemsChange called with repairItems:', repairItems);
+    setRepairItems(repairItems);
+  }, []);
+
+  // Assign image to specific repair item
+  const assignImageToRepairItem = useCallback((imageUri: string, category: string, itemName: string) => {
+    console.log('📸 Assigning image to repair item:', { imageUri, category, itemName });
+    setRepairItems((prev: any) => {
+      console.log('📸 Previous repairItems:', JSON.stringify(prev, null, 2));
+      const newItems = { ...prev };
+
+      // Ensure category exists
+      if (!newItems[category]) {
+        console.log('📸 Creating new category:', category);
+        newItems[category] = {};
+      }
+
+      // Ensure item exists
+      if (!newItems[category][itemName]) {
+        console.log('📸 Creating new item:', itemName, 'in category:', category);
+        newItems[category][itemName] = { images: [] };
+      }
+
+      // Ensure images array exists
+      if (!newItems[category][itemName].images) {
+        newItems[category][itemName].images = [];
+      }
+
+      // Add the image
+      newItems[category][itemName].images.push(imageUri);
+      console.log('📸 Updated repairItems:', JSON.stringify(newItems, null, 2));
+      console.log('📸 Total categories after update:', Object.keys(newItems).length);
+      Object.keys(newItems).forEach(cat => {
+        console.log(`📸 Category ${cat} has ${Object.keys(newItems[cat]).length} items`);
+      });
+
+      return newItems;
+    });
+  }, []);
+
+  // Handle image selection for specific repair items
+  const handleImageSelectForItem = useCallback((category: string, itemName: string) => {
+    // Track which item the images should be assigned to
+    setCurrentItemForImages({ category, itemName });
+    setShowImageSourceModal(true);
+    console.log('Selecting images for:', category, itemName);
+  }, []);
+
+  // Remove image from specific repair item
+  const handleRemoveImageFromItem = useCallback((category: string, itemName: string, imageUri: string) => {
+    setRepairItems((prev: any) => {
+      const newItems = { ...prev };
+      if (newItems[category] && newItems[category][itemName] && newItems[category][itemName].images) {
+        newItems[category][itemName].images = newItems[category][itemName].images.filter(
+          (uri: string) => uri !== imageUri
+        );
+      }
+      return newItems;
+    });
+
+    // Also remove from the main images array
+    setImages(prev => prev.filter(img => img.uri !== imageUri));
+    setDeletedImages(prev => [...prev, ...prev.filter(img => img.uri === imageUri)]);
   }, []);
 
   // Image handling functions
@@ -251,7 +310,7 @@ const RepairDetailsScreen = () => {
   };
 
   const handleImageEditorSave = (editedImageUri: string) => {
-    setImages(prev => {
+    setImages((prev: Array<{ id: string; uri: string }>) => {
       const index = prev.findIndex(img => img.uri === imageToEdit);
       if (index !== -1) {
         const newImages = [...prev];
@@ -269,12 +328,19 @@ const RepairDetailsScreen = () => {
   };
 
   const handleCameraCaptured = (uri: string) => {
-    setImages(prev => [...prev, { id: `camera-${Date.now()}`, uri }]);
+    const newImage = { id: `camera-${Date.now()}`, uri };
+    setImages((prev: Array<{ id: string; uri: string }>) => [...prev, newImage]);
+
+    // Assign image to current repair item if one is selected
+    if (currentItemForImages) {
+      assignImageToRepairItem(newImage.uri, currentItemForImages.category, currentItemForImages.itemName);
+      setCurrentItemForImages(null);
+    }
   };
 
   const handlePickFromGallery = async () => {
     try {
-      
+
       const response = await launchImageLibrary({
         mediaType: 'photo',
         selectionLimit: 1,
@@ -287,7 +353,14 @@ const RepairDetailsScreen = () => {
 
       const uri = response.assets?.[0]?.uri;
       if (uri) {
-        setImages(prev => [...prev, { id: `gallery-${Date.now()}`, uri }]);
+        const newImage = { id: `gallery-${Date.now()}`, uri };
+        setImages((prev: Array<{ id: string; uri: string }>) => [...prev, newImage]);
+
+        // Assign image to current repair item if one is selected
+        if (currentItemForImages) {
+          assignImageToRepairItem(newImage.uri, currentItemForImages.category, currentItemForImages.itemName);
+          setCurrentItemForImages(null);
+        }
       }
     } catch (error) {
       Alert.alert('Image picker error', 'Unable to select image from gallery.');
@@ -300,6 +373,22 @@ const RepairDetailsScreen = () => {
     if (imageToRemove) {
       setImages(prev => prev.filter(img => img.id !== imageId));
       setDeletedImages(prev => [...prev, imageToRemove]);
+
+      // Also remove from repair items
+      setRepairItems((prev: any) => {
+        const newItems = { ...prev };
+        Object.keys(newItems).forEach(category => {
+          Object.keys(newItems[category]).forEach(itemName => {
+            if (newItems[category][itemName].images) {
+              newItems[category][itemName].images = newItems[category][itemName].images.filter(
+                (uri: string) => uri !== imageToRemove.uri
+              );
+            }
+          });
+        });
+        return newItems;
+      });
+
       console.log('Image marked for deletion:', imageToRemove.uri);
     }
   };
@@ -308,21 +397,22 @@ const RepairDetailsScreen = () => {
   const handleRestoreImage = (imageId: string) => {
     const imageToRestore = deletedImages.find(img => img.id === imageId);
     if (imageToRestore) {
-      setDeletedImages(prev => prev.filter(img => img.id !== imageId));
-      setImages(prev => [...prev, imageToRestore]);
+      setDeletedImages((prev: Array<{ id: string; uri: string }>) => prev.filter(img => img.id !== imageId));
+      setImages((prev: Array<{ id: string; uri: string }>) => [...prev, imageToRestore]);
       console.log('Image restored:', imageToRestore.uri);
     }
   };
 
   // Save repair data (create or update)
   const handleSaveRepair = async () => {
+    console.log('🔧 SAVE REPAIR TRIGGERED');
+    console.log(`Mode: ${isUpdateMode ? 'UPDATE' : 'CREATE'}`);
+    console.log(`Repair Total: $${repairTotal}`);
+    console.log(`Repair Status: ${formData.repairStatus}`);
+    console.log(`Current Images Count: ${images.length}`);
+
     if (repairTotal === 0) {
       Alert.alert('Error', 'Please add at least one repair item');
-      return;
-    }
-
-    if (!formData.repairTag.trim()) {
-      Alert.alert('Error', 'Please fill in repair tag');
       return;
     }
 
@@ -393,22 +483,37 @@ const RepairDetailsScreen = () => {
       setUploadedImageUrls(uploadedImageUrls);
       setUploadingImages(false);
 
-      // Step 2: Get current repair items array and distribute uploaded images
+      // Step 2: Get current repair items array and distribute uploaded image URLs
       const currentRepairItemsArray = [...repairItemsArray];
 
-      // Distribute uploaded images across repair findings (for now, distribute evenly)
-      // TODO: Add UI to allow users to assign images to specific repair findings
-      if (uploadedImageUrls.length > 0 && currentRepairItemsArray.length > 0) {
-        currentRepairItemsArray.forEach((item, index) => {
-          // For now, assign images in round-robin fashion
-          // This can be improved with proper image assignment UI
-          const imagesForThisItem = [];
-          for (let i = index; i < uploadedImageUrls.length; i += currentRepairItemsArray.length) {
-            imagesForThisItem.push(uploadedImageUrls[i]);
-          }
-          item.images = imagesForThisItem;
-        });
-      }
+      // Create mapping from local file URIs to uploaded URLs
+      const imageUrlMap = new Map<string, string>();
+      images.forEach((img, index) => {
+        if (uploadedImageUrls[index]) {
+          imageUrlMap.set(img.uri, uploadedImageUrls[index]);
+        }
+      });
+
+      // Replace local file URIs with uploaded URLs in repair items
+      currentRepairItemsArray.forEach(item => {
+        if (item.images && item.images.length > 0) {
+          item.images = item.images.map((imageUri: string) => {
+            return imageUrlMap.get(imageUri) || imageUri; // Use uploaded URL if available, otherwise keep original
+          });
+        }
+        // Remove the name field as it's not needed in the API payload
+        delete item.name;
+      });
+
+      console.log('📋 Current Repair Items Array (after URL distribution):');
+      currentRepairItemsArray.forEach((item, index) => {
+        console.log(`  Item ${index + 1}: Finding ${item.repair_finding_id}, Qty: ${item.repair_quantity}, Images: ${item.images?.length || 0}`);
+        if (item.images && item.images.length > 0) {
+          item.images.forEach((imgUrl: string, imgIndex: number) => {
+            console.log(`    Image ${imgIndex + 1}: ${imgUrl}`);
+          });
+        }
+      });
 
       // Step 3: Prepare repair data
       const repairData = {
@@ -425,17 +530,50 @@ const RepairDetailsScreen = () => {
         spare_gear: formData.spearGear,
       };
 
-      console.log('Repair Data:', repairData);
+      // Enhanced logging for the payload
+      console.log('🚀 FINAL REPAIR PAYLOAD BEING SENT:');
+      console.log('='.repeat(50));
+      console.log('📋 Basic Info:');
+      console.log(`  Lead ID: ${repairData.lead_id}`);
+      console.log(`  Firestation ID: ${repairData.firestation_id}`);
+      console.log(`  Gear ID: ${repairData.gear_id}`);
+      console.log(`  Roster ID: ${repairData.roster_id}`);
+      console.log(`  Franchise ID: ${repairData.franchise_id}`);
+      console.log(`  Status: ${repairData.repair_status}`);
+      console.log(`  Total Cost: $${repairData.repair_cost}`);
+      console.log(`  Remarks: ${repairData.remarks || 'None'}`);
+      console.log(`  Spare Gear: ${repairData.spare_gear}`);
+
+      console.log('\n📦 Repair Items:');
+      repairData.repair_items.forEach((item, index) => {
+        console.log(`  Item ${index + 1}:`);
+        console.log(`    Finding ID: ${item.repair_finding_id}`);
+        console.log(`    Quantity: ${item.repair_quantity}`);
+        console.log(`    Cost: $${item.repair_cost}`);
+        console.log(`    Images (${item.images?.length || 0}):`);
+        if (item.images && item.images.length > 0) {
+          item.images.forEach((imgUrl: string, imgIndex: number) => {
+            console.log(`      ${imgIndex + 1}. ${imgUrl}`);
+          });
+        } else {
+          console.log(`      No images assigned`);
+        }
+        console.log('');
+      });
+
+      console.log('='.repeat(50));
+      console.log('Full Payload Object:', JSON.stringify(repairData, null, 2));
 
       // Step 3: Create or update repair via API
       let repairResponse;
       if (isUpdateMode && repairId) {
         // Update existing repair
-        console.log('🔄 Updating existing repair with ID:', repairId);
+        console.log(`🔄 UPDATING REPAIR - API Call: PUT /gear-repair/${repairId}/`);
+        console.log('Repair ID:', repairId);
         repairResponse = await repairApi.updateGearRepair(repairId, repairData);
       } else {
         // Create new repair
-        console.log('➕ Creating new repair');
+        console.log('➕ CREATING NEW REPAIR - API Call: POST /gear-repair/');
         repairResponse = await repairApi.createGearRepair(repairData);
       }
 
@@ -574,23 +712,23 @@ const RepairDetailsScreen = () => {
           <RepairPricingCalculator
             onTotalChange={handleRepairTotalChange}
             initialData={existingRepairData}
+            currentRepairItems={repairItems}
+            onRepairItemsChange={handleRepairItemsChange}
             isCollapsed={isPricingCollapsed}
             onToggleCollapse={() => setIsPricingCollapsed(!isPricingCollapsed)}
+            onImageSelectForItem={handleImageSelectForItem}
+            onRemoveImageFromItem={handleRemoveImageFromItem}
           />
+          {(() => {
+            console.log('🔧 Passing repairItems to RepairPricingCalculator:', JSON.stringify(repairItems, null, 2));
+            return null;
+          })()}
         </View>
 
         {/* Basic Repair Details */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Details</Text>
 
-          {/* Repair Tag */}
-          <Input
-            label="Repair Tag *"
-            value={formData.repairTag}
-            onChangeText={(text) => handleFieldChange('repairTag', text)}
-            placeholder="Enter repair tag"
-            style={{ marginBottom: 16 }}
-          />
 
           {/* Spear Gear Toggle */}
           <View style={styles.rowSpace}>
@@ -604,89 +742,7 @@ const RepairDetailsScreen = () => {
           </View>
         </View>
 
-        {/* Repair Images */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Repair Images</Text>
 
-          <View style={styles.imagesContainer}>
-            {images.map((image) => (
-              <View key={image.id} style={styles.imageWrapper}>
-                <TouchableOpacity
-                  style={styles.imageBox}
-                  onPress={() => handleImagePress(image.uri)}
-                >
-                  <Image
-                    source={{ uri: image.uri }}
-                    style={styles.previewImage}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                  onPress={() => handleRemoveImage(image.id)}
-                >
-                  <IconButton
-                    icon="close"
-                    size={16}
-                    iconColor="#fff"
-                    style={styles.removeIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={[styles.imageBox, styles.addImageBox]}
-              onPress={addNewImage}
-            >
-              <Text style={styles.addImageText}>+</Text>
-              <Text style={styles.addImageLabel}>Add Image</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Image Assignment to Repair Findings */}
-        {uploadedImageUrls.length > 0 && (
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Assign Images to Repair Findings</Text>
-            <Text style={[styles.sectionDescription, { color: colors.onSurfaceVariant }]}>
-              Images have been automatically distributed to repair findings. You can modify assignments as needed.
-            </Text>
-
-            {repairItemsArray.map((repairItem: any, index: number) => {
-              const finding = repairItem;
-              return (
-                <View key={`finding-${finding.repair_finding_id}`} style={styles.findingImageSection}>
-                  <Text style={[styles.findingTitle, { color: colors.onSurface }]}>
-                    {finding.name || `Repair Finding ${finding.repair_finding_id}`}
-                  </Text>
-                  <Text style={[styles.findingSubtitle, { color: colors.onSurfaceVariant }]}>
-                    Quantity: {finding.repair_quantity}, Cost: ${finding.repair_cost}
-                  </Text>
-
-                  <View style={styles.assignedImagesContainer}>
-                    {finding.images && finding.images.map((imageUrl: string, imgIndex: number) => {
-                      const originalImage = images.find(img => img.uri === imageUrl);
-                      return (
-                        <View key={`${finding.repair_finding_id}-img-${imgIndex}`} style={styles.assignedImageWrapper}>
-                          <Image
-                            source={{ uri: imageUrl }}
-                            style={styles.assignedImage}
-                            resizeMode="cover"
-                          />
-                        </View>
-                      );
-                    })}
-                    {(!finding.images || finding.images.length === 0) && (
-                      <Text style={[styles.noImagesText, { color: colors.onSurfaceVariant }]}>
-                        No images assigned
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
 
         {/* Remarks */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -775,7 +831,7 @@ const RepairDetailsScreen = () => {
             mode="contained"
             onPress={handleSaveRepair}
             loading={uploadingImages}
-            disabled={uploadingImages || repairTotal === 0 || !formData.repairTag.trim()}
+            disabled={uploadingImages || repairTotal === 0}
           >
             {uploadingImages
               ? (isUpdateMode ? 'Updating...' : 'Creating...')
@@ -788,7 +844,10 @@ const RepairDetailsScreen = () => {
       {/* Modals */}
       <ImageSourcePickerModal
         visible={showImageSourceModal}
-        onDismiss={() => setShowImageSourceModal(false)}
+        onDismiss={() => {
+          setShowImageSourceModal(false);
+          setCurrentItemForImages(null);
+        }}
         onPickCamera={() => {
           setShowImageSourceModal(false);
           setShowCameraModal(true);
@@ -802,7 +861,10 @@ const RepairDetailsScreen = () => {
       {/* Camera Modal */}
       <CameraCaptureModal
         visible={showCameraModal}
-        onClose={() => setShowCameraModal(false)}
+        onClose={() => {
+          setShowCameraModal(false);
+          setCurrentItemForImages(null);
+        }}
         onPhotoCaptured={handleCameraCaptured}
       />
 
@@ -1076,53 +1138,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 18,
     marginTop: 12,
-  },
-
-  // Image Assignment Styles
-  sectionDescription: {
-    fontSize: 12,
-    marginBottom: 16,
-    lineHeight: 16,
-  },
-  findingImageSection: {
-    marginBottom: 20,
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-  },
-  findingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  findingSubtitle: {
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  assignedImagesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  assignedImageWrapper: {
-    position: 'relative',
-    width: 60,
-    height: 60,
-    borderRadius: 6,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  assignedImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  noImagesText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    padding: 16,
   },
 });
 

@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -57,15 +58,23 @@ interface CategoryItems {
 interface RepairPricingCalculatorProps {
   onTotalChange?: (total: number, items: RepairItem[]) => void;
   initialData?: any;
+  currentRepairItems?: any;
+  onRepairItemsChange?: (repairItems: any) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onImageSelectForItem?: (category: string, itemName: string) => void;
+  onRemoveImageFromItem?: (category: string, itemName: string, imageUri: string) => void;
 }
 
 const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   onTotalChange,
   initialData,
+  currentRepairItems,
+  onRepairItemsChange,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onImageSelectForItem,
+  onRemoveImageFromItem
 }) => {
   const { colors } = useTheme();
 
@@ -181,6 +190,54 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     }
   }, [initialData]);
 
+  // Update categoryItems when currentRepairItems changes (for external image updates only)
+  // This should only run when external changes happen, not from our own callbacks
+  useEffect(() => {
+    if (currentRepairItems && Object.keys(currentRepairItems).length > 0) {
+      console.log('🔄 External update: currentRepairItems changed, updating categoryItems');
+
+      // Only update if this is different from our current state to avoid loops
+      let hasChanges = false;
+      const newCategoryItems: { [category: string]: CategoryItems } = { ...categoryItems };
+
+      Object.entries(currentRepairItems).forEach(([category, categoryData]: [string, any]) => {
+        if (categoryData && typeof categoryData === 'object') {
+          if (!newCategoryItems[category]) {
+            newCategoryItems[category] = {};
+            hasChanges = true;
+          }
+
+          Object.entries(categoryData).forEach(([itemName, itemData]: [string, any]) => {
+            const existingItem = newCategoryItems[category]?.[itemName];
+            const currentImages = existingItem?.images || [];
+            const newImages = itemData.images || [];
+
+            // Only update if images have changed (external image assignment)
+            if (JSON.stringify(currentImages) !== JSON.stringify(newImages)) {
+              if (!newCategoryItems[category][itemName]) {
+                newCategoryItems[category][itemName] = {
+                  repair_finding_id: parseInt(itemName) || itemData.repair_finding_id || 0,
+                  name: existingItem?.name || itemData.name || itemName,
+                  repair_quantity: itemData.repair_quantity || itemData.quantity || 1,
+                  repair_cost: itemData.repair_cost || itemData.price?.toString() || '',
+                  images: []
+                };
+              }
+              newCategoryItems[category][itemName].images = newImages;
+              hasChanges = true;
+              console.log('🔄 Updated images for item:', category, itemName);
+            }
+          });
+        }
+      });
+
+      if (hasChanges) {
+        console.log('🔄 Applying external changes to categoryItems');
+        setCategoryItems(newCategoryItems);
+      }
+    }
+  }, [currentRepairItems]);
+
   // Calculate totals and notify parent
   const { categoryTotals, grandTotal, allItems } = useMemo(() => {
     const totals: { [category: string]: number } = {};
@@ -270,10 +327,17 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       }
     });
 
-    setCategoryItems(prev => ({
-      ...prev,
-      [category]: newItems
-    }));
+    setCategoryItems(prev => {
+      const updatedCategoryItems = {
+        ...prev,
+        [category]: newItems
+      };
+      // Notify parent of repair items change
+      if (onRepairItemsChange) {
+        setTimeout(() => onRepairItemsChange(updatedCategoryItems), 0);
+      }
+      return updatedCategoryItems;
+    });
 
     setItemSelectionModal({ visible: false, category: '', selectedItems: new Set(), itemConfigs: {} });
   };
@@ -339,6 +403,11 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         newItems[category][itemName].repair_quantity = newQuantity;
       }
 
+      // Notify parent of repair items change when items are removed
+      if (newQuantity === 0 && onRepairItemsChange) {
+        setTimeout(() => onRepairItemsChange(newItems), 0);
+      }
+
       return newItems;
     });
   };
@@ -367,6 +436,11 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
           newCats.delete(category);
           return newCats;
         });
+      }
+
+      // Notify parent of repair items change
+      if (onRepairItemsChange) {
+        setTimeout(() => onRepairItemsChange(newItems), 0);
       }
 
       return newItems;
@@ -401,6 +475,12 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     setCategoryItems(prev => {
       const newItems = { ...prev };
       delete newItems[category];
+
+      // Notify parent of repair items change
+      if (onRepairItemsChange) {
+        setTimeout(() => onRepairItemsChange(newItems), 0);
+      }
+
       return newItems;
     });
 
@@ -525,64 +605,113 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                   <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Item ({itemCount})</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Price</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Images</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Subtotal</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Actions</Text>
                 </View>
 
                 {Object.entries(items).map(([itemName, item]) => (
-                  <View key={itemName} style={styles.tableRow}>
-                    <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
-                      {item.name}
-                    </Text>
+                  <View key={itemName}>
+                    <View style={styles.tableRow}>
+                        <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
+                          {item.name}
+                        </Text>
 
-                    <View style={styles.tableCellMedium}>
-                      <TextInput
-                        value={item.repair_cost}
-                        onChangeText={(value) => updatePrice(category, itemName, value)}
-                        placeholder="0.00"
-                        keyboardType="decimal-pad"
-                        style={[styles.priceInput, { backgroundColor: colors.surfaceVariant }]}
-                        mode="outlined"
-                        dense
-                      />
-                    </View>
+                      <View style={styles.tableCellMedium}>
+                        <TextInput
+                          value={item.repair_cost}
+                          onChangeText={(value) => updatePrice(category, itemName, value)}
+                          placeholder="0.00"
+                          keyboardType="decimal-pad"
+                          style={[styles.priceInput, { backgroundColor: colors.surfaceVariant }]}
+                          mode="outlined"
+                          dense
+                        />
+                      </View>
 
-                    <View style={styles.tableCellMedium}>
-                      <View style={styles.quantityContainer}>
+                      <View style={styles.tableCellMedium}>
+                        <View style={styles.quantityContainer}>
+                          <TouchableOpacity
+                            style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                            onPress={() => changeQuantity(category, itemName, -1)}
+                          >
+                            <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
+                          </TouchableOpacity>
+                          <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
+                          <TouchableOpacity
+                            style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                            onPress={() => changeQuantity(category, itemName, 1)}
+                          >
+                            <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={styles.tableCellMedium}>
                         <TouchableOpacity
-                          style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
-                          onPress={() => changeQuantity(category, itemName, -1)}
+                          style={[styles.imageButton, { backgroundColor: colors.surfaceVariant }]}
+                          onPress={() => onImageSelectForItem && onImageSelectForItem(category, itemName)}
                         >
-                          <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
+                          <Text style={[styles.imageButtonText, { color: colors.onSurfaceVariant }]}>
+                            {item.images?.length || 0} 📷
+                          </Text>
                         </TouchableOpacity>
-                        <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
-                        <TouchableOpacity
-                          style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
-                          onPress={() => changeQuantity(category, itemName, 1)}
-                        >
-                          <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>+</Text>
-                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
+                        ${(parseFloat(item.repair_cost) || 0) * item.repair_quantity}
+                      </Text>
+
+                      <View style={styles.tableCellMedium}>
+                        <IconButton
+                          icon="delete"
+                          size={20}
+                          onPress={() => removeItem(category, itemName)}
+                          iconColor={colors.primary}
+                        />
                       </View>
                     </View>
 
-                    <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
-                      ${(parseFloat(item.repair_cost) || 0) * item.repair_quantity}
-                    </Text>
-
-                    <View style={styles.tableCellMedium}>
-                      <IconButton
-                        icon="delete"
-                        size={20}
-                        onPress={() => removeItem(category, itemName)}
-                        iconColor={colors.primary}
-                      />
-                    </View>
+                    {/* Images display for this specific repair item */}
+                    {item.images && item.images.length > 0 && (
+                      <View style={styles.itemImagesRow}>
+                        <View style={styles.itemImagesGrid}>
+                          {item.images.map((imageUri: string, imgIndex: number) => {
+                            console.log('🎨 Rendering image:', imageUri, 'for item:', itemName);
+                            return (
+                              <View key={`${itemName}-img-${imgIndex}`} style={styles.itemImageWrapper}>
+                                <TouchableOpacity
+                                  style={styles.itemImageContainer}
+                                  onPress={() => {/* TODO: Open image preview */}}
+                                >
+                                  <Image
+                                    source={{ uri: imageUri }}
+                                    style={styles.itemImage}
+                                    resizeMode="cover"
+                                  />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[styles.removeItemImageButton, { backgroundColor: colors.error }]}
+                                  onPress={() => onRemoveImageFromItem && onRemoveImageFromItem(category, itemName, imageUri)}
+                                >
+                                  <Text style={styles.removeItemImageText}>×</Text>
+                                </TouchableOpacity>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
                   </View>
                 ))}
+
+
               </View>
+              {/* TODO: add images display for each repair item */}
+              
             </ScrollView>
           )}
-        
+
       </Card>
     );
   };
@@ -981,6 +1110,64 @@ const styles = StyleSheet.create({
   },
   priceInput: {
     height: p(36),
+  },
+  imageButton: {
+    padding: p(8),
+    borderRadius: p(4),
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: p(32),
+  },
+  imageButtonText: {
+    fontSize: p(12),
+    fontWeight: '500',
+  },
+  itemImagesRow: {
+    paddingHorizontal: p(8),
+    paddingVertical: p(8),
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  itemImagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: p(8),
+  },
+  itemImageWrapper: {
+    position: 'relative',
+    width: p(60),
+    height: p(60),
+  },
+  itemImageContainer: {
+    width: '100%',
+    height: '100%',
+    borderRadius: p(6),
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: p(6),
+  },
+  removeItemImageButton: {
+    position: 'absolute',
+    top: -p(6),
+    right: -p(6),
+    width: p(20),
+    height: p(20),
+    borderRadius: p(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeItemImageText: {
+    color: '#fff',
+    fontSize: p(14),
+    fontWeight: 'bold',
   },
   totalsCard: {
     marginHorizontal: p(14),
