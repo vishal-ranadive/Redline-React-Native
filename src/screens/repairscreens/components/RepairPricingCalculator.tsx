@@ -267,6 +267,18 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   const toggleCategory = (category: string) => {
     const newSelected = new Set(selectedCategories);
     if (newSelected.has(category)) {
+      // Check if category has any items before allowing deselection
+      const categoryItemsCount = categoryItems[category] ? Object.keys(categoryItems[category]).length : 0;
+      if (categoryItemsCount > 0) {
+        // Show confirmation dialog if category has items
+        setDeleteDialog({
+          visible: true,
+          type: 'category',
+          category
+        });
+        return;
+      }
+      // If no items, proceed with deselection
       newSelected.delete(category);
       const newItems = { ...categoryItems };
       delete newItems[category];
@@ -519,13 +531,14 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         <View style={[styles.categoryGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
           {repairGroups.map((group) => {
             const categoryKey = group.group_name.toLowerCase().replace(/\s+/g, '-');
+            const isSelected = selectedCategories.has(categoryKey);
             return (
               <TouchableOpacity
                 key={categoryKey}
                 style={[
                   styles.categoryButton,
                   {
-                    backgroundColor: selectedCategories.has(categoryKey)
+                    backgroundColor: isSelected
                       ? colors.primary
                       : colors.surfaceVariant
                   }
@@ -536,7 +549,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                   style={[
                     styles.categoryButtonText,
                     {
-                      color: selectedCategories.has(categoryKey)
+                      color: isSelected
                         ? colors.onPrimary
                         : colors.onSurfaceVariant
                     }

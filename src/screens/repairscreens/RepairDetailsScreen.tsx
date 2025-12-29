@@ -51,6 +51,7 @@ const RepairDetailsScreen = () => {
   const { fetchGearById } = useGearStore();
 
   const { gearId, leadId, leadData, repairId } = route.params;
+  console.log("repairId", repairId);
 
   // Mobile detection
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
@@ -173,21 +174,63 @@ const RepairDetailsScreen = () => {
             remarks: repairData.remarks || '',
           });
 
-          // Pre-populate repair items if they exist
-          if (repairData.repair_items) {
-            setRepairItems(repairData.repair_items);
+          // Set repair total if available
+          if (repairData.total_repair_cost) {
+            setRepairTotal(repairData.total_repair_cost);
           }
 
-          // Pre-populate images if they exist
-          if (repairData.repair_images && Array.isArray(repairData.repair_images)) {
-            const existingImages = repairData.repair_images.map((img: any) => ({
-              id: `existing-${img.image_id}`,
-              uri: img.image_urls,
-            }));
-            setImages(existingImages);
+          let transformedRepairItems: any = {};
+
+          // Transform repair_findings into repair_items format expected by RepairPricingCalculator
+          if (repairData.repair_findings && Array.isArray(repairData.repair_findings)) {
+            repairData.repair_findings.forEach((group: any) => {
+              const { group_name, findings } = group;
+              // Use the same key transformation as RepairPricingCalculator: lowercase with spaces replaced by dashes
+              const categoryKey = group_name.toLowerCase().replace(/\s+/g, '-');
+              transformedRepairItems[categoryKey] = {};
+
+              findings.forEach((finding: any) => {
+                transformedRepairItems[categoryKey][finding.repair_finding_name] = {
+                  repair_finding_id: finding.repair_finding_id,
+                  name: finding.repair_finding_name,
+                  repair_quantity: finding.repair_quantity,
+                  repair_cost: finding.repair_cost.toString(),
+                  images: finding.images || []
+                };
+              });
+            });
+
+            setRepairItems(transformedRepairItems);
           }
 
-          setExistingRepairData(repairData);
+          // Collect all images from repair findings
+          if (repairData.repair_findings && Array.isArray(repairData.repair_findings)) {
+            const allImages: Array<{ id: string; uri: string }> = [];
+
+            repairData.repair_findings.forEach((group: any) => {
+              group.findings.forEach((finding: any) => {
+                if (finding.images && Array.isArray(finding.images)) {
+                  finding.images.forEach((imageUrl: string) => {
+                    allImages.push({
+                      id: `existing-${Date.now()}-${Math.random()}`,
+                      uri: imageUrl
+                    });
+                  });
+                }
+              });
+            });
+
+            console.log("RepairDetailsScreen - Collected images:", allImages);
+            setImages(allImages);
+          }
+
+          // Add the transformed repair_items to existingRepairData for RepairPricingCalculator
+          const repairDataWithItems = {
+            ...repairData,
+            repair_items: transformedRepairItems
+          };
+
+          setExistingRepairData(repairDataWithItems);
         } else {
           setError('Failed to load repair data');
         }
@@ -719,10 +762,6 @@ const RepairDetailsScreen = () => {
             onImageSelectForItem={handleImageSelectForItem}
             onRemoveImageFromItem={handleRemoveImageFromItem}
           />
-          {(() => {
-            console.log('🔧 Passing repairItems to RepairPricingCalculator:', JSON.stringify(repairItems, null, 2));
-            return null;
-          })()}
         </View>
 
         {/* Basic Repair Details */}
