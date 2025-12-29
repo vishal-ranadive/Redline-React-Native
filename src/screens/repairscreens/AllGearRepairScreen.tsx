@@ -132,10 +132,11 @@ export default function AllGearRepairScreen() {
 
     const sectionTitle = isPrevious ? 'Previous Repair' : 'Current Repair';
     const repairDate = repair.created_at ? new Date(repair.created_at).toLocaleDateString() : 'N/A';
-    const repairCost = repair.repair_cost !== null && repair.repair_cost !== undefined
-      ? `$${repair.repair_cost.toFixed(2)}`
+    const repairCost = repair.total_repair_cost !== null && repair.total_repair_cost !== undefined
+      ? `$${repair.total_repair_cost.toFixed(2)}`
       : 'N/A';
     const remarks = repair.remarks || 'N/A';
+    const status = repair.repair_status || 'N/A';
 
     return (
       <View style={[styles.repairSection, { borderTopColor: colors.outline }]}>
@@ -156,6 +157,12 @@ export default function AllGearRepairScreen() {
         </View>
 
         <View style={styles.detailRow}>
+          <Icon source="check-circle-outline" size={14} color={colors.primary} />
+          <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Status:</Text>
+          <Text style={[styles.detailValue, { color: colors.onSurface }]}>{status.toUpperCase()}</Text>
+        </View>
+
+        <View style={styles.detailRow}>
           <Icon source="note-text" size={14} color={colors.primary} />
           <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Remarks:</Text>
           <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
@@ -170,14 +177,20 @@ export default function AllGearRepairScreen() {
   const filteredRepairs = repairs.filter(repair => {
     if (!searchQuery) return true; // If no search query, show all
 
-    const gearId = repair.gear_id?.toString() || '';
+    const gearId = repair.gear?.gear_id?.toString() || '';
     const repairId = repair.repair_id?.toString() || '';
     const repairStatus = repair.repair_status || '';
+    const gearName = repair.gear?.gear_name || '';
+    const serialNumber = repair.gear?.serial_number || '';
+    const manufacturerName = repair.gear?.manufacturer?.manufacturer_name || '';
 
     return (
       gearId.includes(searchQuery) ||
       repairId.includes(searchQuery) ||
-      repairStatus.toLowerCase().includes(searchQuery.toLowerCase())
+      repairStatus.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      gearName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      manufacturerName.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -186,14 +199,20 @@ export default function AllGearRepairScreen() {
       const gearStatus = repair.repair_status || 'Unknown';
       const statusColor = getStatusColor(null, gearStatus);
       const tagColor = ""; // No tag color info available in current API response
-      const gearTypeName = 'Gear'; // Placeholder since gear details not available
+      const gearTypeName = repair.gear?.gear_name || repair.gear?.gear_type?.gear_type || 'Gear';
 
-    // Since gear details are not available in the current API response,
-    // we'll use repair information and placeholder data
-    const gearId = repair.gear_id || 'N/A';
-    const serialNumber = `ID: ${gearId}`;
-    const manufacturerName = 'Unknown Manufacturer';
-    const gearSize = 'N/A';
+    // Use gear details from the nested gear object
+    const gearId = repair.gear?.gear_id || 'N/A';
+    const serialNumber = repair.gear?.serial_number || `ID: ${gearId}`;
+    const manufacturerName = repair.gear?.manufacturer?.manufacturer_name || 'Unknown Manufacturer';
+    const gearSize = repair.gear?.gear_size || 'N/A';
+
+    // Calculate total quantity from repair findings
+    const totalQuantity = repair.repair_findings?.reduce((total: number, group: any) => {
+      return total + group.findings?.reduce((groupTotal: number, finding: any) => {
+        return groupTotal + (finding.repair_quantity || 0);
+      }, 0);
+    }, 0) || 'N/A';
 
     return (
       <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
@@ -274,13 +293,13 @@ export default function AllGearRepairScreen() {
                 <View style={styles.detailRow}>
                   <Icon source="counter" size={14} color={colors.primary} />
                   <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Quantity:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repair.repair_quantity || 'N/A'}</Text>
+                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>{totalQuantity}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
                   <Icon source="currency-usd" size={14} color={colors.primary} />
                   <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>${repair.repair_cost || '0'}</Text>
+                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>${repair.total_repair_cost || '0'}</Text>
                 </View>
               </View>
 
@@ -335,7 +354,7 @@ export default function AllGearRepairScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by gear name, serial, or repair ID"
+          placeholder="Search by gear name, serial, manufacturer, or repair ID"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}

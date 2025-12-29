@@ -126,7 +126,7 @@ export default function FirefighterRepairGearScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1); // 1-based for Pagination component
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(50);
   const numberOfItemsPerPageList = [10, 20, 30, 40, 50];
 
   // Mobile detection
@@ -229,7 +229,12 @@ export default function FirefighterRepairGearScreen() {
     setBuildingCards(true);
 
     try {
-      const cards = repairsData.map((repairItem) => {
+      // Only show gears that have current_repair.repair_id
+      const filteredRepairsData = repairsData.filter(repairItem =>
+        repairItem.current_repair?.repair_id
+      );
+
+      const cards = filteredRepairsData.map((repairItem) => {
         let gearStatus = '';
         if (repairItem.current_repair?.repair_status) {
           gearStatus = repairItem.current_repair.repair_status;
@@ -322,6 +327,7 @@ export default function FirefighterRepairGearScreen() {
     }
   };
 
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -358,7 +364,42 @@ export default function FirefighterRepairGearScreen() {
    */
   const renderRepairDetails = useCallback(
     (repair: any, isPrevious: boolean = false) => {
-      if (!repair) return null;
+      if (!repair) {
+        // Show N/A section to maintain consistent card height
+        return (
+          <View style={[styles.repairSection, { borderTopColor: colors.outline }]}>
+            <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
+              {isPrevious ? 'Previous Repair' : 'Current Repair'}
+            </Text>
+
+            <View style={styles.detailRow}>
+              <Icon source="calendar" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Date:</Text>
+              <Text style={[styles.detailValue, { color: colors.onSurface }]}>N/A</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="currency-usd" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
+              <Text style={[styles.detailValue, { color: colors.onSurface }]}>N/A</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="note-text" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Remarks:</Text>
+              <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
+                N/A
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <Icon source="wrench" size={14} color={colors.primary} />
+              <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Status:</Text>
+              <Text style={[styles.detailValue, { color: colors.onSurface }]}>N/A</Text>
+            </View>
+          </View>
+        );
+      }
 
       const sectionTitle = isPrevious ? 'Previous Repair' : 'Current Repair';
       const repairDate = repair.created_at ? new Date(repair.created_at).toLocaleDateString() : 'N/A';
@@ -448,29 +489,16 @@ export default function FirefighterRepairGearScreen() {
               <Card.Content>
                 {/* Card Header with Gear Status */}
                 <View style={styles.cardHeader}>
-                  {item.gearStatus ? (
-                    <Chip
-                      mode="outlined"
-                      textStyle={[styles.gearStatusText, { color: '#fff' }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: statusColor, borderColor: statusColor },
-                      ]}
-                    >
-                      {item.gearStatus}
-                    </Chip>
-                  ) : (
-                    <Chip
-                      mode="outlined"
-                      textStyle={[styles.gearStatusText, { color: '#fff' }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: statusColor, borderColor: statusColor },
-                      ]}
-                    >
-                      No Status
-                    </Chip>
-                  )}
+                  <Chip
+                    mode="outlined"
+                    textStyle={[styles.gearStatusText, { color: '#fff' }]}
+                    style={[
+                      styles.headerStatusChip,
+                      { backgroundColor: statusColor, borderColor: statusColor },
+                    ]}
+                  >
+                    {item.gearStatus || 'No Status'}
+                  </Chip>
                 </View>
 
                 <View style={styles.gearImageContainer}>
