@@ -27,6 +27,23 @@ export const repairApi = {
     return response.data;
   },
 
+  // Get firefighter repair information with pagination
+  getFirefighterRepairInformationWithPagination: async (params: {
+    lead_id: number;
+    roster_id: number;
+    page?: number;
+    page_size?: number;
+  }): Promise<any> => {
+    console.log(
+      `➡️ API CALL GET /firefighter-repair-information/?lead_id=${params.lead_id}&roster_id=${params.roster_id}&page=${params.page}&page_size=${params.page_size}`,
+    );
+    const response = await axiosInstance.get(`/firefighter-repair-information/`, {
+      params,
+    });
+    console.log('✅ API Response GET /firefighter-repair-information/', response.data);
+    return response.data;
+  },
+
   // Upload repair image to S3
   uploadRepairImage: async (formData: FormData): Promise<any> => {
     console.log('➡️ API CALL POST /upload-repair-image/', formData);
@@ -81,6 +98,22 @@ export const repairApi = {
     });
 
     console.log('✅ API Response GET /gear-repair/', response.data);
+    return response.data;
+  },
+
+  // Get repair rosters for a lead
+  getRepairRosters: async (leadId: number, page?: number, pageSize?: number, name?: string): Promise<any> => {
+    console.log(`➡️ API CALL GET /gear-repair/rosters/${leadId}/?page=${page}&page_size=${pageSize}&name=${name}`);
+
+    const response = await axiosInstance.get(`/gear-repair/rosters/${leadId}/`, {
+      params: {
+        ...(page && { page }),
+        ...(pageSize && { page_size: pageSize }),
+        ...(name && { name }),
+      },
+    });
+
+    console.log(`✅ API Response GET /gear-repair/rosters/${leadId}/`, response.data);
     return response.data;
   },
 
