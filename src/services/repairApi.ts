@@ -49,12 +49,14 @@ export const repairApi = {
     repair_status: 'completed' | 'rejected';
     repair_sub_total: number;
     repair_cost: number;
-    repair_images: string[];
     remarks: string;
-    repair_qty: number;
-    repair_tag: string;
+    repair_items: Array<{
+      repair_finding_id: number;
+      repair_quantity: number;
+      repair_cost: string;
+      images: string[];
+    }>;
     spare_gear: boolean;
-    slug?: string;
   }): Promise<any> => {
     console.log('➡️ API CALL POST /gear-repair/ with', repairData);
 

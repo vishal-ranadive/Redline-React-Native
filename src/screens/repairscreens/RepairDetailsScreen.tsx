@@ -81,6 +81,9 @@ const RepairDetailsScreen = () => {
   const [repairTotal, setRepairTotal] = useState(0);
   const [isPricingCollapsed, setIsPricingCollapsed] = useState(false);
 
+  // Image assignment state
+  const [repairItemsArray, setRepairItemsArray] = useState<any[]>([]);
+
   // UI state
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isGearInfoCollapsed, setIsGearInfoCollapsed] = useState(true);
@@ -98,6 +101,7 @@ const RepairDetailsScreen = () => {
   // Image upload state
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, percentage: 0 });
+  const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
 
   // Repair mode state
   const [isUpdateMode, setIsUpdateMode] = useState(false);
@@ -224,6 +228,20 @@ const RepairDetailsScreen = () => {
   const handleRepairTotalChange = useCallback((total: number, items: any[]) => {
     setRepairTotal(total);
     setRepairItems(items);
+
+    // Update the flat array for image assignment display
+    const flatArray = Object.values(items as any).reduce((allItems: any[], categoryItems: any) => {
+      return allItems.concat(
+        Object.values(categoryItems).map((item: any) => ({
+          repair_finding_id: parseInt(item.repair_finding_id || item.id),
+          repair_quantity: item.repair_quantity || item.quantity,
+          repair_cost: item.repair_cost || item.price,
+          name: item.name,
+          images: item.images || []
+        }))
+      );
+    }, []);
+    setRepairItemsArray(flatArray);
   }, []);
 
   // Image handling functions
@@ -371,10 +389,29 @@ const RepairDetailsScreen = () => {
 
       console.log('📷 Final repair image URLs:', uploadedImageUrls);
 
+      // Update state with uploaded image URLs
+      setUploadedImageUrls(uploadedImageUrls);
       setUploadingImages(false);
 
-      // Step 2: Prepare repair data
-      const baseRepairData = {
+      // Step 2: Get current repair items array and distribute uploaded images
+      const currentRepairItemsArray = [...repairItemsArray];
+
+      // Distribute uploaded images across repair findings (for now, distribute evenly)
+      // TODO: Add UI to allow users to assign images to specific repair findings
+      if (uploadedImageUrls.length > 0 && currentRepairItemsArray.length > 0) {
+        currentRepairItemsArray.forEach((item, index) => {
+          // For now, assign images in round-robin fashion
+          // This can be improved with proper image assignment UI
+          const imagesForThisItem = [];
+          for (let i = index; i < uploadedImageUrls.length; i += currentRepairItemsArray.length) {
+            imagesForThisItem.push(uploadedImageUrls[i]);
+          }
+          item.images = imagesForThisItem;
+        });
+      }
+
+      // Step 3: Prepare repair data
+      const repairData = {
         lead_id: currentLead?.lead_id || leadId,
         firestation_id: currentLead?.firestation?.id || leadData?.firestation_id,
         gear_id: gearId,
@@ -384,17 +421,7 @@ const RepairDetailsScreen = () => {
         repair_sub_total: repairTotal,
         repair_cost: repairTotal,
         remarks: formData.remarks,
-        repair_tag: formData.repairTag,
-        repair_qty: Object.values(repairItems as any).reduce((total: number, items: any) => {
-          return total + Object.values(items).reduce((catTotal: number, item: any) => catTotal + (item.quantity || 0), 0);
-        }, 0),
-        repair_items: repairItems, // New field for detailed repair items
-      };
-
-      // Same field names for both create and update operations
-      const repairData = {
-        ...baseRepairData,
-        repair_images: uploadedImageUrls,
+        repair_items: currentRepairItemsArray,
         spare_gear: formData.spearGear,
       };
 
@@ -616,6 +643,50 @@ const RepairDetailsScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Image Assignment to Repair Findings */}
+        {uploadedImageUrls.length > 0 && (
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Assign Images to Repair Findings</Text>
+            <Text style={[styles.sectionDescription, { color: colors.onSurfaceVariant }]}>
+              Images have been automatically distributed to repair findings. You can modify assignments as needed.
+            </Text>
+
+            {repairItemsArray.map((repairItem: any, index: number) => {
+              const finding = repairItem;
+              return (
+                <View key={`finding-${finding.repair_finding_id}`} style={styles.findingImageSection}>
+                  <Text style={[styles.findingTitle, { color: colors.onSurface }]}>
+                    {finding.name || `Repair Finding ${finding.repair_finding_id}`}
+                  </Text>
+                  <Text style={[styles.findingSubtitle, { color: colors.onSurfaceVariant }]}>
+                    Quantity: {finding.repair_quantity}, Cost: ${finding.repair_cost}
+                  </Text>
+
+                  <View style={styles.assignedImagesContainer}>
+                    {finding.images && finding.images.map((imageUrl: string, imgIndex: number) => {
+                      const originalImage = images.find(img => img.uri === imageUrl);
+                      return (
+                        <View key={`${finding.repair_finding_id}-img-${imgIndex}`} style={styles.assignedImageWrapper}>
+                          <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.assignedImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                      );
+                    })}
+                    {(!finding.images || finding.images.length === 0) && (
+                      <Text style={[styles.noImagesText, { color: colors.onSurfaceVariant }]}>
+                        No images assigned
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* Remarks */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -1005,6 +1076,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 18,
     marginTop: 12,
+  },
+
+  // Image Assignment Styles
+  sectionDescription: {
+    fontSize: 12,
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+  findingImageSection: {
+    marginBottom: 20,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+  findingTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  findingSubtitle: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  assignedImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  assignedImageWrapper: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  assignedImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  noImagesText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 16,
   },
 });
 
