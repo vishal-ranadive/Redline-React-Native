@@ -9,7 +9,6 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
-import Pagination from '../../components/common/Pagination';
 
 type ApiLoad = {
   load_number: number;
@@ -42,19 +41,11 @@ export default function LoadsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Pagination state
-  const [page, setPage] = useState(0);
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(5);
-  const numberOfItemsPerPageList = [3, 4, 5, 6];
 
   // Detect if device is mobile (width < 600)
   const screenWidth = Dimensions.get('window').width;
   const isMobile = screenWidth < 600;
   const numColumns = isMobile ? 1 : 2;
-
-  // Pagination calculations
-  const from = page * numberOfItemsPerPage;
-  const to = Math.min((page + 1) * numberOfItemsPerPage, loads.length);
 
   // Filter loads by search
   const filteredLoads = loads.filter(load => {
@@ -65,15 +56,10 @@ export default function LoadsScreen() {
     return matchesSearch;
   });
 
-  const currentLoads = filteredLoads.slice(from, to);
-
   useEffect(() => {
     fetchLoads();
   }, [currentLead]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [numberOfItemsPerPage, filteredLoads.length]);
 
   const fetchLoads = async (options?: { skipLoader?: boolean }) => {
     const useLoader = !options?.skipLoader;
@@ -241,7 +227,7 @@ export default function LoadsScreen() {
         </View>
       ) : (
         <FlatList
-          data={currentLoads}
+          data={filteredLoads}
           renderItem={renderLoadCard}
           keyExtractor={(item) => item.id}
           numColumns={numColumns}
@@ -259,21 +245,6 @@ export default function LoadsScreen() {
         />
       )}
 
-      {/* Pagination at Bottom */}
-      {filteredLoads.length > 0 && (
-        <Pagination
-          page={page}
-          total={filteredLoads.length}
-          itemsPerPage={numberOfItemsPerPage}
-          itemsPerPageList={numberOfItemsPerPageList}
-          onPageChange={setPage}
-          onItemsPerPageChange={setNumberOfItemsPerPage}
-          containerStyle={[
-            styles.paginationContainer,
-            isMobile && styles.paginationContainerMobile,
-          ]}
-        />
-      )}
 
       {/* Add Load Dialog */}
       <Portal>
@@ -329,15 +300,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: p(8),
-  },
-  paginationContainer: {
-    position: 'absolute',
-    bottom: p(50), // Push above bottom nav bar
-    left: 0,
-    right: 0,
-  },
-  paginationContainerMobile: {
-    paddingHorizontal: p(8),
   },
   loadCard: {
     borderRadius: p(16),
