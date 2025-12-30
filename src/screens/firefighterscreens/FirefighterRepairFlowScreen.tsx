@@ -41,7 +41,7 @@ import { inspectionApi } from '../../services/inspectionApi';
 import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import { gearApi } from '../../services/gearApi';
-import { getStatusColor } from '../../constants/inspection';
+import { getStatusColor, getRepairStatusColor } from '../../constants/inspection';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_repair_tag_color';
 
@@ -639,8 +639,8 @@ const getCategoryRepairSummary = (categoryId:string) => {
   const renderGearCard = useCallback(
     (gear: any) => {
       const gearStatus = getGearStatus(gear);
-      const statusId = gear.current_repair?.repair_status?.id;
-      const statusColor = getStatusColor(statusId, gearStatus);
+      // Use getRepairStatusColor for repair statuses like "complete" and "incomplete"
+      const statusColor = getRepairStatusColor(gearStatus);
       const gearTypeName = gearTypes.find(gt => gt.gear_type_id === gear.gear?.gear_type?.gear_type_id)?.gear_type || gear.gear?.gear_name || 'Other';
 
       // Get gear details from top-level gear object (now always available in API response)
@@ -856,11 +856,11 @@ const getCategoryRepairSummary = (categoryId:string) => {
                                 {gear.gear_usage ? `${gear.gear_usage} — ` : ''}{gear.gear_name}
                               </Text>
                               <View style={styles.statusRowPortrait}>
-                                <Icon source="arrow-right" size={14} color={getStatusColor(null, gear.current_status)} />
+                                <Icon source="arrow-right" size={14} color={getRepairStatusColor(gear.current_status)} />
                                 <Text
                                   style={[
                                     styles.gearStatusTextCategory,
-                                    { color: getStatusColor(null, gear.current_status), marginLeft: p(4) }
+                                    { color: getRepairStatusColor(gear.current_status), marginLeft: p(4) }
                                   ]}
                                 >
                                   {gear.current_status}
@@ -876,7 +876,7 @@ const getCategoryRepairSummary = (categoryId:string) => {
                               <Text
                                 style={[
                                   styles.gearStatusTextCategory,
-                                  { color: getStatusColor(null, gear.current_status), marginLeft: p(8) }
+                                  { color: getRepairStatusColor(gear.current_status), marginLeft: p(8) }
                                 ]}
                               >
                                 {gear.current_status}

@@ -626,8 +626,8 @@ const RepairDetailsScreen = () => {
           ? (repairResponse.message || 'Repair updated successfully!')
           : (repairResponse.message || 'Repair created successfully!');
         Alert.alert('Success', successMessage);
-        // Navigate back
-        // navigation.goBack();
+        // Navigate back after successful save
+        navigation.goBack();
       } else {
         // Handle specific error cases like duplicates
         const errorMsg = repairResponse.message || `Failed to ${isUpdateMode ? 'update' : 'create'} repair`;
