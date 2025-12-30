@@ -515,9 +515,11 @@ const CreateJobScreen: React.FC = () => {
                   }
                 } : {}}
                 onDayPress={(day) => {
-                  const selectedDate = new Date(day.dateString);
+                  // Parse the date parts to avoid timezone issues on iOS
+                  const [year, month, dayNum] = day.dateString.split('-').map(Number);
+                  const selectedDate = new Date(year, month - 1, dayNum);
                   setScheduleDate(selectedDate);
-                  setDatePickerVisible(false);
+                  // Don't auto-close - let user confirm with Done button
                 }}
                 monthFormat={'MMMM yyyy'}
                 theme={{
