@@ -42,6 +42,7 @@ interface ScannedGear {
 
 interface ScanGearResponse {
   inspectionId: string;
+  repairId: string | null;
   name: string;
   gearType: {
     id: number;
@@ -194,10 +195,13 @@ const stopScanning = () => {
                 gear_image_url: gear.gear_image_url || null,
                 // Store additional data for navigation
                 inspectionId: gearData.inspectionId,
-                mode: gearData.inspectionId && 
-                  gearData.inspectionId.toString().trim() !== '' && 
-                  gearData.inspectionId.toString().trim() !== 'null' 
-                  ? 'update' : 'create',
+                repairId: gearData.repairId,
+                mode: source === 'REPAIR'
+                  ? (gearData.repairId && gearData.repairId.toString().trim() !== '' && gearData.repairId.toString().trim() !== 'null' ? 'update' : 'create')
+                  : (gearData.inspectionId &&
+                    gearData.inspectionId.toString().trim() !== '' &&
+                    gearData.inspectionId.toString().trim() !== 'null'
+                    ? 'update' : 'create'),
                 rosterData: gearData.roster
               } as any;
             });
@@ -255,11 +259,18 @@ const stopScanning = () => {
   const handleGearPress = (gear: any) => {
     if (source === 'REPAIR') {
       // Navigate to Repair Details screen for repair flow
-      navigation.navigate('RepairDetails', {
+      const navigationParams: any = {
         gearId: gear.gear_id,
         leadId: currentLead?.lead_id,
         leadData: currentLead,
-      });
+      };
+
+      // If there's an existing repair, pass the repair_id for updating
+      if (gear.repairId) {
+        navigationParams.repairId = gear.repairId;
+      }
+
+      navigation.navigate('RepairDetails', navigationParams);
     } else {
       // Navigate to UpdateInspection screen for inspection flow (existing behavior)
       // Prepare roster data for navigation
