@@ -212,20 +212,24 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
             const currentImages = existingItem?.images || [];
             const newImages = itemData.images || [];
 
-            // Only update if images have changed (external image assignment)
-            if (JSON.stringify(currentImages) !== JSON.stringify(newImages)) {
-              if (!newCategoryItems[category][itemName]) {
-                newCategoryItems[category][itemName] = {
-                  repair_finding_id: parseInt(itemName) || itemData.repair_finding_id || 0,
-                  name: existingItem?.name || itemData.name || itemName,
-                  repair_quantity: itemData.repair_quantity || itemData.quantity || 1,
-                  repair_cost: itemData.repair_cost || itemData.price?.toString() || '',
-                  images: []
-                };
-              }
-              newCategoryItems[category][itemName].images = newImages;
+            // Ensure the item exists in categoryItems (even if images haven't changed)
+            if (!existingItem) {
+              newCategoryItems[category][itemName] = {
+                repair_finding_id: parseInt(itemName) || itemData.repair_finding_id || 0,
+                name: itemData.name || itemName,
+                repair_quantity: itemData.repair_quantity || itemData.quantity || 1,
+                repair_cost: itemData.repair_cost || itemData.price?.toString() || '',
+                images: newImages
+              };
               hasChanges = true;
-              console.log('🔄 Updated images for item:', category, itemName);
+              console.log('🔄 Added missing item:', category, itemName);
+            } else {
+              // Only update if images have changed (external image assignment)
+              if (JSON.stringify(currentImages) !== JSON.stringify(newImages)) {
+                newCategoryItems[category][itemName].images = newImages;
+                hasChanges = true;
+                console.log('🔄 Updated images for item:', category, itemName);
+              }
             }
           });
         }

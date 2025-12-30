@@ -114,9 +114,9 @@ export default function AllGearRepairScreen() {
     try {
       // Navigate to RepairDetails page
       navigation.navigate('RepairDetails', {
-        repairId: repair.repair_id,
-        gearId: repair.gear_id,
-        leadId: repair.lead_id,
+        repairId: repair?.repair_id,
+        gearId: repair?.gear?.gear_id,
+        leadId: repair?.lead_id,
         leadData: currentLead,
       });
     } catch (error) {
