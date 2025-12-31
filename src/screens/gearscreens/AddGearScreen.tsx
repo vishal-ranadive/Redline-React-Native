@@ -296,28 +296,25 @@ const AddGearScreen = () => {
           type: 'success',
           text1: 'Gear added successfully!',
         });
-        // Reset form and navigate based on lead type
-        setTimeout(() => {
-          resetForm();
 
-          // Navigate based on lead type (case insensitive)
-          const leadType = currentLead?.type?.toLowerCase();
-          if (leadType === 'repair') {
-            // Navigate to Repair Details screen
-            navigation.navigate('RepairDetails', {
-              gearId: Number(createdGear.gear_id),
-              leadId: currentLead.lead_id,
-              leadData: currentLead
-            });
-          } else {
-            // Default to Update Inspection screen for inspection leads
-            navigation.navigate('UpadateInspection', {
-              gearId: Number(createdGear.gear_id),
-              firefighter: assignedRoster,
-              mode: "create"
-            });
-          }
-        }, 500);
+        // Navigate based on lead type (case insensitive)
+        // Using replace to prevent showing GearScanScreen during transition
+        const leadType = currentLead?.type?.toLowerCase();
+        if (leadType === 'repair') {
+          // Navigate to Repair Details screen
+          navigation.replace('RepairDetails', {
+            gearId: Number(createdGear.gear_id),
+            leadId: currentLead.lead_id,
+            leadData: currentLead
+          });
+        } else {
+          // Default to Update Inspection screen for inspection leads
+          navigation.replace('UpadateInspection', {
+            gearId: Number(createdGear.gear_id),
+            firefighter: assignedRoster,
+            mode: "create"
+          });
+        }
       } else {
         // showSnackbar('Failed to add gear. Please try again.');
         Toast.show({

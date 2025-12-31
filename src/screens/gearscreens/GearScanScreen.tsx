@@ -270,7 +270,8 @@ const stopScanning = () => {
         navigationParams.repairId = gear.repairId;
       }
 
-      navigation.navigate('RepairDetails', navigationParams);
+      // Use replace to prevent GearScan from flashing during transition
+      navigation.replace('RepairDetails', navigationParams);
     } else {
       // Navigate to UpdateInspection screen for inspection flow (existing behavior)
       // Prepare roster data for navigation
@@ -289,7 +290,8 @@ const stopScanning = () => {
         gear.inspectionId.toString().trim() !== '' &&
         gear.inspectionId.toString().trim() !== 'null';
 
-      navigation.navigate('UpadateInspection', {
+      // Use replace to prevent GearScan from flashing during transition
+      navigation.replace('UpadateInspection', {
         gearId: gear.gear_id,
         inspectionId: hasInspectionId ? parseInt(gear.inspectionId.toString()) : undefined,
         mode: gear.mode || (hasInspectionId ? 'update' : 'create'),
