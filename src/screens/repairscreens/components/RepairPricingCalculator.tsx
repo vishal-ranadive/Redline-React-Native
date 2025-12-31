@@ -361,6 +361,15 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       return updatedCategoryItems;
     });
 
+    // Expand the category if at least one item was added
+    if (Object.keys(newItems).length > 0) {
+      setCollapsedCategories(prev => {
+        const newCollapsed = new Set(prev);
+        newCollapsed.delete(category);
+        return newCollapsed;
+      });
+    }
+
     setItemSelectionModal({ visible: false, category: '', selectedItems: new Set(), itemConfigs: {} });
   };
 
