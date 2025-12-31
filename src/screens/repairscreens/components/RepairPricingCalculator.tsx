@@ -271,7 +271,6 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   const toggleCategory = (category: string) => {
     const newSelected = new Set(selectedCategories);
     if (newSelected.has(category)) {
-      // Category is already selected - handle deselection
       // Check if category has any items before allowing deselection
       const categoryItemsCount = categoryItems[category] ? Object.keys(categoryItems[category]).length : 0;
       if (categoryItemsCount > 0) {
@@ -288,65 +287,50 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       const newItems = { ...categoryItems };
       delete newItems[category];
       setCategoryItems(newItems);
-      setSelectedCategories(newSelected);
     } else {
-      // Category is NOT selected - first time selecting
-      // Add to selected categories
+      // Category is being selected for the first time
       newSelected.add(category);
       setSelectedCategories(newSelected);
-      // Automatically open the add repair item modal for this category
-      showItemSelectionModal(category);
+      // Automatically open the item selection modal
+      setTimeout(() => {
+        showItemSelectionModal(category);
+      }, 0);
+      return;
     }
+    setSelectedCategories(newSelected);
   };
 
   const showItemSelectionModal = (category: string) => {
     const currentItems = categoryItems[category] || {};
     const selectedItems = new Set(Object.keys(currentItems));
-    const itemConfigs: { [itemId: string]: { quantity: number; price: string; images: string[] } } = {};
-
-    // Initialize configs for selected items
-    selectedItems.forEach(itemId => {
-      const existingItem = currentItems[itemId];
-      itemConfigs[itemId] = {
-        quantity: existingItem?.repair_quantity || 1,
-        price: existingItem?.repair_cost || '0',
-        images: existingItem?.images || []
-      };
-    });
 
     setItemSelectionModal({
       visible: true,
       category,
       selectedItems,
-      itemConfigs
+      itemConfigs: {} // No longer used, kept for type compatibility
     });
   };
 
   const addSelectedItems = () => {
-    const { category, selectedItems, itemConfigs } = itemSelectionModal;
+    const { category, selectedItems } = itemSelectionModal;
     const groupData = repairGroups.find(group => group.group_name.toLowerCase().replace(/\s+/g, '-') === category);
+    const currentItems = categoryItems[category] || {};
 
-    const newItems: CategoryItems = { ...categoryItems[category] };
+    const newItems: CategoryItems = {};
 
-    // Add new selected items with configured values
+    // Add selected items, preserving existing values if they exist, otherwise using defaults
     selectedItems.forEach(itemId => {
-      const config = itemConfigs[itemId] || { quantity: 1, price: '0', images: [] };
+      const existingItem = currentItems[itemId];
       const finding = groupData?.findings.find(f => f.repair_finding_id.toString() === itemId);
 
       newItems[itemId] = {
         repair_finding_id: parseInt(itemId),
         name: finding?.repair_finding_name || itemId,
-        repair_quantity: config.quantity,
-        repair_cost: config.price,
-        images: config.images
+        repair_quantity: existingItem?.repair_quantity || 1,
+        repair_cost: existingItem?.repair_cost || '0',
+        images: existingItem?.images || []
       };
-    });
-
-    // Remove unselected items
-    Object.keys(newItems).forEach(itemId => {
-      if (!selectedItems.has(itemId)) {
-        delete newItems[itemId];
-      }
     });
 
     setCategoryItems(prev => {
@@ -360,15 +344,6 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       }
       return updatedCategoryItems;
     });
-
-    // Expand the category if at least one item was added
-    if (Object.keys(newItems).length > 0) {
-      setCollapsedCategories(prev => {
-        const newCollapsed = new Set(prev);
-        newCollapsed.delete(category);
-        return newCollapsed;
-      });
-    }
 
     setItemSelectionModal({ visible: false, category: '', selectedItems: new Set(), itemConfigs: {} });
   };
@@ -591,10 +566,10 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     const isCollapsed = collapsedCategories.has(category);
 
     return (
-      <Card key={category} style={[styles.categoryCard, { backgroundColor: colors.surface }]}>
+      <Card key={category} style={[styles.categoryCard, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderColor: colors.outline + '60' }]}>
         
           <TouchableOpacity
-            style={styles.categoryHeader}
+            style={[styles.categoryHeader, { backgroundColor: '#ffe0e0' }]}
             onPress={() => toggleCategoryCollapse(category)}
             activeOpacity={0.7}
           >
@@ -619,7 +594,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 style={styles.addButton}
                 labelStyle={{ fontSize: p(11) }}
               >
-                {isMobile ? '+' : '+ Add repair item'}
+                {isMobile ? '+' : '+ Add Repair Item'}
               </Button>
               <IconButton
                 icon="delete"
@@ -633,7 +608,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
           {!isCollapsed && Object.keys(items).length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.tableScrollContainer}>
               <View style={styles.tableWrapper}>
-                <View style={styles.tableHeader}>
+                <View style={[styles.tableHeader, { backgroundColor: '#fff0f0', marginTop: p(2) , paddingVertical: p(4)}]}>
                   <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Item ({itemCount})</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Price</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
@@ -641,101 +616,122 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Subtotal</Text>
                   <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Actions</Text>
                 </View>
+                <Divider style={{ backgroundColor: colors.outline, marginVertical: 0 }} />
 
-                {Object.entries(items).map(([itemName, item]) => (
-                  <View key={itemName}>
-                    <View style={styles.tableRow}>
-                        <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
-                          {item.name}
+                {Object.entries(items).map(([itemName, item], index) => {
+                  const itemsArray = Object.entries(items);
+                  const isLastRow = index === itemsArray.length - 1;
+                  
+                  return (
+                    <View key={itemName}>
+                      <View style={styles.tableRow}>
+                          <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
+                            {item.name}
+                          </Text>
+
+                        <View style={styles.tableCellMedium}>
+                          <TextInput
+                            value={item.repair_cost}
+                            onChangeText={(value) => updatePrice(category, itemName, value)}
+                            placeholder="0.00"
+                            keyboardType="decimal-pad"
+                            style={[styles.priceInput, { backgroundColor: colors.surfaceVariant }]}
+                            mode="outlined"
+                            dense
+                          />
+                        </View>
+
+                        <View style={styles.tableCellMedium}>
+                          <View style={styles.quantityContainer}>
+                            <TouchableOpacity
+                              style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                              onPress={() => changeQuantity(category, itemName, -1)}
+                            >
+                              <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
+                            </TouchableOpacity>
+                            <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
+                            <TouchableOpacity
+                              style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                              onPress={() => changeQuantity(category, itemName, 1)}
+                            >
+                              <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        <View style={styles.tableCellMedium}>
+                          <TouchableOpacity
+                            style={[styles.imageButton, { backgroundColor: colors.surfaceVariant }]}
+                            onPress={() => onImageSelectForItem && onImageSelectForItem(category, itemName)}
+                          >
+                            <Text style={[styles.imageButtonText, { color: colors.onSurfaceVariant }]}>
+                              {item.images?.length || 0} 📷
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
+                          ${(parseFloat(item.repair_cost) || 0) * item.repair_quantity}
                         </Text>
 
-                      <View style={styles.tableCellMedium}>
-                        <TextInput
-                          value={item.repair_cost}
-                          onChangeText={(value) => updatePrice(category, itemName, value)}
-                          placeholder="0.00"
-                          keyboardType="decimal-pad"
-                          style={[styles.priceInput, { backgroundColor: colors.surfaceVariant }]}
-                          mode="outlined"
-                          dense
-                        />
-                      </View>
-
-                      <View style={styles.tableCellMedium}>
-                        <View style={styles.quantityContainer}>
-                          <TouchableOpacity
-                            style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
-                            onPress={() => changeQuantity(category, itemName, -1)}
-                          >
-                            <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
-                          </TouchableOpacity>
-                          <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
-                          <TouchableOpacity
-                            style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
-                            onPress={() => changeQuantity(category, itemName, 1)}
-                          >
-                            <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>+</Text>
-                          </TouchableOpacity>
+                        <View style={styles.tableCellMedium}>
+                          <IconButton
+                            icon="delete"
+                            size={20}
+                            onPress={() => removeItem(category, itemName)}
+                            iconColor={colors.primary}
+                          />
                         </View>
                       </View>
 
-                      <View style={styles.tableCellMedium}>
-                        <TouchableOpacity
-                          style={[styles.imageButton, { backgroundColor: colors.surfaceVariant }]}
-                          onPress={() => onImageSelectForItem && onImageSelectForItem(category, itemName)}
-                        >
-                          <Text style={[styles.imageButtonText, { color: colors.onSurfaceVariant }]}>
-                            {item.images?.length || 0} 📷
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                      {/* Images display for this specific repair item - visually connected to row */}
+                      {item.images && item.images.length > 0 && (
+                        <View style={[styles.itemImagesRow, { backgroundColor: colors.surfaceVariant + '40', borderLeftColor: colors.primary, borderTopColor: colors.outline + '40' }]}>
+                          <View style={styles.itemImagesHeader}>
+                            <View style={styles.itemImagesHeaderLeft}>
+                              <Text style={[styles.itemImagesLabel, { color: colors.onSurfaceVariant }]}>
+                                📷 Images for: <Text style={[styles.itemImagesItemName, { color: colors.primary, fontWeight: '600' }]}>{item.name}</Text>
+                              </Text>
+                              <Text style={[styles.itemImagesCount, { color: colors.onSurfaceVariant }]}>
+                                ({item.images.length})
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.itemImagesGrid}>
+                            {item.images.map((imageUri: string, imgIndex: number) => {
+                              console.log('🎨 Rendering image:', imageUri, 'for item:', itemName);
+                              return (
+                                <View key={`${itemName}-img-${imgIndex}`} style={styles.itemImageWrapper}>
+                                  <TouchableOpacity
+                                    style={styles.itemImageContainer}
+                                    onPress={() => {/* TODO: Open image preview */}}
+                                  >
+                                    <Image
+                                      source={{ uri: imageUri }}
+                                      style={styles.itemImage}
+                                      resizeMode="cover"
+                                    />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={[styles.removeItemImageButton, { backgroundColor: colors.error }]}
+                                    onPress={() => onRemoveImageFromItem && onRemoveImageFromItem(category, itemName, imageUri)}
+                                  >
+                                    <Text style={styles.removeItemImageText}>×</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      )}
 
-                      <Text style={[styles.tableCellMedium, { color: colors.onSurface, fontSize: p(12) }]}>
-                        ${(parseFloat(item.repair_cost) || 0) * item.repair_quantity}
-                      </Text>
-
-                      <View style={styles.tableCellMedium}>
-                        <IconButton
-                          icon="delete"
-                          size={20}
-                          onPress={() => removeItem(category, itemName)}
-                          iconColor={colors.primary}
-                        />
-                      </View>
+                      {/* Divider between rows - moved after images */}
+                      {!isLastRow && (
+                        <Divider style={{ backgroundColor: colors.outline , marginVertical: 0 }} />
+                      )}
                     </View>
-
-                    {/* Images display for this specific repair item */}
-                    {item.images && item.images.length > 0 && (
-                      <View style={styles.itemImagesRow}>
-                        <View style={styles.itemImagesGrid}>
-                          {item.images.map((imageUri: string, imgIndex: number) => {
-                            console.log('🎨 Rendering image:', imageUri, 'for item:', itemName);
-                            return (
-                              <View key={`${itemName}-img-${imgIndex}`} style={styles.itemImageWrapper}>
-                                <TouchableOpacity
-                                  style={styles.itemImageContainer}
-                                  onPress={() => {/* TODO: Open image preview */}}
-                                >
-                                  <Image
-                                    source={{ uri: imageUri }}
-                                    style={styles.itemImage}
-                                    resizeMode="cover"
-                                  />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={[styles.removeItemImageButton, { backgroundColor: colors.error }]}
-                                  onPress={() => onRemoveImageFromItem && onRemoveImageFromItem(category, itemName, imageUri)}
-                                >
-                                  <Text style={styles.removeItemImageText}>×</Text>
-                                </TouchableOpacity>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                ))}
+                  );
+                })}
 
 
               </View>
@@ -807,87 +803,46 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderTextNarrow, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Select</Text>
                     <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Item</Text>
-                    <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Price</Text>
-                    <Text style={[styles.tableHeaderTextNarrow, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
                   </View>
 
                   {groupData?.findings.map((finding) => {
                     const itemId = finding.repair_finding_id.toString();
-                    const config = itemConfigs[itemId] || { quantity: 1, price: '0', images: [] };
+                    const isSelected = selectedItems.has(itemId);
                     return (
-                      <View key={itemId} style={styles.tableRow}>
+                      <TouchableOpacity
+                        key={itemId}
+                        style={styles.tableRow}
+                        onPress={() => {
+                          const newSelected = new Set(selectedItems);
+                          if (newSelected.has(itemId)) {
+                            newSelected.delete(itemId);
+                          } else {
+                            newSelected.add(itemId);
+                          }
+                          setItemSelectionModal(prev => ({
+                            ...prev,
+                            selectedItems: newSelected
+                          }));
+                        }}
+                        activeOpacity={0.7}
+                      >
                         <View style={styles.tableCellNarrow}>
-                          <TouchableOpacity
-                            onPress={() => {
-                              const newSelected = new Set(selectedItems);
-                              if (newSelected.has(itemId)) {
-                                newSelected.delete(itemId);
-                                // Remove config when deselected
-                                const newConfigs = { ...itemConfigs };
-                                delete newConfigs[itemId];
-                                setItemSelectionModal(prev => ({
-                                  ...prev,
-                                  selectedItems: newSelected,
-                                  itemConfigs: newConfigs
-                                }));
-                              } else {
-                                newSelected.add(itemId);
-                                // Initialize config when selected
-                                setItemSelectionModal(prev => ({
-                                  ...prev,
-                                  selectedItems: newSelected,
-                                  itemConfigs: {
-                                    ...prev.itemConfigs,
-                                    [itemId]: {
-                                      quantity: 1,
-                                      price: '0',
-                                      images: []
-                                    }
-                                  }
-                                }));
-                              }
-                            }}
-                          >
-                            <View style={[
-                              styles.checkbox,
-                              {
-                                backgroundColor: selectedItems.has(itemId) ? colors.primary : 'transparent',
-                                borderColor: colors.outline
-                              }
-                            ]}>
-                              {selectedItems.has(itemId) && (
-                                <Text style={[styles.checkmark, { color: colors.onPrimary }]}>✓</Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
+                          <View style={[
+                            styles.checkbox,
+                            {
+                              backgroundColor: isSelected ? colors.primary : 'transparent',
+                              borderColor: colors.outline
+                            }
+                          ]}>
+                            {isSelected && (
+                              <Text style={[styles.checkmark, { color: colors.onPrimary }]}>✓</Text>
+                            )}
+                          </View>
                         </View>
                         <Text style={[styles.tableCellWide, { color: colors.onSurface, fontSize: p(12) }]} numberOfLines={2} ellipsizeMode="tail">
                           {finding.repair_finding_name}
                         </Text>
-                        <View style={styles.tableCellMedium}>
-                          <TextInput
-                            value={config.price}
-                            onChangeText={(value) => updateItemConfig(itemId, 'price', value)}
-                            keyboardType="decimal-pad"
-                            style={[styles.tableInput, { backgroundColor: colors.surfaceVariant, color: colors.onSurface }]}
-                            mode="outlined"
-                            dense
-                            left={<TextInput.Affix text="$" />}
-                            disabled={!selectedItems.has(itemId)}
-                          />
-                        </View>
-                        <View style={styles.tableCellNarrow}>
-                          <TextInput
-                            value={config.quantity.toString()}
-                            onChangeText={(value) => updateItemConfig(itemId, 'quantity', value)}
-                            keyboardType="numeric"
-                            style={[styles.tableInput, { backgroundColor: colors.surfaceVariant, color: colors.onSurface }]}
-                            mode="outlined"
-                            dense
-                            disabled={!selectedItems.has(itemId)}
-                          />
-                        </View>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -928,7 +883,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     if (grandTotal === 0) return null;
 
     return (
-      <Card style={[styles.totalsCard, { backgroundColor: colors.surface }]}>
+      <Card style={[styles.totalsCard, { backgroundColor: '#fff0f0' }]}>
         <Card.Content>
           <View style={styles.totalsContent}>
             <Text style={[styles.grandTotalText, { color: colors.primary }]}>
@@ -1084,17 +1039,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   categoryCard: {
-    marginHorizontal: p(0),
-    paddingHorizontal: p(0),
-    paddingVertical: p(1),
+    marginHorizontal: p(8),
+    paddingHorizontal: p(4),
+    paddingVertical: p(4),
     marginBottom: p(2),
     borderRadius: 12,
+    borderLeftWidth: p(3),
+    borderWidth: StyleSheet.hairlineWidth,
+    // borderLeftColor and borderColor set dynamically via theme
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-
+    paddingHorizontal: p(12),
+    paddingVertical: p(2),
+    borderTopLeftRadius: p(8),
+    borderTopRightRadius: p(8),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    // marginBottom: p(4),
   },
   categoryTitleContainer: {
     flexDirection: 'row',
@@ -1155,11 +1119,35 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   itemImagesRow: {
-    paddingHorizontal: p(8),
-    paddingVertical: p(8),
-    backgroundColor: '#f8f9fa',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginLeft: p(150), // Align with Item column (tableCellWide width)
+    marginRight: p(8),
+    marginTop: p(4),
+    marginBottom: p(8),
+    paddingHorizontal: p(12),
+    paddingVertical: p(10),
+    borderRadius: p(6),
+    borderLeftWidth: p(3),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    // backgroundColor and border colors set dynamically via theme
+  },
+  itemImagesHeader: {
+    marginBottom: p(8),
+  },
+  itemImagesHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: p(6),
+  },
+  itemImagesLabel: {
+    fontSize: p(12),
+    fontWeight: '500',
+  },
+  itemImagesItemName: {
+    fontSize: p(12),
+  },
+  itemImagesCount: {
+    fontSize: p(11),
+    fontStyle: 'italic',
   },
   itemImagesGrid: {
     flexDirection: 'row',
@@ -1175,11 +1163,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: p(6),
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f5f5f5', // Light background for image container
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e0e0e0', // Subtle border for image containers
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   itemImage: {
     width: '100%',
@@ -1202,15 +1191,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   totalsCard: {
-    marginHorizontal: p(14),
+    marginHorizontal: p(8),
     marginBottom: p(20),
+    marginTop: p(12),
     borderRadius: 12,
   },
   totalsContent: {
     alignItems: 'center',
   },
   grandTotalText: {
-    fontSize: p(20),
+    fontSize: p(24),
     fontWeight: 'bold',
   },
   modal: {
@@ -1321,7 +1311,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: 'row',
-    marginBottom: p(8),
+    // marginBottom: p(8),
   },
   // Fixed width for specific columns
   tableHeaderTextMedium: {
