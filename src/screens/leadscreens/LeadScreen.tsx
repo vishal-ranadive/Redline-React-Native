@@ -386,10 +386,13 @@ const LeadScreen = () => {
 
   /**
    * Format date for display
+   * Parses date manually to avoid timezone issues (similar to CreateJobScreen)
    */
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
+    // Parse the date parts manually to avoid timezone issues on iOS/Android
+    const [year, month, dayNum] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, dayNum);
     return date.toLocaleDateString();
   };
 
