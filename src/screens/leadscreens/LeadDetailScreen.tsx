@@ -1150,7 +1150,11 @@ const LeadDetailScreen = () => {
                   </Text>
                 </View>
 
-                {/* Display current repair cost or edit button */}
+                {/* Display current repair cost - edit disabled for repair leads */}
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: p(16) }}>
+                  ${repairCostValue || '0'}
+                </Text>
+                {/* Edit button commented out for repair leads
                 {!isEditingRepairCost ? (
                   <TouchableOpacity
                     activeOpacity={0.7}
@@ -1190,6 +1194,7 @@ const LeadDetailScreen = () => {
                     </Button>
                   </View>
                 )}
+                */}
               </View>
 
               {/* Expandable input field */}

@@ -46,7 +46,7 @@ type GearInspection = {
   inspection_date: string;
   hydro_test_result: 'PASS' | 'FAIL' | null;
   hydro_test_performed: 'YES' | 'NO' | null;
-  gear_findings: string | null;
+  gear_findings: string | null | Array<{id: number; findings: string}>;
   inspection_cost: number;
   remarks: string;
   gear_status: {
@@ -327,7 +327,16 @@ export default function GearsScreen() {
         : 'N/A';
       const remarks = inspection.remarks || 'N/A';
       const serviceType = inspection.service_type?.status || 'N/A';
-      const finding = inspection.gear_findings || 'N/A';
+
+      // Handle gear_findings - can be string, null, or array of objects
+      let finding: string = 'N/A';
+      if (inspection.gear_findings) {
+        if (Array.isArray(inspection.gear_findings)) {
+          finding = inspection.gear_findings.map(f => f.findings).join(', ');
+        } else if (typeof inspection.gear_findings === 'string') {
+          finding = inspection.gear_findings;
+        }
+      }
 
       return (
         <View style={[styles.inspectionSection, { borderTopColor: colors.outline }]}>

@@ -15,6 +15,7 @@ import { getRepairStatusColor } from '../../constants/inspection';
 import { p } from '../../utils/responsive';
 import { useGearStore } from '../../store/gearStore';
 import Pagination from '../../components/common/Pagination';
+import useDebounce from '../../hooks/useDebounce';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'RepairDetails'>;
 
@@ -30,6 +31,8 @@ export default function AllGearRepairScreen() {
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<any>({ page: 1, page_size: 10, total: 0 });
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [repairStatusFilter, setRepairStatusFilter] = useState<'all' | 'complete' | 'incomplete'>('all');
   const [page, setPage] = useState(1);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(10);
   const numberOfItemsPerPageList = [10, 20, 30, 50];
@@ -42,18 +45,18 @@ export default function AllGearRepairScreen() {
 
   useEffect(() => {
     fetchAllRepairs();
-  }, [currentLead, page, numberOfItemsPerPage]);
+  }, [currentLead, page, numberOfItemsPerPage, debouncedSearchQuery, repairStatusFilter]);
 
   useEffect(() => {
     fetchGearTypes();
   }, [fetchGearTypes]);
 
-  // Reset to page 1 when page size changes
+  // Reset to page 1 when page size, search query, or status filter changes
   useEffect(() => {
     if (page !== 1) {
       setPage(1);
     }
-  }, [numberOfItemsPerPage]);
+  }, [numberOfItemsPerPage, debouncedSearchQuery, repairStatusFilter]);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -75,10 +78,30 @@ export default function AllGearRepairScreen() {
       }
       setError(null);
 
-      const response = await repairApi.getAllGearRepairs(currentLead.firestation.id, {
+      // Build params object - always include lead_id, only include optional params if they have values
+      const params: {
+        page: number;
+        page_size: number;
+        lead_id: number;
+        repair_status?: 'complete' | 'incomplete';
+        name?: string;
+      } = {
         page: page,
-        page_size: numberOfItemsPerPage
-      });
+        page_size: numberOfItemsPerPage,
+        lead_id: currentLead.lead_id,
+      };
+
+      // Only include repair_status if it's not 'all'
+      if (repairStatusFilter !== 'all') {
+        params.repair_status = repairStatusFilter;
+      }
+
+      // Only include name if search query exists and is not empty
+      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+        params.name = debouncedSearchQuery.trim();
+      }
+
+      const response = await repairApi.getAllGearRepairs(currentLead.firestation.id, params);
 
       if (response?.status && response?.data) {
         // Handle paginated response
@@ -122,6 +145,24 @@ export default function AllGearRepairScreen() {
     } catch (error) {
       console.error('Error navigating to repair details:', error);
     }
+  };
+
+  /**
+   * Format roster name from first_name, middle_name, last_name
+   * Handles cases where roster might not exist, be null, or keys might not exist
+   */
+  const formatRosterName = (roster: any): string | null => {
+    if (!roster) return null;
+    
+    const firstName = roster.first_name || '';
+    const middleName = roster.middle_name || '';
+    const lastName = roster.last_name || '';
+    
+    const nameParts = [firstName, middleName, lastName].filter(part => part && part.trim());
+    
+    if (nameParts.length === 0) return null;
+    
+    return nameParts.join(' ').trim();
   };
 
   /**
@@ -173,26 +214,8 @@ export default function AllGearRepairScreen() {
     );
   };
 
-  // Filter repairs by search query (client-side search on current page data)
-  const filteredRepairs = repairs.filter(repair => {
-    if (!searchQuery) return true; // If no search query, show all
-
-    const gearId = repair.gear?.gear_id?.toString() || '';
-    const repairId = repair.repair_id?.toString() || '';
-    const repairStatus = repair.repair_status || '';
-    const gearName = repair.gear?.gear_name || '';
-    const serialNumber = repair.gear?.serial_number || '';
-    const manufacturerName = repair.gear?.manufacturer?.manufacturer_name || '';
-
-    return (
-      gearId.includes(searchQuery) ||
-      repairId.includes(searchQuery) ||
-      repairStatus.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      gearName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      manufacturerName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  // Use repairs directly since filtering is now done server-side
+  const filteredRepairs = repairs;
 
   const renderGearCard = ({ item: repair }: { item: any }) => {
     try {
@@ -201,131 +224,163 @@ export default function AllGearRepairScreen() {
       const tagColor = ""; // No tag color info available in current API response
       const gearTypeName = repair.gear?.gear_name || repair.gear?.gear_type?.gear_type || 'Gear';
 
-    // Use gear details from the nested gear object
-    const gearId = repair.gear?.gear_id || 'N/A';
-    const serialNumber = repair.gear?.serial_number || `ID: ${gearId}`;
-    const manufacturerName = repair.gear?.manufacturer?.manufacturer_name || 'Unknown Manufacturer';
-    const gearSize = repair.gear?.gear_size || 'N/A';
+      // Use gear details from the nested gear object
+      const serialNumber = repair.gear?.serial_number || 'N/A';
+      const manufacturerName = repair.gear?.manufacturer?.manufacturer_name || 'Unknown Manufacturer';
+      const gearSize = repair.gear?.gear_size || 'N/A';
+      
+      // Get roster name safely
+      const rosterName = formatRosterName(repair.gear?.roster);
 
-    // Calculate total quantity from repair findings
-    const totalQuantity = repair.repair_findings?.reduce((total: number, group: any) => {
-      return total + group.findings?.reduce((groupTotal: number, finding: any) => {
-        return groupTotal + (finding.repair_quantity || 0);
-      }, 0);
-    }, 0) || 'N/A';
+      // Current repair details
+      const updatedAt = repair.updated_at ? new Date(repair.updated_at).toLocaleDateString() : 'N/A';
+      const repairCost = repair.total_repair_cost !== null && repair.total_repair_cost !== undefined
+        ? `$${repair.total_repair_cost.toFixed(2)}`
+        : 'N/A';
+      const remarks = repair.remarks || 'N/A';
 
-    return (
-      <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => handleGearPress(repair)}
-          style={[styles.gearCardNew, styles.shadow, { borderColor: colors.outline }]}
-        >
-          <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
-          <Card style={{ backgroundColor: colors.surface }}>
-            <Card.Content>
-              {/* Card Header with Gear Status */}
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  {gearStatus && gearStatus !== 'Unknown' ? (
-                    <Chip
-                      mode="outlined"
-                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: statusColor, borderColor: statusColor },
-                      ]}
-                    >
-                      {gearStatus.toUpperCase()}
-                    </Chip>
-                  ) : (
-                    <Chip
-                      mode="outlined"
-                      textStyle={[styles.gearStatusChipText, { color: colors.onSurfaceVariant }]}
-                      style={[
-                        styles.headerStatusChip,
-                        { backgroundColor: colors.surface, borderColor: colors.outline },
-                      ]}
-                    >
-                      NO STATUS
-                    </Chip>
+      return (
+        <View style={[styles.cardWrapper, { width: isMobile ? '100%' : '48%' }]}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => handleGearPress(repair)}
+            style={[styles.gearCardNew, styles.shadow, { borderColor: colors.outline }]}
+          >
+            <View style={[styles.cardTagBadge, { backgroundColor: tagColor }]} />
+            <Card style={{ backgroundColor: colors.surface }}>
+              <Card.Content>
+                {/* Card Header with Gear Status */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    {gearStatus && gearStatus !== 'Unknown' ? (
+                      <Chip
+                        mode="outlined"
+                        textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                        style={[
+                          styles.headerStatusChip,
+                          { backgroundColor: statusColor, borderColor: statusColor },
+                        ]}
+                      >
+                        {gearStatus.toUpperCase()}
+                      </Chip>
+                    ) : (
+                      <Chip
+                        mode="outlined"
+                        textStyle={[styles.gearStatusChipText, { color: colors.onSurfaceVariant }]}
+                        style={[
+                          styles.headerStatusChip,
+                          { backgroundColor: colors.surface, borderColor: colors.outline },
+                        ]}
+                      >
+                        NO STATUS
+                      </Chip>
+                    )}
+                  </View>
+                </View>
+
+                {/* Gear Image */}
+                <View style={styles.gearImageContainer}>
+                  <Image
+                    source={getGearIconImage(repair.gear?.gear_type?.gear_type ?? repair.gear?.gear_name ?? null)}
+                    style={styles.gearImage}
+                    resizeMode="cover"
+                  />
+                </View>
+
+                {/* Gear Details */}
+                <View style={styles.gearDetails}>
+                  <View style={styles.detailRow}>
+                    <Icon source="barcode" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Serial:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{serialNumber}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="tag-outline" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Gear Name:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
+                      {gearTypeName}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="factory" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Manufacturer:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
+                      {manufacturerName}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="ruler" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Size:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{gearSize}</Text>
+                  </View>
+
+                  {/* Firefighter (Roster) - Only show if exists */}
+                  {rosterName && (
+                    <View style={styles.detailRow}>
+                      <Icon source="account" size={14} color={colors.primary} />
+                      <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Firefighter:</Text>
+                      <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
+                        {rosterName}
+                      </Text>
+                    </View>
                   )}
                 </View>
-              </View>
 
-              {/* Gear Image */}
-              <View style={styles.gearImageContainer}>
-                <Image
-                  source={getGearIconImage(repair.gear?.gear_type?.gear_type ?? repair.gear?.gear_name ?? null)}
-                  style={styles.gearImage}
-                  resizeMode="cover"
-                />
-              </View>
+                {/* Separator */}
+                <View style={[styles.separator, { backgroundColor: colors.outline }]} />
 
-              {/* Gear Details */}
-              <View style={styles.gearDetails}>
-                <View style={styles.detailRow}>
-                  <Icon source="barcode" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Gear ID:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>{gearId}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Icon source="tag-outline" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Type:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
-                    {gearTypeName}
+                {/* Current Repair Section */}
+                <View style={styles.currentRepairSection}>
+                  <Text variant="labelLarge" style={[styles.sectionTitle, { color: colors.primary }]}>
+                    Current Repair
                   </Text>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="calendar-clock" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Updated:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{updatedAt}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="currency-usd" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{repairCost}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="note-text" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Remarks:</Text>
+                    <Text style={[styles.detailValue, styles.remarksText, { color: colors.onSurface }]} numberOfLines={2}>
+                      {remarks}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Icon source="check-circle-outline" size={14} color={colors.primary} />
+                    <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Status:</Text>
+                    <Text style={[styles.detailValue, { color: colors.onSurface }]}>{gearStatus.toUpperCase()}</Text>
+                  </View>
                 </View>
 
-                <View style={styles.detailRow}>
-                  <Icon source="factory" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Repair ID:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]} numberOfLines={1}>
-                    {repair.repair_id}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Icon source="calendar" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Date:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>
-                    {repair.created_at ? new Date(repair.created_at).toLocaleDateString() : 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Icon source="counter" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Quantity:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>{totalQuantity}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Icon source="currency-usd" size={14} color={colors.primary} />
-                  <Text style={[styles.detailLabel, { color: colors.onSurface }]}>Cost:</Text>
-                  <Text style={[styles.detailValue, { color: colors.onSurface }]}>${repair.total_repair_cost || '0'}</Text>
-                </View>
-              </View>
-
-              {/* Current Repair Details */}
-              {renderRepairDetails(repair, false)}
-
-              {/* Update Button */}
-              <Button
-                mode="contained"
-                onPress={() => handleGearPress(repair)}
-                icon="clipboard-edit-outline"
-                style={styles.updateButton}
-                contentStyle={styles.updateButtonContent}
-                buttonColor={tagColor || colors.primary}
-              >
-                View Repair
-          </Button>
-        </Card.Content>
-          </Card>
-        </TouchableOpacity>
-      </View>
-    );
+                {/* Update Button */}
+                <Button
+                  mode="contained"
+                  onPress={() => handleGearPress(repair)}
+                  icon="clipboard-edit-outline"
+                  style={styles.updateButton}
+                  contentStyle={styles.updateButtonContent}
+                  buttonColor={tagColor || colors.primary}
+                >
+                  View Repair
+                </Button>
+              </Card.Content>
+            </Card>
+          </TouchableOpacity>
+        </View>
+      );
     } catch (error) {
       console.error('Error rendering gear card:', error);
       return (
@@ -336,20 +391,6 @@ export default function AllGearRepairScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="All Gear Repairs" showBackButton={true} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.onSurfaceVariant }}>
-            Loading repairs...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="All Gear Repairs" showBackButton={true} />
@@ -358,21 +399,78 @@ export default function AllGearRepairScreen() {
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
         <TextInput
           mode="outlined"
-          placeholder="Search by gear name, serial, manufacturer, or repair ID"
+          placeholder="Search by name"
           value={searchQuery}
           onChangeText={setSearchQuery}
           left={<TextInput.Icon icon="magnify" />}
           style={styles.searchInput}
           dense
         />
-        <Text style={[styles.statusText, { color: colors.onSurfaceVariant }]}>
-          Status will coming soon
-        </Text>
+        
+        {/* Status Filter Buttons */}
+        <View style={styles.statusFilterContainer}>
+          <TouchableOpacity
+            onPress={() => setRepairStatusFilter('all')}
+            style={[
+              styles.statusFilterButton,
+              repairStatusFilter === 'all' && styles.statusFilterButtonActive,
+              { 
+                backgroundColor: repairStatusFilter === 'all' ? colors.primary : colors.surface,
+                borderColor: colors.outline 
+              }
+            ]}
+          >
+            <Text style={[
+              styles.statusFilterButtonText,
+              { color: repairStatusFilter === 'all' ? '#fff' : colors.onSurface }
+            ]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => setRepairStatusFilter('complete')}
+            style={[
+              styles.statusFilterButton,
+              repairStatusFilter === 'complete' && styles.statusFilterButtonActive,
+              { 
+                backgroundColor: repairStatusFilter === 'complete' ? colors.primary : colors.surface,
+                borderColor: colors.outline 
+              }
+            ]}
+          >
+            <Text style={[
+              styles.statusFilterButtonText,
+              { color: repairStatusFilter === 'complete' ? '#fff' : colors.onSurface }
+            ]}>
+              Complete
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => setRepairStatusFilter('incomplete')}
+            style={[
+              styles.statusFilterButton,
+              repairStatusFilter === 'incomplete' && styles.statusFilterButtonActive,
+              { 
+                backgroundColor: repairStatusFilter === 'incomplete' ? colors.primary : colors.surface,
+                borderColor: colors.outline 
+              }
+            ]}
+          >
+            <Text style={[
+              styles.statusFilterButtonText,
+              { color: repairStatusFilter === 'incomplete' ? '#fff' : colors.onSurface }
+            ]}>
+              Incomplete
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Content */}
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainerBelow}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ marginTop: 16, color: colors.onSurfaceVariant }}>
             Loading repairs...
@@ -449,10 +547,38 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
   },
+  statusFilterContainer: {
+    flexDirection: 'row',
+    gap: p(8),
+    marginTop: p(8),
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  statusFilterButton: {
+    paddingHorizontal: p(16),
+    paddingVertical: p(8),
+    borderRadius: p(8),
+    borderWidth: 1,
+    minWidth: p(100),
+    alignItems: 'center',
+  },
+  statusFilterButtonActive: {
+    // Active state handled by backgroundColor in inline style
+  },
+  statusFilterButtonText: {
+    fontSize: p(14),
+    fontWeight: '600',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainerBelow: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: p(40),
   },
   errorContainer: {
     flex: 1,
@@ -568,6 +694,15 @@ const styles = StyleSheet.create({
     marginBottom: p(8),
     paddingTop: p(8),
     borderTopWidth: 1,
+  },
+  separator: {
+    height: 1,
+    marginVertical: p(2),
+    opacity: 0.2,
+  },
+  currentRepairSection: {
+    marginTop: p(4),
+    marginBottom: p(8),
   },
   sectionTitle: {
     fontSize: p(12),

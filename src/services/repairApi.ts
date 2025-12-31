@@ -86,15 +86,41 @@ export const repairApi = {
   },
 
   // Get all gear repairs for a firestation
-  getAllGearRepairs: async (firestationId: number, params?: { page?: number; page_size?: number }): Promise<any> => {
-    console.log(`➡️ API CALL GET /gear-repair/?firestation_id=${firestationId}&page=${params?.page}&page_size=${params?.page_size}`);
+  getAllGearRepairs: async (firestationId: number, params?: { 
+    page?: number; 
+    page_size?: number;
+    lead_id?: number;
+    repair_status?: 'complete' | 'incomplete';
+    name?: string;
+  }): Promise<any> => {
+    // Build query params - always include firestation_id and lead_id, only include optional params if provided
+    const queryParams: any = {
+      firestation_id: firestationId,
+    };
+
+    // Always include lead_id if provided (should always be provided from screen)
+    if (params?.lead_id) {
+      queryParams.lead_id = params.lead_id;
+    }
+
+    // Only include optional params if they have values
+    if (params?.page !== undefined && params.page !== null) {
+      queryParams.page = params.page;
+    }
+    if (params?.page_size !== undefined && params.page_size !== null) {
+      queryParams.page_size = params.page_size;
+    }
+    if (params?.repair_status !== undefined && params.repair_status !== null) {
+      queryParams.repair_status = params.repair_status;
+    }
+    if (params?.name !== undefined && params.name !== null && params.name.trim()) {
+      queryParams.name = params.name.trim();
+    }
+
+    console.log(`➡️ API CALL GET /gear-repair/`, queryParams);
 
     const response = await axiosInstance.get(`/gear-repair/`, {
-      params: {
-        firestation_id: firestationId,
-        ...(params?.page && { page: params.page }),
-        ...(params?.page_size && { page_size: params.page_size }),
-      },
+      params: queryParams,
     });
 
     console.log('✅ API Response GET /gear-repair/', response.data);
