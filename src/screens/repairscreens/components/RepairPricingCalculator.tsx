@@ -21,6 +21,7 @@ import {
   useTheme,
   Portal,
   Dialog,
+  Icon,
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 
@@ -76,7 +77,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   onImageSelectForItem,
   onRemoveImageFromItem
 }) => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
 
   // Repair findings data from API
   const [repairGroups, setRepairGroups] = useState<RepairGroup[]>([]);
@@ -328,7 +329,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         repair_finding_id: parseInt(itemId),
         name: finding?.repair_finding_name || itemId,
         repair_quantity: existingItem?.repair_quantity || 1,
-        repair_cost: existingItem?.repair_cost || '0',
+        repair_cost: existingItem?.repair_cost || '',
         images: existingItem?.images || []
       };
     });
@@ -569,7 +570,14 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       <Card key={category} style={[styles.categoryCard, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderColor: colors.outline + '60' }]}>
         
           <TouchableOpacity
-            style={[styles.categoryHeader, { backgroundColor: '#ffe0e0' }]}
+            style={[
+              styles.categoryHeader,
+              {
+                backgroundColor: dark ? colors.surfaceVariant : '#ffe0e0',
+                borderBottomLeftRadius: isCollapsed ? p(8) : 0,
+                borderBottomRightRadius: isCollapsed ? p(8) : 0,
+              }
+            ]}
             onPress={() => toggleCategoryCollapse(category)}
             activeOpacity={0.7}
           >
@@ -593,6 +601,8 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 onPress={() => showItemSelectionModal(category)}
                 style={styles.addButton}
                 labelStyle={{ fontSize: p(11) }}
+                contentStyle={{ paddingHorizontal: p(8) , paddingVertical: p(2)}}
+                compact
               >
                 {isMobile ? '+' : '+ Add Repair Item'}
               </Button>
@@ -601,20 +611,21 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                 size={20}
                 onPress={() => removeCategory(category)}
                 iconColor={colors.primary}
+                style={{ margin: 0 }}
               />
             </View>
           </TouchableOpacity>
 
-          {!isCollapsed && Object.keys(items).length > 0 && (
+                        {!isCollapsed && Object.keys(items).length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.tableScrollContainer}>
               <View style={styles.tableWrapper}>
-                <View style={[styles.tableHeader, { backgroundColor: '#fff0f0', marginTop: p(2) , paddingVertical: p(4)}]}>
-                  <Text style={[styles.tableHeaderTextWide, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Item ({itemCount})</Text>
-                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Price</Text>
-                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
-                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Images</Text>
-                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Subtotal</Text>
-                  <Text style={[styles.tableHeaderTextMedium, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>Actions</Text>
+                <View style={[styles.tableHeader, { backgroundColor: dark ? colors.surfaceVariant : '#fff0f0', marginTop: p(2) , paddingVertical: p(4)}]}>
+                  <Text style={[styles.tableHeaderTextWide, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Item ({itemCount})</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Price</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Qty</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Images</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Subtotal</Text>
+                  <Text style={[styles.tableHeaderTextMedium, { color: dark ? colors.onSurface : colors.onSurfaceVariant, fontSize: p(14) }]}>Actions</Text>
                 </View>
                 <Divider style={{ backgroundColor: colors.outline, marginVertical: 0 }} />
 
@@ -644,29 +655,65 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                         <View style={styles.tableCellMedium}>
                           <View style={styles.quantityContainer}>
                             <TouchableOpacity
-                              style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                              style={[styles.quantityButton, { backgroundColor: dark ? '#FFCDD2' : '#FFEBEE' }]}
                               onPress={() => changeQuantity(category, itemName, -1)}
                             >
-                              <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>-</Text>
+                              <Text style={[styles.quantityButtonText, { color: dark ? '#C62828' : '#D32F2F' }]}>-</Text>
                             </TouchableOpacity>
                             <Text style={[styles.quantityText, { color: colors.onSurface }]}>{item.repair_quantity}</Text>
                             <TouchableOpacity
-                              style={[styles.quantityButton, { backgroundColor: colors.surfaceVariant }]}
+                              style={[styles.quantityButton, { backgroundColor: dark ? '#C8E6C9' : '#E8F5E9' }]}
                               onPress={() => changeQuantity(category, itemName, 1)}
                             >
-                              <Text style={[styles.quantityButtonText, { color: colors.onSurfaceVariant }]}>+</Text>
+                              <Text style={[styles.quantityButtonText, { color: dark ? '#2E7D32' : '#388E3C' }]}>+</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
 
                         <View style={styles.tableCellMedium}>
                           <TouchableOpacity
-                            style={[styles.imageButton, { backgroundColor: colors.surfaceVariant }]}
+                            style={[
+                              styles.imageButton,
+                              {
+                                backgroundColor: item.images && item.images.length > 0
+                                  ? colors.primaryContainer
+                                  : colors.surfaceVariant,
+                                borderWidth: 1,
+                                borderColor: item.images && item.images.length > 0
+                                  ? colors.primary
+                                  : colors.outline + '60',
+                              }
+                            ]}
                             onPress={() => onImageSelectForItem && onImageSelectForItem(category, itemName)}
+                            activeOpacity={0.7}
                           >
-                            <Text style={[styles.imageButtonText, { color: colors.onSurfaceVariant }]}>
-                              {item.images?.length || 0} 📷
-                            </Text>
+                            <View style={styles.imageIconContainer}>
+                              <Icon
+                                source="camera"
+                                size={p(16)}
+                                color={item.images && item.images.length > 0 ? colors.primary : colors.onSurfaceVariant}
+                              />
+                              <View style={[
+                                styles.plusIconOverlay,
+                                {
+                                  backgroundColor: item.images && item.images.length > 0 ? colors.primary : colors.onSurfaceVariant,
+                                  borderColor: colors.surface,
+                                }
+                              ]}>
+                                <Icon
+                                  source="plus"
+                                  size={p(10)}
+                                  color={item.images && item.images.length > 0 ? colors.onPrimary : colors.surface}
+                                />
+                              </View>
+                            </View>
+                            {item.images && item.images.length > 0 && (
+                              <View style={[styles.imageCountBadge, { backgroundColor: colors.primary, borderColor: colors.surface }]}>
+                                <Text style={[styles.imageCountText, { color: colors.onPrimary }]}>
+                                  {item.images.length}
+                                </Text>
+                              </View>
+                            )}
                           </TouchableOpacity>
                         </View>
 
@@ -686,13 +733,13 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
 
                       {/* Images display for this specific repair item - visually connected to row */}
                       {item.images && item.images.length > 0 && (
-                        <View style={[styles.itemImagesRow, { backgroundColor: colors.surfaceVariant + '40', borderLeftColor: colors.primary, borderTopColor: colors.outline + '40' }]}>
+                        <View style={[styles.itemImagesRow, { backgroundColor: dark ? colors.surfaceVariant + '80' : colors.surfaceVariant + '40', borderLeftColor: colors.primary, borderTopColor: dark ? colors.outline : colors.outline + '40' }]}>
                           <View style={styles.itemImagesHeader}>
                             <View style={styles.itemImagesHeaderLeft}>
-                              <Text style={[styles.itemImagesLabel, { color: colors.onSurfaceVariant }]}>
+                              <Text style={[styles.itemImagesLabel, { color: dark ? colors.onSurface : colors.onSurfaceVariant }]}>
                                 📷 Images for: <Text style={[styles.itemImagesItemName, { color: colors.primary, fontWeight: '600' }]}>{item.name}</Text>
                               </Text>
-                              <Text style={[styles.itemImagesCount, { color: colors.onSurfaceVariant }]}>
+                              <Text style={[styles.itemImagesCount, { color: dark ? colors.onSurface : colors.onSurfaceVariant }]}>
                                 ({item.images.length})
                               </Text>
                             </View>
@@ -703,7 +750,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                               return (
                                 <View key={`${itemName}-img-${imgIndex}`} style={styles.itemImageWrapper}>
                                   <TouchableOpacity
-                                    style={styles.itemImageContainer}
+                                    style={[styles.itemImageContainer, { backgroundColor: dark ? colors.surfaceVariant : '#f5f5f5', borderColor: dark ? colors.outline : '#e0e0e0' }]}
                                     onPress={() => {/* TODO: Open image preview */}}
                                   >
                                     <Image
@@ -757,7 +804,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
         onRequestClose={() => setItemSelectionModal({ visible: false, category: '', selectedItems: new Set(), itemConfigs: {} })}
         supportedOrientations={modalSupportedOrientations}
       >
-        <SafeAreaView style={[styles.statusModalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+        <SafeAreaView style={[styles.statusModalOverlay, { backgroundColor: dark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' }]}>
           <View style={[
             styles.statusModalContainer,
             {
@@ -811,7 +858,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                     return (
                       <TouchableOpacity
                         key={itemId}
-                        style={styles.tableRow}
+                        style={[styles.tableRow, { borderBottomWidth: 1, borderBottomColor: dark ? colors.outline + '60' : '#f0f0f0' }]}
                         onPress={() => {
                           const newSelected = new Set(selectedItems);
                           if (newSelected.has(itemId)) {
@@ -883,7 +930,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
     if (grandTotal === 0) return null;
 
     return (
-      <Card style={[styles.totalsCard, { backgroundColor: '#fff0f0' }]}>
+      <Card style={[styles.totalsCard, { backgroundColor: dark ? colors.surfaceVariant : '#fff0f0' }]}>
         <Card.Content>
           <View style={styles.totalsContent}>
             <Text style={[styles.grandTotalText, { color: colors.primary }]}>
@@ -1040,9 +1087,9 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     marginHorizontal: p(8),
-    paddingHorizontal: p(4),
-    paddingVertical: p(4),
-    marginBottom: p(2),
+    paddingHorizontal: p(2),
+    paddingVertical: p(2),
+    // marginBottom: p(4),
     borderRadius: 12,
     borderLeftWidth: p(3),
     borderWidth: StyleSheet.hairlineWidth,
@@ -1076,10 +1123,12 @@ const styles = StyleSheet.create({
   categoryActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: p(8),
+    justifyContent: 'flex-end',
+    gap: p(4),
   },
   addButton: {
-    // height: p(32),
+    margin: 0,
+    marginRight: 0,
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -1108,25 +1157,58 @@ const styles = StyleSheet.create({
     height: p(36),
   },
   imageButton: {
+    position: 'relative',
     padding: p(8),
-    borderRadius: p(4),
+    borderRadius: p(6),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: p(32),
+    minHeight: p(36),
+    minWidth: p(36),
   },
-  imageButtonText: {
-    fontSize: p(12),
-    fontWeight: '500',
+  imageIconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusIconOverlay: {
+    position: 'absolute',
+    top: -p(8),
+    right: -p(8),
+    borderRadius: p(6),
+    width: p(12),
+    height: p(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    // borderColor handled dynamically
+  },
+  imageCountBadge: {
+    position: 'absolute',
+    top: -p(4),
+    right: -p(4),
+    minWidth: p(18),
+    height: p(18),
+    borderRadius: p(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: p(4),
+    borderWidth: 2,
+    // borderColor handled dynamically
+  },
+  imageCountText: {
+    fontSize: p(10),
+    fontWeight: '700',
+    lineHeight: p(12),
   },
   itemImagesRow: {
     marginLeft: p(150), // Align with Item column (tableCellWide width)
-    marginRight: p(8),
+    marginRight: p(0),
     marginTop: p(4),
     marginBottom: p(8),
     paddingHorizontal: p(12),
     paddingVertical: p(10),
     borderRadius: p(6),
-    borderLeftWidth: p(3),
+    borderLeftWidth: p(1.2),
     borderTopWidth: StyleSheet.hairlineWidth,
     // backgroundColor and border colors set dynamically via theme
   },
@@ -1163,12 +1245,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: p(6),
-    backgroundColor: '#f5f5f5', // Light background for image container
     borderWidth: 1,
-    borderColor: '#e0e0e0', // Subtle border for image containers
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    // backgroundColor and borderColor handled dynamically
   },
   itemImage: {
     width: '100%',
@@ -1197,10 +1278,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   totalsContent: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   grandTotalText: {
-    fontSize: p(24),
+    fontSize: p(12),
     fontWeight: 'bold',
   },
   modal: {
@@ -1228,7 +1309,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: p(12),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    // borderBottomColor handled dynamically
   },
   checkbox: {
     width: p(24),
@@ -1364,7 +1445,7 @@ const styles = StyleSheet.create({
     paddingVertical: p(12),
     paddingHorizontal: p(16),
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    // borderBottomColor handled dynamically
   },
   configItemName: {
     flex: 1.5,

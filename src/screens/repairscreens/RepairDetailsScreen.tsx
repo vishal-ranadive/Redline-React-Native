@@ -42,7 +42,7 @@ import { RepairHeader } from './components/RepairHeader';
 import RepairPricingCalculator from './components/RepairPricingCalculator';
 
 const RepairDetailsScreen = () => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { currentLead } = useLeadStore();
@@ -651,7 +651,7 @@ const RepairDetailsScreen = () => {
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>Loading gear details...</Text>
+          <Text style={[styles.loadingText, { color: dark ? colors.onSurface : colors.onSurfaceVariant }]}>Loading gear details...</Text>
         </View>
       </SafeAreaView>
     );
@@ -671,7 +671,7 @@ const RepairDetailsScreen = () => {
             size={48}
             iconColor={colors.error}
           />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: dark ? colors.onSurface : '#666' }]}>{error}</Text>
           <Button
             mode="contained"
             onPress={() => navigation.goBack()}
@@ -698,7 +698,7 @@ const RepairDetailsScreen = () => {
             size={48}
             iconColor={colors.onSurfaceDisabled}
           />
-          <Text style={styles.errorText}>No gear data available</Text>
+          <Text style={[styles.errorText, { color: dark ? colors.onSurface : '#666' }]}>No gear data available</Text>
           <Button
             mode="contained"
             onPress={() => navigation.goBack()}
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    // color handled dynamically via theme
   },
   errorContainer: {
     flex: 1,
@@ -970,9 +970,9 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
+    // color handled dynamically via theme
   },
   errorButton: {
     marginTop: 12,
@@ -1072,9 +1072,8 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    // backgroundColor and borderColor handled dynamically
   },
   previewImage: {
     width: '100%',
@@ -1106,18 +1105,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#ccc',
     backgroundColor: 'transparent',
+    // borderColor handled dynamically
   },
   addImageText: {
     fontSize: 28,
-    color: '#666',
     fontWeight: 'bold',
+    // color handled dynamically
   },
   addImageLabel: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
+    // color handled dynamically
   },
 
   // Deleted Images styles
