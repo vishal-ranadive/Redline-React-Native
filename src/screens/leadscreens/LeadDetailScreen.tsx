@@ -892,7 +892,7 @@ const LeadDetailScreen = () => {
                   {item.isAddress && generateFullAddress() && (
                     <View style={styles.mapActionsContainer}>
                       <TouchableOpacity
-                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        style={[styles.mapActionButton, { backgroundColor: colors.surfaceVariant || colors.surface }]}
                         onPress={handleShareAddress}
                         activeOpacity={0.7}
                       >
@@ -903,7 +903,7 @@ const LeadDetailScreen = () => {
                       </TouchableOpacity>
                       {Platform.OS === 'ios' && (
                         <TouchableOpacity
-                          style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                          style={[styles.mapActionButton, { backgroundColor: colors.surfaceVariant || colors.surface }]}
                           onPress={handleOpenAppleMaps}
                           activeOpacity={0.7}
                         >
@@ -914,7 +914,7 @@ const LeadDetailScreen = () => {
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity
-                        style={[styles.mapActionButton, { backgroundColor: colors.primaryContainer }]}
+                        style={[styles.mapActionButton, { backgroundColor: colors.surfaceVariant || colors.surface }]}
                         onPress={handleOpenGoogleMaps}
                         activeOpacity={0.7}
                       >
