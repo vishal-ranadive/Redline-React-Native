@@ -21,8 +21,8 @@ const UnauthorizedScreen = () => {
   const paperTheme = useTheme();
   const { user, logout } = useAuthStore();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigation.reset({
       index: 0,
       routes: [{ name: 'Login' }],

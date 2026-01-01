@@ -7,6 +7,7 @@ import axios from 'axios';
 import { BASE_URL } from '@env';
 import { getUserProfile, updateUserProfile } from '../services/authApi';
 import { setAuthStore } from '../services/api';
+import { clearAllStores } from '../utils/storeUtils';
 
 /* ---------- User interface (internal normalized shape) ---------- */
 interface User {
@@ -41,7 +42,7 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   refreshTokens: () => Promise<void>;
   fetchProfile: (id: string | number) => Promise<void>;
@@ -149,13 +150,33 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
+        console.log('🚪 Starting logout process...');
+        
+        // Clear auth state immediately
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           error: null,
         });
+        
+        // Clear auth-storage from AsyncStorage
+        try {
+          await AsyncStorage.removeItem('auth-storage');
+        } catch (error) {
+          console.error('❌ Error clearing auth storage:', error);
+        }
+        
+        // Clear all other stores (persisted and in-memory)
+        try {
+          await clearAllStores();
+        } catch (error) {
+          console.error('❌ Error clearing stores during logout:', error);
+          // Continue with logout even if clearing stores fails
+        }
+        
+        console.log('✅ Logout complete - all stores cleared');
       },
 
       clearError: () => set({ error: null }),
@@ -163,7 +184,7 @@ export const useAuthStore = create<AuthState>()(
       refreshTokens: async () => {
         const { refreshToken } = get();
         if (!refreshToken) {
-          get().logout();
+          await get().logout();
           return;
         }
         try {
@@ -172,7 +193,7 @@ export const useAuthStore = create<AuthState>()(
           set({ accessToken: access_token, refreshToken: refresh_token });
         } catch (error) {
           console.error('Token refresh failed', error);
-          get().logout();
+          await get().logout();
           throw error;
         }
       },

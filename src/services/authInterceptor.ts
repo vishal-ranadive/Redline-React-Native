@@ -28,7 +28,9 @@ export const setupAuthInterceptor = (authStore: any) => {
       console.error('❌ API Response Error:', error.response?.status, error.message);
       
       if (error.response?.status === 401) {
-        authStore.getState().logout();
+        authStore.getState().logout().catch(err => {
+          console.error('Error during logout:', err);
+        });
       }
       
       return Promise.reject(error);

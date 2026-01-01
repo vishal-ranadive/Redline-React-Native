@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { BASE_URL } from '@env';
 import Toast from 'react-native-toast-message';
+import { isTokenExpired } from '../utils/tokenUtils';
 
 // Create axios instance
 export const axiosInstance = axios.create({
@@ -28,11 +29,45 @@ export const setNavigationRef = (ref: any) => {
   navigationRef = ref;
 };
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and check expiration
 axiosInstance.interceptors.request.use(
   (config) => {
-    if (authStore && authStore.getState().accessToken) {
-      config.headers.Authorization = `Bearer ${authStore.getState().accessToken}`;
+    if (authStore) {
+      const accessToken = authStore.getState().accessToken;
+      
+      // Check if token is expired before making the request
+      if (accessToken && isTokenExpired(accessToken)) {
+        console.warn('⚠️ Token expired before request, logging out...');
+        
+        // Logout and clear all stores
+        authStore.getState().logout().catch(err => {
+          console.error('Error during logout:', err);
+        });
+        
+        // Show toast message
+        Toast.show({
+          type: 'error',
+          text1: 'Session Expired',
+          text2: 'Your session has expired. Please login again.',
+          visibilityTime: 4000,
+        });
+        
+        // Navigate to login screen
+        if (navigationRef) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }
+        
+        // Reject the request to prevent it from being made
+        return Promise.reject(new Error('Token expired'));
+      }
+      
+      // Add token to request if valid
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
     }
     console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`, config.data || '');
     return config;
@@ -59,7 +94,9 @@ axiosInstance.interceptors.response.use(
 
     // Handle 401 unauthorized errors
     if (error.response?.status === 401 && authStore) {
-      authStore.getState().logout();
+      authStore.getState().logout().catch(err => {
+        console.error('Error during logout:', err);
+      });
       if (navigationRef) {
         navigationRef.reset({
           index: 0,
@@ -77,7 +114,9 @@ axiosInstance.interceptors.response.use(
         error.message?.includes('Token has expired'))
     ) {
       // Logout the user
-      authStore.getState().logout();
+      authStore.getState().logout().catch(err => {
+        console.error('Error during logout:', err);
+      });
       
       // Show toast message
       Toast.show({

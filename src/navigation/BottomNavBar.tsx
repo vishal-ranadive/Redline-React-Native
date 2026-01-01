@@ -37,12 +37,12 @@ export default function BottomNavBar() {
     );
   };
 
-  const performLogout = () => {
+  const performLogout = async () => {
     try {
       console.log('🚪 Starting logout process...');
       
-      // Clear auth store
-      logout();
+      // Clear auth store (now async and clears all stores)
+      await logout();
       
       // Clear theme store if you have reset functionality
       // resetTheme();
