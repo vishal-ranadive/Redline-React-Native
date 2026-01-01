@@ -50,6 +50,7 @@ import LoadPicker from '../../components/common/LoadPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import InspectionFormSkeleton from '../skeleton/InspectionFormSkeleton';
 import { imageUploadApi } from '../../services/imageUploadApi';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -967,6 +968,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   if (loading || gearStatusLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header 
           title={'Inspection Details'}
           showBackButton={true}
@@ -980,6 +982,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   if (error && !gear) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header 
           // title={mode === 'create' ? 'Create Inspection' : 'Update Inspection'}
           title={'Inspection Details'}
@@ -1008,6 +1011,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   if (!gear) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header
           title={!inspectionId ? 'Create Inspection' : 'Update Inspection'}
           showBackButton={true}
@@ -1035,7 +1039,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-
+      <LeadInfoBanner />
       {/* Sticky Gear Information */}
       <InspectionHeader
         gear={gear}

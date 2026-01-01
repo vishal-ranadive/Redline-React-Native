@@ -13,6 +13,7 @@ import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getStatusColor } from '../../constants/inspection';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type GearStatus = 'Pass' | 'Expired' | 'Recommended OOS' | 'Corrective Action Required' | 'Repair' | 'Recommended Out Of Service' | 'Fail';
 
@@ -569,6 +570,7 @@ export default function GearsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header 
         title={`Gears - ${load.name}`}
         showBackButton={true}

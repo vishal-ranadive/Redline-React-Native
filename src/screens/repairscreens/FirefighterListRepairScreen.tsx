@@ -13,6 +13,7 @@ import { COLOR_MAP, getColorHex } from '../../constants/colors';
 import RosterCardSkeleton from '../skeleton/RosterCardSkeleton';
 import Pagination from '../../components/common/Pagination';
 import useDebounce from '../../hooks/useDebounce';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'FirefighterRepairGearScreen'>;
 
@@ -297,6 +298,7 @@ export default function FirefighterListRepairScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header title="Firefighter Repair List" showBackButton={true} />
 
       {/* 🔍 Search Section */}

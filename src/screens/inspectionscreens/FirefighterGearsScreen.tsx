@@ -12,6 +12,7 @@ import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getStatusColor } from '../../constants/inspection';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
@@ -593,6 +594,7 @@ export default function FirefighterGearsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header 
           title={`${roster.name}'s Gears`}
           showBackButton={true}
@@ -622,6 +624,7 @@ export default function FirefighterGearsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header 
         title={`${roster.name}'s Gears`}
         showBackButton={true}

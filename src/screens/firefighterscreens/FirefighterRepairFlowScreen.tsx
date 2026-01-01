@@ -42,6 +42,7 @@ import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import { gearApi } from '../../services/gearApi';
 import { getStatusColor, getRepairStatusColor } from '../../constants/inspection';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_repair_tag_color';
 
@@ -900,6 +901,7 @@ const getCategoryRepairSummary = (categoryId:string) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header
         title="Firefighter Repair Flow"
         showBackButton={true}

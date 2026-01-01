@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useLeadStore } from '../../store/leadStore';
 import { inspectionApi } from '../../services/inspectionApi';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type ApiLoad = {
   load_number: number;
@@ -204,6 +205,7 @@ export default function LoadsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header title="Inspection Loads" />
 
       {/* 🔍 Search */}

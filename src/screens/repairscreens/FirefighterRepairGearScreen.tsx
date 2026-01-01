@@ -13,6 +13,7 @@ import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getRepairStatusColor } from '../../constants/inspection';
 import Pagination from '../../components/common/Pagination';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'RepairDetails'>;
 
@@ -577,6 +578,7 @@ export default function FirefighterRepairGearScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header
           title={`${roster.name}'s Repairs`}
           showBackButton={true}
@@ -606,6 +608,7 @@ export default function FirefighterRepairGearScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header
         title={`${roster.name}'s Repairs`}
         showBackButton={true}

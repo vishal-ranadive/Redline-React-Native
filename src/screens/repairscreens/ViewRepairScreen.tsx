@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { p } from '../../utils/responsive';
 import Header from '../../components/common/Header';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 export default function ViewRepairScreen() {
   const { colors, dark } = useTheme();
@@ -59,6 +60,7 @@ export default function ViewRepairScreen() {
         }
         style={StyleSheet.absoluteFill}
       /> */}
+      <LeadInfoBanner />
       <Header title="Choose Repair View" showBackButton={true} />
 
       <View style={styles.content}>

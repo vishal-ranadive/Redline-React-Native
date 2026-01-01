@@ -40,6 +40,7 @@ import { imageUploadApi } from '../../services/imageUploadApi';
 import { repairApi } from '../../services/repairApi';
 import { RepairHeader } from './components/RepairHeader';
 import RepairPricingCalculator from './components/RepairPricingCalculator';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 const RepairDetailsScreen = () => {
   const { colors, dark } = useTheme();
@@ -678,6 +679,7 @@ const RepairDetailsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header
           title={'Repair Details'}
           showBackButton={true}
@@ -694,6 +696,7 @@ const RepairDetailsScreen = () => {
   if (error && !gear) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header
           title={'Repair Details'}
           showBackButton={true}
@@ -721,6 +724,7 @@ const RepairDetailsScreen = () => {
   if (!gear) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <LeadInfoBanner />
         <Header
           title={'Repair Details'}
           showBackButton={true}
@@ -746,6 +750,7 @@ const RepairDetailsScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       {/* Repair Header with Collapsible Firefighter Information */}
       <RepairHeader
         gear={gear}

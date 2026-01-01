@@ -40,6 +40,7 @@ import { getColorHex } from '../../constants/colors';
 import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import { gearApi } from '../../services/gearApi';
 import { getStatusColor } from '../../constants/inspection';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -1090,6 +1091,7 @@ const handleGearPress = (gear: any) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header 
         title="Firefighter Inspection"
         showBackButton={true}
