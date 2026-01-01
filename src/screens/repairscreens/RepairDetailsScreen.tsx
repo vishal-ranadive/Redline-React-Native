@@ -800,10 +800,16 @@ const RepairDetailsScreen = () => {
         </View>
 
         {/* Repair Settings - Spare Gear and Status */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <View style={[styles.responsiveRow, isTablet && styles.tabletRow]}>
-            {/* Spare Gear Toggle */}
-            <View style={[styles.responsiveColumn, isTablet && styles.tabletColumn]}>
+        <View style={[styles.responsiveRow, isTablet && styles.tabletRow]}>
+          {/* Spare Gear Toggle - Separate Box */}
+          <View style={[styles.responsiveColumn, isTablet && styles.tabletColumn]}>
+            <View style={[
+              styles.settingCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.outline + '60',
+              }
+            ]}>
               <View style={styles.rowSpace}>
                 <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Spare Gear</Text>
                 <View style={styles.toggleContainer}>
@@ -814,9 +820,17 @@ const RepairDetailsScreen = () => {
                 </View>
               </View>
             </View>
+          </View>
 
-            {/* Repair Status */}
-            <View style={[styles.responsiveColumn, isTablet && { ...styles.tabletColumn, marginRight: 0 }]}>
+          {/* Repair Status - Separate Box */}
+          <View style={[styles.responsiveColumn, isTablet && { ...styles.tabletColumn, marginRight: 0 }]}>
+            <View style={[
+              styles.settingCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.outline + '60',
+              }
+            ]}>
               <View style={styles.rowSpace}>
                 <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Status</Text>
                 <View style={styles.rowWrap}>
@@ -1041,6 +1055,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+  },
+  settingCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   cardTitle: {
     fontSize: 16,
