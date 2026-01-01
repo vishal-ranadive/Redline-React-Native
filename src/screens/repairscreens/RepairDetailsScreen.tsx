@@ -114,6 +114,13 @@ const RepairDetailsScreen = () => {
     itemName: string;
   } | null>(null);
 
+  // Image editing tracking (for repair item images)
+  const [editingImageContext, setEditingImageContext] = useState<{
+    category: string;
+    itemName: string;
+    originalUri: string;
+  } | null>(null);
+
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Fetch gear data
@@ -350,10 +357,19 @@ const RepairDetailsScreen = () => {
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
     setImageToEdit(imageUri);
+    setEditingImageContext(null); // Clear repair item context for main images
     setImageEditorVisible(true);
   };
 
+  // Handle image editing from repair items (via RepairPricingCalculator)
+  const handleImageEditFromRepairItem = useCallback((imageUri: string, category: string, itemName: string) => {
+    setImageToEdit(imageUri);
+    setEditingImageContext({ category, itemName, originalUri: imageUri });
+    setImageEditorVisible(true);
+  }, []);
+
   const handleImageEditorSave = (editedImageUri: string) => {
+    // Update main images array
     setImages((prev: Array<{ id: string; uri: string }>) => {
       const index = prev.findIndex(img => img.uri === imageToEdit);
       if (index !== -1) {
@@ -363,8 +379,25 @@ const RepairDetailsScreen = () => {
       }
       return prev;
     });
+
+    // If editing a repair item image, update it in repairItems
+    if (editingImageContext) {
+      const { category, itemName, originalUri } = editingImageContext;
+      setRepairItems((prev: any) => {
+        const newItems = { ...prev };
+        if (newItems[category] && newItems[category][itemName] && newItems[category][itemName].images) {
+          // Replace the original URI with the edited URI
+          newItems[category][itemName].images = newItems[category][itemName].images.map(
+            (uri: string) => (uri === originalUri ? editedImageUri : uri)
+          );
+        }
+        return newItems;
+      });
+    }
+
     setImageEditorVisible(false);
     setImageToEdit('');
+    setEditingImageContext(null);
   };
 
   const addNewImage = () => {
@@ -762,6 +795,7 @@ const RepairDetailsScreen = () => {
             onToggleCollapse={() => setIsPricingCollapsed(!isPricingCollapsed)}
             onImageSelectForItem={handleImageSelectForItem}
             onRemoveImageFromItem={handleRemoveImageFromItem}
+            onImageEdit={handleImageEditFromRepairItem}
           />
         </View>
 
@@ -912,6 +946,7 @@ const RepairDetailsScreen = () => {
         onClose={() => {
           setImageEditorVisible(false);
           setImageToEdit('');
+          setEditingImageContext(null);
         }}
         onSave={handleImageEditorSave}
       />

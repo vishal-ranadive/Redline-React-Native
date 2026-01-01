@@ -27,6 +27,7 @@ import { p } from '../../../utils/responsive';
 
 // Import repair API
 import { repairApi } from '../../../services/repairApi';
+import ImageEditor from '../../../components/common/ImageEditor';
 
 interface RepairItem {
   repair_finding_id: number;
@@ -65,6 +66,7 @@ interface RepairPricingCalculatorProps {
   onToggleCollapse?: () => void;
   onImageSelectForItem?: (category: string, itemName: string) => void;
   onRemoveImageFromItem?: (category: string, itemName: string, imageUri: string) => void;
+  onImageEdit?: (imageUri: string, category: string, itemName: string) => void;
 }
 
 const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
@@ -75,7 +77,8 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   onImageSelectForItem,
-  onRemoveImageFromItem
+  onRemoveImageFromItem,
+  onImageEdit,
 }) => {
   const { colors, dark } = useTheme();
 
@@ -690,7 +693,7 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                             <View style={styles.imageIconContainer}>
                               <Icon
                                 source="camera"
-                                size={p(16)}
+                                size={p(20)}
                                 color={item.images && item.images.length > 0 ? colors.primary : colors.onSurfaceVariant}
                               />
                               <View style={[
@@ -751,7 +754,12 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                                 <View key={`${itemName}-img-${imgIndex}`} style={styles.itemImageWrapper}>
                                   <TouchableOpacity
                                     style={[styles.itemImageContainer, { backgroundColor: dark ? colors.surfaceVariant : '#f5f5f5', borderColor: dark ? colors.outline : '#e0e0e0' }]}
-                                    onPress={() => {/* TODO: Open image preview */}}
+                                    onPress={() => {
+                                      // Open ImageEditor for drawing/editing
+                                      if (onImageEdit) {
+                                        onImageEdit(imageUri, category, itemName);
+                                      }
+                                    }}
                                   >
                                     <Image
                                       source={{ uri: imageUri }}
