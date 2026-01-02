@@ -133,11 +133,11 @@ const RosterModal: React.FC<RosterModalProps> = ({
         <View style={styles.rosterNameContainer}>
           {/* Tag Color Dot */}
           {item.tag_color && (
-            <View 
+            <View
               style={[
-                styles.tagColorDot, 
-                { backgroundColor: getColorHex(item.tag_color) }
-              ]} 
+                styles.tagColorDot,
+                { backgroundColor: '#FFEBEE' } // Light red background for both light and dark mode
+              ]}
             />
           )}
           <Text style={[styles.rosterName, { color: colors.onSurface, fontSize: p(18) }]}>

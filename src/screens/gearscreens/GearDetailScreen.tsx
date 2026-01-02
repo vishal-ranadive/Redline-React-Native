@@ -19,6 +19,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import Pagination from '../../components/common/Pagination';
 import { useGearStore, GearHistoryItem } from '../../store/gearStore';
 import { printTable } from '../../utils/printTable';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 
@@ -311,6 +312,7 @@ const GearDetailScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
