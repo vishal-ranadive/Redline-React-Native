@@ -46,7 +46,7 @@ export const REPAIR_STATUSES: { status: RepairStatus; icon: string; label: strin
   { status: 'RecievedByFranchies', icon: 'store', label: 'Recieved By Franchies' },
   { status: 'OngoingPreRepair', icon: 'hammer-wrench', label: 'Ongoing Pre Repair' },
   { status: 'OngoingPostRepair', icon: 'hammer', label: 'Ongoing Post Repair' },
-  { status: 'RepairComplete', icon: 'check-all', label: 'Repair Complete' },
+  { status: 'RepairComplete', icon: 'check-all', label: 'Complete' },
   { status: 'IntransitPostRepair', icon: 'truck-check', label: 'Intransit Post Repair' },
 ];
 

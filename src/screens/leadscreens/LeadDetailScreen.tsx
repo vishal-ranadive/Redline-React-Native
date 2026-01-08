@@ -757,7 +757,10 @@ const LeadDetailScreen = () => {
               color: colors.surface,
             }}
           >
-            {formatStatus(currentStatus)}
+            {(() => {
+              const statusConfig = availableStatuses.find(s => s.status === currentStatus);
+              return statusConfig ? statusConfig.label : formatStatus(currentStatus);
+            })()}
           </Button>
 
           <Button
@@ -860,7 +863,10 @@ const LeadDetailScreen = () => {
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 // { icon: 'office-building', label: 'Department', value:'Sarasota County Fire Department'},
                 { icon: normalizedLeadType === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: normalizedLeadType === 'REPAIR' ? 'Repair' : 'Inspection' },
-                { icon: 'check-circle', label: 'Job Status', value: formatStatus(currentStatus) },
+                { icon: 'check-circle', label: 'Job Status', value: (() => {
+                  const statusConfig = availableStatuses.find(s => s.status === currentStatus);
+                  return statusConfig ? statusConfig.label : formatStatus(currentStatus);
+                })() },
                 { icon: 'truck', label: 'MEU', value: lead?.lead?.meu },
                 { icon: 'map-marker', label: 'Address', value: generateFullAddress(), isAddress: true },
               ].map((item, index) => (

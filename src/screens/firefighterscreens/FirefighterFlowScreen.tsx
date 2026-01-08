@@ -771,34 +771,50 @@ const handleGearPress = (gear: any) => {
                 {/* Card Header with Gear Status */}
                 <View style={styles.cardHeader}>
                   <View style={styles.cardHeaderLeft}>
-                    {gearStatus && gearStatus !== 'Not Inspected' ? (
-                      <Chip 
-                        mode="outlined" 
-                        textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
-                        style={[
-                          styles.headerStatusChip,
-                          { backgroundColor: statusColor, borderColor: statusColor },
-                        ]}
-                      >
-                        {gearStatus}
-                      </Chip>
-                    ) : (
-                    
-                    <Button 
-                      mode="contained" 
-                      onPress={() => handleDeleteGear(gear)} 
-                      icon="delete" 
-                      buttonColor="red"
-                      textColor="#fff"
-                      compact
-                      style={styles.deleteButton}
-                      labelStyle={{ fontSize: p(12), fontWeight: '600' }}
-                      contentStyle={{ paddingHorizontal: p(4) }}
+                    {gearStatus && gearStatus !== 'Not Inspected' && (
+                    <Chip
+                      mode="outlined"
+                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: statusColor, borderColor: statusColor },
+                      ]}
                     >
-                      Delete
-                    </Button>
-                    
-                    )}
+                      {gearStatus}
+                    </Chip>
+                  )}
+
+                  {/* Commented out delete button */}
+                  {/*
+                  {gearStatus && gearStatus !== 'Not Inspected' ? (
+                    <Chip
+                      mode="outlined"
+                      textStyle={[styles.gearStatusChipText, { color: '#fff' }]}
+                      style={[
+                        styles.headerStatusChip,
+                        { backgroundColor: statusColor, borderColor: statusColor },
+                      ]}
+                    >
+                      {gearStatus}
+                    </Chip>
+                  ) : (
+
+                  <Button
+                    mode="contained"
+                    onPress={() => handleDeleteGear(gear)}
+                    icon="delete"
+                    buttonColor="red"
+                    textColor="#fff"
+                    compact
+                    style={styles.deleteButton}
+                    labelStyle={{ fontSize: p(12), fontWeight: '600' }}
+                    contentStyle={{ paddingHorizontal: p(4) }}
+                  >
+                    Delete
+                  </Button>
+
+                  )}
+                  */}
                   </View>
                   
 

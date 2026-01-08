@@ -613,8 +613,8 @@ const getServiceTypeValue = (serviceType: string) => {
     // Use global status color mapping from constants
     const statusColorMap = STATUS_COLOR_BY_ID;
 
-    // Filter out "N/A" (id: 7) and "OOS" (id: 8) statuses from UI (hidden but kept in code)
-    const hiddenStatusIds = [7, 8];
+    // Filter out "N/A" (id: 7), "OOS" (id: 8), "Fail" (id: 6), "Recommend OOS" (id: 9), and "Out of Date" (id: 10) statuses from UI (hidden but kept in code)
+    const hiddenStatusIds = [6, 7, 8, 9, 10];
     return gearStatus
       .filter((status: any) => !hiddenStatusIds.includes(status.id))
       .map((status: any) => ({
