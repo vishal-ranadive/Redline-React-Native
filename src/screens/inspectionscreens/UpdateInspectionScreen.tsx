@@ -51,6 +51,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import InspectionFormSkeleton from '../skeleton/InspectionFormSkeleton';
 import { imageUploadApi } from '../../services/imageUploadApi';
 import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
+import { requestGalleryPermission, requestCameraPermission } from '../../utils/permissions';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -771,11 +772,24 @@ const handleFieldChange = useCallback((field: string, value: any) => {
   };
 
   const handleCameraCaptured = (uri: string) => {
-    setImages(prev => [...prev, { id: `camera-${Date.now()}`, uri }]);
+    if (uri) {
+      setImages(prev => [...prev, { id: `camera-${Date.now()}`, uri }]);
+    }
   };
 
   const handlePickFromGallery = async () => {
     try {
+      // Request gallery permission first
+      const hasPermission = await requestGalleryPermission(true);
+      if (!hasPermission) {
+        Alert.alert(
+          'Permission Denied',
+          'Gallery access is required to select images. Please grant permission in your device settings.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const response = await launchImageLibrary({
         mediaType: 'photo',
         selectionLimit: 1,
@@ -786,12 +800,20 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         return;
       }
 
+      if (response.errorMessage) {
+        Alert.alert('Image picker error', response.errorMessage);
+        return;
+      }
+
       const uri = response.assets?.[0]?.uri;
       if (uri) {
         setImages(prev => [...prev, { id: `gallery-${Date.now()}`, uri }]);
+      } else {
+        Alert.alert('Error', 'No image was selected.');
       }
-    } catch (error) {
-      Alert.alert('Image picker error', 'Unable to select image from gallery.');
+    } catch (error: any) {
+      console.error('Gallery picker error:', error);
+      Alert.alert('Image picker error', error.message || 'Unable to select image from gallery.');
     }
   };
 
@@ -1764,6 +1786,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         visible={showCameraModal}
         onClose={() => setShowCameraModal(false)}
         onPhotoCaptured={handleCameraCaptured}
+        requestPermission={true}
       />
 
       {/* Image Editor Modal */}

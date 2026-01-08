@@ -41,6 +41,7 @@ import { repairApi } from '../../services/repairApi';
 import { RepairHeader } from './components/RepairHeader';
 import RepairPricingCalculator from './components/RepairPricingCalculator';
 import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
+import { requestGalleryPermission, requestCameraPermission } from '../../utils/permissions';
 
 const RepairDetailsScreen = () => {
   const { colors, dark } = useTheme();
@@ -406,42 +407,127 @@ const RepairDetailsScreen = () => {
   };
 
   const handleCameraCaptured = (uri: string) => {
-    const newImage = { id: `camera-${Date.now()}`, uri };
-    setImages((prev: Array<{ id: string; uri: string }>) => [...prev, newImage]);
+    if (uri) {
+      const newImage = { id: `camera-${Date.now()}`, uri };
+      setImages((prev: Array<{ id: string; uri: string }>) => [...prev, newImage]);
 
-    // Assign image to current repair item if one is selected
-    if (currentItemForImages) {
-      assignImageToRepairItem(newImage.uri, currentItemForImages.category, currentItemForImages.itemName);
-      setCurrentItemForImages(null);
+      // Assign image to current repair item if one is selected
+      if (currentItemForImages) {
+        assignImageToRepairItem(newImage.uri, currentItemForImages.category, currentItemForImages.itemName);
+        setCurrentItemForImages(null);
+      }
     }
   };
 
   const handlePickFromGallery = async () => {
     try {
+      console.log('📸 handlePickFromGallery called, currentItemForImages:', currentItemForImages);
+
+      // Request gallery permission first
+      const hasPermission = await requestGalleryPermission(true);
+      console.log('📸 Gallery permission result:', hasPermission);
+
+      if (!hasPermission) {
+        Alert.alert(
+          'Permission Denied',
+          'Gallery access is required to select images. Please grant permission in your device settings.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      console.log('📸 Launching image library...');
 
       const response = await launchImageLibrary({
         mediaType: 'photo',
         selectionLimit: 1,
         includeBase64: false,
+        quality: 0.8,
+        storageOptions: {
+          skipBackup: true,
+          path: 'images',
+        },
+        permissionDenied: {
+          title: 'Photo Library Permission',
+          text: 'This app needs access to your photo library to select images',
+          reTryTitle: 'Grant Permission',
+          okTitle: 'Cancel',
+        }
       });
 
+      console.log('📸 Image library response:', response);
+
       if (response.didCancel) {
+        console.log('📸 User cancelled image selection');
+        return;
+      }
+
+      if (response.errorMessage) {
+        console.log('📸 Image picker error:', response.errorMessage);
+
+        // Handle specific iOS permission errors
+        if (response.errorMessage.includes('permission') || response.errorMessage.includes('denied')) {
+          Alert.alert(
+            'Permission Denied',
+            'Photo library access is required to select images. Please grant permission in your device settings.',
+            [
+              { text: 'Cancel' },
+              {
+                text: 'Settings',
+                onPress: () => {
+                  // On iOS, we can't directly open settings, so show instructions
+                  if (Platform.OS === 'ios') {
+                    Alert.alert(
+                      'Settings Instructions',
+                      'Please go to Settings > Privacy & Security > Photos and allow access for this app.'
+                    );
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Image picker error', response.errorMessage);
+        }
+        return;
+      }
+
+      if (response.errorCode) {
+        console.log('📸 Image picker error code:', response.errorCode);
+
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            'Permission Required',
+            'Photo library access is required to select images.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Image picker error', `Error code: ${response.errorCode}`);
+        }
         return;
       }
 
       const uri = response.assets?.[0]?.uri;
+      console.log('📸 Selected image URI:', uri);
+
       if (uri) {
         const newImage = { id: `gallery-${Date.now()}`, uri };
+        console.log('📸 Adding new image to state:', newImage);
         setImages((prev: Array<{ id: string; uri: string }>) => [...prev, newImage]);
 
         // Assign image to current repair item if one is selected
         if (currentItemForImages) {
+          console.log('📸 Assigning image to repair item:', currentItemForImages);
           assignImageToRepairItem(newImage.uri, currentItemForImages.category, currentItemForImages.itemName);
           setCurrentItemForImages(null);
         }
+      } else {
+        console.log('📸 No image URI found');
+        Alert.alert('Error', 'No image was selected.');
       }
-    } catch (error) {
-      Alert.alert('Image picker error', 'Unable to select image from gallery.');
+    } catch (error: any) {
+      console.error('Gallery picker error:', error);
+      Alert.alert('Image picker error', error.message || 'Unable to select image from gallery.');
     }
   };
 
@@ -956,6 +1042,7 @@ const RepairDetailsScreen = () => {
           setCurrentItemForImages(null);
         }}
         onPhotoCaptured={handleCameraCaptured}
+        requestPermission={true}
       />
 
       {/* Image Editor Modal */}

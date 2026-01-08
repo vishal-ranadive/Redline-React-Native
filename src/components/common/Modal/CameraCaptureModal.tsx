@@ -14,14 +14,16 @@ import { Camera, CameraType, type CameraApi } from 'react-native-camera-kit';
 import { useTheme, IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../../utils/responsive';
+import { requestCameraPermission } from '../../../utils/permissions';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onPhotoCaptured: (uri: string) => void;
+  requestPermission?: boolean;
 };
 
-const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured }) => {
+const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured, requestPermission = true }) => {
   const { colors } = useTheme();
   const cameraRef = useRef<CameraApi | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
@@ -45,24 +47,25 @@ const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured
     }
   }, [visible]);
 
-  const requestPermission = useCallback(async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
-        const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
-        setHasPermission(isGranted);
-        if (!isGranted) {
-          setError('Camera permission is required to take photos.');
-        }
-      } catch (permissionError) {
-        setError('Unable to request camera permission.');
-      }
-    } else {
-      // For iOS, render Camera component first and request permission after it mounts
-      // The Camera component will handle permissions automatically when rendered
+  const checkPermissions = useCallback(async () => {
+    if (!requestPermission) {
+      // If requestPermission is false, assume permission is already granted
       setHasPermission(true);
+      return;
     }
-  }, []);
+
+    try {
+      const isGranted = await requestCameraPermission(true);
+      setHasPermission(isGranted);
+      if (!isGranted) {
+        setError('Camera permission is required to take photos.');
+      }
+    } catch (permissionError) {
+      console.error('Camera permission error:', permissionError);
+      setError('Unable to request camera permission.');
+      setHasPermission(false);
+    }
+  }, [requestPermission]);
 
   // Request iOS permission after camera ref is set
   useEffect(() => {
@@ -94,12 +97,12 @@ const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured
       setError(null);
       setIsProcessing(false);
       setCameraMounted(false);
-      requestPermission();
+      checkPermissions();
     } else {
       setHasPermission(false);
       setCameraMounted(false);
     }
-  }, [requestPermission, visible]);
+  }, [checkPermissions, visible]);
 
   const handleCapture = async () => {
     if (!cameraRef.current || isProcessing) {
