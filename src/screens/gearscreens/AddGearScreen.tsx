@@ -10,6 +10,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   type PressableProps,
   type PressableStateCallbackType,
   type StyleProp,
@@ -146,6 +147,7 @@ const AddGearScreen = () => {
   const [isGearNameEditable, setIsGearNameEditable] = useState(true);
   const [isCustomGearNameRequired, setIsCustomGearNameRequired] = useState(false);
   const [gearNameError, setGearNameError] = useState('');
+  const [manufacturingDateError, setManufacturingDateError] = useState('');
 
   // UI states
   const [submitting, setSubmitting] = useState(false);
@@ -218,24 +220,44 @@ const AddGearScreen = () => {
   };
 
   const validateForm = (): boolean => {
+    let isValid = true;
+
     if (isCustomGearNameRequired && !gearName.trim()) {
       setGearNameError('Gear name is required for Other type');
       showSnackbar('Please enter gear name');
-      return false;
+      isValid = false;
+    } else {
+      setGearNameError('');
     }
+
     if (!selectedGearType) {
       showSnackbar('Please select gear type');
-      return false;
+      isValid = false;
     }
+
     if (!manufacturer) {
       showSnackbar('Please select manufacturer');
-      return false;
+      isValid = false;
     }
+
     if (!assignedRoster) {
       showSnackbar('Please select fire fighter');
-      return false;
+      isValid = false;
     }
-    return true;
+
+    if (!manufacturingDate) {
+      setManufacturingDateError('Manufacturing month & year is required');
+      Alert.alert(
+        'Required Field',
+        'Please select manufacturing month & year',
+        [{ text: 'OK' }]
+      );
+      isValid = false;
+    } else {
+      setManufacturingDateError('');
+    }
+
+    return isValid;
   };
 
   const handleSave = async () => {
@@ -338,6 +360,8 @@ const AddGearScreen = () => {
     setSelectedGearType(null);
     setSelectedStatus('new');
     setManufacturingDate('');
+    setGearNameError('');
+    setManufacturingDateError('');
   };
 
   const onRosterSelect = (roster: RosterItem) => {
@@ -444,14 +468,16 @@ const AddGearScreen = () => {
               >
                 {assignedRoster.firestation?.name || 'Unknown Station'}
               </Text>
-              <Text
-                style={[
-                  styles.selectedItemSubtitle,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                {assignedRoster.email} • {assignedRoster.phone}
-              </Text>
+              {(assignedRoster.email || assignedRoster.phone) && (
+                <Text
+                  style={[
+                    styles.selectedItemSubtitle,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  {[assignedRoster.email, assignedRoster.phone].filter(Boolean).join(' • ')}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -524,14 +550,16 @@ const AddGearScreen = () => {
               >
                 {manufacturer.manufacturer_name}
               </Text>
-              <Text
-                style={[
-                  styles.selectedItemSubtitle,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                {manufacturer.city}, {manufacturer.country}
-              </Text>
+              {(manufacturer.city || manufacturer.country) && (
+                <Text
+                  style={[
+                    styles.selectedItemSubtitle,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  {[manufacturer.city, manufacturer.country].filter(Boolean).join(', ')}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -719,9 +747,14 @@ const AddGearScreen = () => {
 
                     <View style={[styles.inputCol, { flex: 1, marginTop: p(12) }]}>
                       <MonthYearPicker
-                        label="Manufacturing Month & Year"
+                        label="Manufacturing Month & Year *"
                         value={manufacturingDate}
-                        onChange={setManufacturingDate}
+                        onChange={(value) => {
+                          setManufacturingDate(value);
+                          if (value) {
+                            setManufacturingDateError('');
+                          }
+                        }}
                         placeholder="Select month & year"
                       />
                     </View>
@@ -832,9 +865,14 @@ const AddGearScreen = () => {
                   {/* 3. Manufacturing Month & Year */}
                   <View style={[styles.inputCol, { marginTop: p(12) }]}>
                     <MonthYearPicker
-                      label="Manufacturing Month & Year"
+                      label="Manufacturing Month & Year *"
                       value={manufacturingDate}
-                      onChange={setManufacturingDate}
+                      onChange={(value) => {
+                        setManufacturingDate(value);
+                        if (value) {
+                          setManufacturingDateError('');
+                        }
+                      }}
                       placeholder="Select month & year"
                     />
                   </View>
