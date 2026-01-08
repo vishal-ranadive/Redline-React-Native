@@ -113,7 +113,7 @@ const LeadScreen = () => {
   
   // Pagination state
   const [page, setPage] = useState<number>(1); // Current page
-  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(50); // Items per page
+  const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState<number>(100); // Items per page
   const numberOfItemsPerPageList = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500]; // Page size options
   
   // Ref to track initial mount and prevent double fetch

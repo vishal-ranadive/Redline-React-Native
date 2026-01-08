@@ -51,7 +51,7 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   const isOtherSelected = isOtherMode || selectedColor?.toLowerCase() === 'other';
 
   // Normalize used colors to lowercase for comparison
-  const normalizedUsedColors = usedColors.map((color) => color.toLowerCase().trim()).filter(Boolean);
+  // const normalizedUsedColors = usedColors.map((color) => color.toLowerCase().trim()).filter(Boolean);
 
   // Initialize isOtherMode when modal opens if Other is already selected
   useEffect(() => {
@@ -173,8 +173,9 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               const colorValue = option.value.toLowerCase();
               const displayColor = getColorForOption(option);
               const isSelected = selectedColor?.toLowerCase() === colorValue;
-              const isLocked = option.type === 'color' && 
-                normalizedUsedColors.includes(colorValue) && !isSelected;
+              // const isLocked = option.type === 'color' &&
+              //   normalizedUsedColors.includes(colorValue) && !isSelected;
+              const isLocked = false; // Commented out lock logic
 
               const isOther = option.type === 'other';
 
@@ -183,16 +184,16 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   key={option.value}
                   style={styles.colorRow}
                   onPress={() => handleColorSelect(option.value)}
-                  disabled={isLocked}
-                  activeOpacity={isLocked ? 1 : 0.7}
+                  // disabled={isLocked}
+                  activeOpacity={0.7} // isLocked ? 1 : 0.7
                 >
                   {/* Color Rectangle - Simple View with text and color box */}
                   <View 
                     style={[
                       styles.colorRowContainer,
-                      { 
+                      {
                         backgroundColor: colors.surface,
-                        opacity: isLocked ? 0.5 : 1,
+                        // opacity: isLocked ? 0.5 : 1,
                       }
                     ]}
                   >
@@ -201,8 +202,8 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                       <Text 
                         style={[
                           styles.colorLabel,
-                          { 
-                            color: isLocked ? colors.onSurface + '80' : colors.onSurface,
+                          {
+                            color: colors.onSurface, // isLocked ? colors.onSurface + '80' : colors.onSurface,
                             fontWeight: option.type === 'no-tag' ? 'bold' : 'normal',
                           }
                         ]}
@@ -217,14 +218,14 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                           style={styles.checkIcon}
                         />
                       )}
-                      {isLocked && (
+                      {/* {isLocked && (
                         <IconButton
                           icon="lock"
                           size={20}
                           iconColor={colors.onSurface + '80'}
                           style={styles.lockIcon}
                         />
-                      )}
+                      )} */}
                     </View>
                     {/* Color box or ban icon on the right */}
                     {option.type === 'no-tag' ? (
@@ -238,9 +239,9 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                       <View 
                         style={[
                           styles.colorStrip,
-                          { 
+                          {
                             backgroundColor: displayColor,
-                            opacity: isLocked ? 0.5 : 1,
+                            // opacity: isLocked ? 0.5 : 1,
                           }
                         ]} 
                       />
