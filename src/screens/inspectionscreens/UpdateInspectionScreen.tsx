@@ -436,9 +436,12 @@ export default function UpdateInspectionScreen() {
           }
 
           // Populate form data with inspection data
-          // Handle finding_ids as array of IDs (new API format) or finding as array/object (legacy format)
+          // Handle gear_findings (current API format), finding_ids, or finding (legacy formats)
           let gearFindings: string[] = [];
-          if (inspectionData.finding_ids && Array.isArray(inspectionData.finding_ids)) {
+          if (inspectionData.gear_findings && Array.isArray(inspectionData.gear_findings)) {
+            // Current API format: gear_findings is an array of objects with id and findings
+            gearFindings = inspectionData.gear_findings.map((f: any) => f.id?.toString()).filter(Boolean);
+          } else if (inspectionData.finding_ids && Array.isArray(inspectionData.finding_ids)) {
             // New API format: finding_ids is an array of IDs
             gearFindings = inspectionData.finding_ids.map((id: number) => id.toString()).filter(Boolean);
           } else if (Array.isArray(inspectionData.finding)) {
