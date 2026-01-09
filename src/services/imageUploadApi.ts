@@ -46,8 +46,12 @@ class ImageUploadApi {
   async uploadInspectionImage(
     imageUri: string,
     gearId: number,
-    onProgress?: (progress: ImageUploadProgress) => void
+    onProgress?: (progress: ImageUploadProgress) => void,
+    retryCount: number = 0
   ): Promise<ImageUploadResponse> {
+    const maxRetries = Platform.OS === 'ios' ? 2 : 1; // iOS gets 2 retries, Android gets 1
+    const timeoutDuration = 2400000; // 40 minutes for both iOS and Android
+    
     try {
       // Fix Android file URI handling - ensure proper format
       let fileUri = imageUri;
@@ -79,15 +83,24 @@ class ImageUploadApi {
         type: type,
       } as any);
 
-      console.log('📤 Uploading image:', { imageUri, fileUri, gearId, filename, type });
+      console.log(`📤 Uploading image (attempt ${retryCount + 1}/${maxRetries + 1}):`, { 
+        imageUri, 
+        fileUri, 
+        gearId, 
+        filename, 
+        type,
+        platform: Platform.OS,
+        timeout: timeoutDuration 
+      });
 
       // Use axiosInstance for upload with progress tracking
-      const response = await axiosInstance.post('/upload-inspection-image/', formData, {
+      // Create a new config object to ensure timeout is properly set
+      const uploadConfig = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 2400000, // 40 minutes - allow enough time for large images to upload
-        onUploadProgress: (progressEvent) => {
+        timeout: timeoutDuration, // Platform-specific timeout
+        onUploadProgress: (progressEvent: any) => {
           if (onProgress && progressEvent.total) {
             const progress: ImageUploadProgress = {
               loaded: progressEvent.loaded,
@@ -97,7 +110,9 @@ class ImageUploadApi {
             onProgress(progress);
           }
         },
-      });
+      };
+
+      const response = await axiosInstance.post('/upload-inspection-image/', formData, uploadConfig);
 
       console.log('✅ Image uploaded successfully:', response.data);
       
@@ -129,7 +144,24 @@ class ImageUploadApi {
         };
       }
     } catch (error: any) {
-      console.error('❌ Error uploading image:', error);
+      console.error(`❌ Error uploading image (attempt ${retryCount + 1}):`, {
+        message: error.message,
+        code: error.code,
+        platform: Platform.OS,
+        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+      });
+      
+      // Check if it's a timeout error and we can retry
+      const isTimeoutError = error.code === 'ECONNABORTED' || 
+                            error.message?.includes('timeout') || 
+                            error.message?.includes('TIMEOUT');
+      
+      if (isTimeoutError && retryCount < maxRetries) {
+        console.log(`🔄 Retrying upload (${retryCount + 1}/${maxRetries}) after timeout...`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+        return this.uploadInspectionImage(imageUri, gearId, onProgress, retryCount + 1);
+      }
       
       // Handle axios error
       if (error.response) {
@@ -140,11 +172,14 @@ class ImageUploadApi {
           error: 'UPLOAD_FAILED'
         };
       } else if (error.request) {
-        // Request was made but no response
+        // Request was made but no response (network error or timeout)
+        const errorMessage = isTimeoutError 
+          ? `Upload timeout on ${Platform.OS}. Please check your connection and try again.`
+          : 'Network error during upload';
         return {
           status: false,
-          message: 'Network error during upload',
-          error: 'NETWORK_ERROR'
+          message: errorMessage,
+          error: isTimeoutError ? 'TIMEOUT_ERROR' : 'NETWORK_ERROR'
         };
       } else {
         // Something else happened

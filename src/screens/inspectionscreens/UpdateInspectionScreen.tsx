@@ -897,12 +897,22 @@ const handleFieldChange = useCallback((field: string, value: any) => {
             console.log(`✅ Image ${index + 1} uploaded:`, result.data.url);
           } else {
             console.error(`❌ Failed to upload image ${index + 1}:`, result.message);
-            Alert.alert('Upload Warning', `Failed to upload image ${index + 1}: ${result.message}`);
+            // Only show alert for non-timeout errors (timeout errors are handled by retry logic)
+            if (result.error !== 'TIMEOUT_ERROR') {
+              Alert.alert('Upload Warning', `Failed to upload image ${index + 1}: ${result.message}`);
+            } else {
+              console.log(`⏳ Timeout error for image ${index + 1}, retry logic handled it`);
+            }
           }
         });
 
         if (uploadedImageUrls.length === 0) {
-          Alert.alert('Upload Error', 'No images were uploaded successfully. Please try again.');
+          Alert.alert(
+            'Upload Error', 
+            Platform.OS === 'ios' 
+              ? 'No images were uploaded successfully. This may be due to network timeout. Please check your connection and try again.'
+              : 'No images were uploaded successfully. Please try again.'
+          );
           setUploadingImages(false);
           return;
         }

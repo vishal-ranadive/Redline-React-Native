@@ -646,19 +646,31 @@ const RepairDetailsScreen = () => {
               code: error.code,
               response: error.response?.data,
               request: error.request,
+              platform: Platform.OS,
             });
             
             // Provide more specific error messages
             let errorMessage = 'Network error';
-            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-              errorMessage = 'Upload timeout - please check your connection and try again.';
+            const isTimeoutError = error.code === 'ECONNABORTED' || 
+                                  error.message?.includes('timeout') || 
+                                  error.message?.includes('TIMEOUT');
+            
+            if (isTimeoutError) {
+              errorMessage = Platform.OS === 'ios' 
+                ? 'Upload timeout on iOS. The upload will be retried automatically. If this persists, please check your connection.'
+                : 'Upload timeout - please check your connection and try again.';
             } else if (error.message?.includes('Network Error')) {
               errorMessage = 'Network connection failed. Please check your internet connection.';
             } else {
               errorMessage = error.message || 'Failed to upload image';
             }
             
-            Alert.alert('Upload Error', `Failed to upload image ${i + 1}: ${errorMessage}`);
+            // Only show alert if it's not a timeout (timeout errors are handled by retry logic)
+            if (!isTimeoutError) {
+              Alert.alert('Upload Error', `Failed to upload image ${i + 1}: ${errorMessage}`);
+            } else {
+              console.log(`⏳ Timeout error for image ${i + 1}, retry logic will handle it`);
+            }
           }
         }
       }

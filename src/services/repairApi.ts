@@ -1,5 +1,6 @@
 // src/services/repairApi.ts
 import { axiosInstance } from './api';
+import { Platform } from 'react-native';
 
 export const repairApi = {
   // Get repair findings
@@ -45,16 +46,46 @@ export const repairApi = {
   },
 
   // Upload repair image to S3
-  uploadRepairImage: async (formData: FormData): Promise<any> => {
-    console.log('➡️ API CALL POST /upload-repair-image/', formData);
+  uploadRepairImage: async (formData: FormData, retryCount: number = 0): Promise<any> => {
+    const maxRetries = Platform.OS === 'ios' ? 2 : 1; // iOS gets 2 retries, Android gets 1
+    const timeoutDuration = 2400000; // 40 minutes for both iOS and Android
+    
+    try {
+      console.log(`➡️ API CALL POST /upload-repair-image/ (attempt ${retryCount + 1}/${maxRetries + 1})`, {
+        platform: Platform.OS,
+        timeout: timeoutDuration
+      });
 
-    const response = await axiosInstance.post(`/upload-repair-image/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 2400000, // 40 minutes - allow enough time for large images to upload
-    });
+      const response = await axiosInstance.post(`/upload-repair-image/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: timeoutDuration, // Platform-specific timeout
+      });
 
-    console.log('✅ API Response POST /upload-repair-image/', response.data);
-    return response.data;
+      console.log('✅ API Response POST /upload-repair-image/', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`❌ Error uploading repair image (attempt ${retryCount + 1}):`, {
+        message: error.message,
+        code: error.code,
+        platform: Platform.OS,
+        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+      });
+
+      // Check if it's a timeout error and we can retry
+      const isTimeoutError = error.code === 'ECONNABORTED' || 
+                            error.message?.includes('timeout') || 
+                            error.message?.includes('TIMEOUT');
+      
+      if (isTimeoutError && retryCount < maxRetries) {
+        console.log(`🔄 Retrying repair image upload (${retryCount + 1}/${maxRetries}) after timeout...`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+        return repairApi.uploadRepairImage(formData, retryCount + 1);
+      }
+
+      // Re-throw the error if we can't retry
+      throw error;
+    }
   },
 
   // Create gear repair
