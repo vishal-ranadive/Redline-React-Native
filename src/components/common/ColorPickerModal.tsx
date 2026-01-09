@@ -42,7 +42,7 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
     { value: 'grey', label: 'GREY' },
     { value: 'gold', label: 'GOLD' },
   ],
-  usedColors = [],
+  usedColors: _usedColors = [],
 }) => {
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,14 +51,14 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   const isOtherSelected = isOtherMode || selectedColor?.toLowerCase() === 'other';
 
   // Normalize used colors to lowercase for comparison
-  // const normalizedUsedColors = usedColors.map((color) => color.toLowerCase().trim()).filter(Boolean);
+  // const normalizedUsedColors = _usedColors.map((color) => color.toLowerCase().trim()).filter(Boolean);
 
   // Initialize isOtherMode when modal opens if Other is already selected
   useEffect(() => {
     if (visible && selectedColor?.toLowerCase() === 'other') {
       setIsOtherMode(true);
     }
-  }, [visible]);
+  }, [visible, selectedColor]);
 
   // Reset other color value when modal closes
   useEffect(() => {
@@ -173,11 +173,11 @@ export const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               const colorValue = option.value.toLowerCase();
               const displayColor = getColorForOption(option);
               const isSelected = selectedColor?.toLowerCase() === colorValue;
-              // const isLocked = option.type === 'color' &&
+              // const _isLocked = option.type === 'color' &&
               //   normalizedUsedColors.includes(colorValue) && !isSelected;
-              const isLocked = false; // Commented out lock logic
+              // Commented out lock logic
 
-              const isOther = option.type === 'other';
+              // const _isOther = option.type === 'other';
 
               return (
                 <TouchableOpacity

@@ -6,7 +6,6 @@ import { useLeadStore } from '../../store/leadStore';
 import { useNavigation } from '@react-navigation/native';
 import { p } from '../../utils/responsive';
 import { formatStatus, getStatusColor } from '../../constants/leadStatuses';
-import useFormattedDate from '../../hooks/useFormattedDate';
 
 export const LeadInfoBanner: React.FC = () => {
   const { colors } = useTheme();
@@ -21,7 +20,7 @@ export const LeadInfoBanner: React.FC = () => {
     currentLead.type?.toUpperCase() === 'REPAIR' ? 'REPAIR' : 'INSPECTION';
 
   const handlePress = () => {
-    navigation.navigate('LeadDetail' as never, { lead: currentLead });
+    (navigation as any).navigate('LeadDetail', { lead: currentLead });
   };
 
   return (

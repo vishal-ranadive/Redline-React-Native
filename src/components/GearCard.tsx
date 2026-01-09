@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Card, Text, Avatar, Badge, useTheme } from 'react-native-paper';
-import { GearItem } from '../types/gears';
 
 const p = (v: number) => v;
 

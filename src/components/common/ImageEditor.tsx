@@ -4,14 +4,12 @@ import {
   View,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   Dimensions,
   Alert,
-  Platform,
   Image,
 } from 'react-native';
 import { Text, IconButton, Button, useTheme } from 'react-native-paper';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 
@@ -50,12 +48,11 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [safeAreaReady, setSafeAreaReady] = useState(false);
   const strokeWidth = 4; // Fixed stroke width
   const strokeColor = '#FF0000'; // Red color only
   const containerRef = useRef<View>(null);
 
-  // Reset state when modal opens and ensure SafeAreaView is ready
+  // Reset state when modal opens
   useEffect(() => {
     if (visible) {
       // Reset all state
@@ -64,16 +61,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
       setCurrentPath([]);
       setImageLoaded(false);
       setImageError(false);
-      setSafeAreaReady(false);
-      
-      // Force SafeAreaView to recalculate by setting ready state after a brief delay
-      const timer = setTimeout(() => {
-        setSafeAreaReady(true);
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    } else {
-      setSafeAreaReady(false);
     }
   }, [visible, imageUri]);
 

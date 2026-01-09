@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  PermissionsAndroid,
   Platform,
   StyleSheet,
   Text,
@@ -150,9 +149,9 @@ const CameraCaptureModal: React.FC<Props> = ({ visible, onClose, onPhotoCaptured
               style={styles.cameraPreview}
               cameraType={CameraType.Back}
               flashMode="off"
-              onError={(error: any) => {
-                console.log('Camera error:', error);
-                if (error?.message?.includes('permission') || error?.code === 'PERMISSION_DENIED') {
+              onError={(cameraError: any) => {
+                console.log('Camera error:', cameraError);
+                if (cameraError?.message?.includes('permission') || cameraError?.code === 'PERMISSION_DENIED') {
                   setHasPermission(false);
                   setError('Camera permission is required to take photos.');
                 }

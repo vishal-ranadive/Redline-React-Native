@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
-  TouchableOpacity,
   Dimensions,
   Image,
 } from 'react-native';
@@ -17,7 +16,6 @@ import {
   Card,
   Divider,
   Badge,
-  ActivityIndicator,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { p } from '../../../utils/responsive';

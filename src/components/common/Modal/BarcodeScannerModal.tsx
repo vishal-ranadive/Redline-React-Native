@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, PermissionsAndroid, Platform, Modal, ActivityIndicator, Dimensions } from 'react-native';
-import { Text, Button, Icon, Card, useTheme } from 'react-native-paper';
+import { Text, Button, Icon, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-camera-kit';
 import { p } from '../../../utils/responsive';

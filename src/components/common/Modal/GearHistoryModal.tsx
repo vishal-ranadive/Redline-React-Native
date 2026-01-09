@@ -8,7 +8,6 @@ import {
   Image,
   Dimensions,
   Alert,
-  Platform,
 } from 'react-native';
 import {
   Text,

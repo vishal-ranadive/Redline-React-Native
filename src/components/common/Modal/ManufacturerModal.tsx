@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Alert,
   FlatList,
   Dimensions,
 } from 'react-native';
@@ -70,7 +69,7 @@ const ManufacturerModal: React.FC<ManufacturerModalProps> = ({ visible, onClose,
 
       fetchManufacturers(searchParams);
     }
-  }, [visible, debouncedSearch, page, numberOfItemsPerPage]);
+  }, [visible, debouncedSearch, page, numberOfItemsPerPage, fetchManufacturers]);
 
   // Reset when modal opens
   useEffect(() => {

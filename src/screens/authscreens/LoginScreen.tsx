@@ -21,7 +21,7 @@ const LoginScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
   const { theme, toggleTheme } = useThemeStore();
   const paperTheme = useTheme();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, clearError } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,12 +58,12 @@ const LoginScreen = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fadeAnim, subtitles.length]);
 
   // Clear error on unmount
   useEffect(() => {
     return () => clearError();
-  }, []);
+  }, [clearError]);
 
 
   const handleLogin = async () => {
@@ -103,29 +103,29 @@ const LoginScreen = () => {
         text2: 'Welcome back to RedLine Gear',
       });
       navigation.navigate('LeadScreen');
-    } catch (error) {
-      console.error('❌ Login error caught in component:', error);
+    } catch (loginError) {
+      console.error('❌ Login error caught in component:', loginError);
 
       // Check if the error is specifically about unauthorized access for role on iPad
       let errorMessage = '';
-      if (error && typeof error === 'object') {
-        if ('response' in error && error.response && typeof error.response === 'object' &&
-            'data' in error.response && error.response.data && typeof error.response.data === 'object') {
+      if (loginError && typeof loginError === 'object') {
+        if ('response' in loginError && loginError.response && typeof loginError.response === 'object' &&
+            'data' in loginError.response && loginError.response.data && typeof loginError.response.data === 'object') {
           // Check for both 'message' and 'error' properties in response data
-          if ('message' in error.response.data && typeof error.response.data.message === 'string') {
-            errorMessage = error.response.data.message;
-          } else if ('error' in error.response.data && typeof error.response.data.error === 'string') {
-            errorMessage = error.response.data.error;
+          if ('message' in loginError.response.data && typeof loginError.response.data.message === 'string') {
+            errorMessage = loginError.response.data.message;
+          } else if ('error' in loginError.response.data && typeof loginError.response.data.error === 'string') {
+            errorMessage = loginError.response.data.error;
           }
         }
-        if (errorMessage === '' && 'message' in error && typeof error.message === 'string') {
-          errorMessage = error.message;
+        if (errorMessage === '' && 'message' in loginError && typeof loginError.message === 'string') {
+          errorMessage = loginError.message;
         }
         if (errorMessage === '') {
-          errorMessage = String(error);
+          errorMessage = String(loginError);
         }
       } else {
-        errorMessage = String(error);
+        errorMessage = String(loginError);
       }
       const isUnauthorizedIPadError = errorMessage.includes('Unauthorized access for this role on iPad');
 

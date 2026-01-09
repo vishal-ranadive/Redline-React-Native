@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  Alert,
   FlatList,
   Dimensions,
 } from 'react-native';
@@ -21,7 +20,6 @@ import { p } from '../../../utils/responsive';
 import { useRosterStore } from '../../../store/rosterStore';
 import { useLeadStore } from '../../../store/leadStore';
 import useDebounce from '../../../hooks/useDebounce';
-import { getColorHex } from '../../../constants/colors';
 import Pagination from '../Pagination';
 
 interface RosterModalProps {
@@ -47,7 +45,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
   >(['portrait', 'landscape']);
   
   // Stores
-  const { rosters, loading, fetchRosters, pagination, fetchRostersByFirestation } = useRosterStore();
+  const { rosters, loading, pagination, fetchRostersByFirestation } = useRosterStore();
   const { currentLead } = useLeadStore();
 
   // Lock to current orientation when modal opens
@@ -79,7 +77,7 @@ const RosterModal: React.FC<RosterModalProps> = ({
 
       fetchRostersByFirestation(currentLead.firestation.id, searchParams);
     }
-  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch, numberOfItemsPerPage, page]);
+  }, [visible, currentLead?.firestation?.id, currentLead?.lead_id, debouncedSearch, numberOfItemsPerPage, page, fetchRostersByFirestation]);
 
   // Reset when modal opens
   useEffect(() => {

@@ -1,7 +1,5 @@
 // src/constants/leadStatuses.ts
 
-import { printTable } from "../utils/printTable";
-
 /**
  * Lead Status Constants
  * 

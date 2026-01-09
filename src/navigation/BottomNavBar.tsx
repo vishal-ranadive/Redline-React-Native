@@ -4,7 +4,6 @@ import { Icon, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { p } from '../utils/responsive';
 import { useAuthStore } from '../store/authStore';
-import { useThemeStore } from '../store/themeStore';
 
 export default function BottomNavBar() {
   const { colors } = useTheme();
