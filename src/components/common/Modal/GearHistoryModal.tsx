@@ -20,6 +20,7 @@ import {
 } from 'react-native-paper';
 import { p } from '../../../utils/responsive';
 import { GearHistoryItem } from '../../../store/gearStore';
+import { formatDateMMDDYYYY } from '../../../utils/dateUtils';
 
 interface GearHistoryModalProps {
   visible: boolean;
@@ -52,9 +53,7 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
   }, [visible]);
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+    return formatDateMMDDYYYY(dateString) || 'N/A';
   };
 
   const formatCurrency = (amount: number) => {

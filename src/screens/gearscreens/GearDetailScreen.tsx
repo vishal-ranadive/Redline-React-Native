@@ -21,6 +21,7 @@ import { useGearStore, GearHistoryItem } from '../../store/gearStore';
 import { printTable } from '../../utils/printTable';
 import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { formatDateMMDDYYYY } from '../../utils/dateUtils';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 
 
@@ -279,9 +280,7 @@ const GearDetailScreen = () => {
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+    return formatDateMMDDYYYY(dateString) || 'N/A';
   };
   printTable("currentGear",currentGear)
 
