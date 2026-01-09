@@ -245,7 +245,9 @@ export interface GearHistoryItem {
   created_by: string;
   updated_by: string;
   record_type: string;
-  repair_images: Array<any>; // Array of image objects
+  repair_images?: Array<string>; // Array of image URLs for repairs
+  inspection_images?: Array<string>; // Array of image URLs for inspections
+  inspection_id?: number; // For inspection records
 }
 
 interface GearState {

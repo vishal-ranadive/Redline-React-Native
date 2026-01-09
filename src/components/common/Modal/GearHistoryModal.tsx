@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   Image,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
 import {
   Text,
@@ -33,6 +34,22 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const screenWidth = Dimensions.get('window').width;
+  const [supportedOrientations, setSupportedOrientations] = useState<
+    ('portrait' | 'landscape' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right')[]
+  >(['portrait', 'landscape']);
+
+  // Lock to current orientation when modal opens
+  useEffect(() => {
+    if (visible) {
+      const { width, height } = Dimensions.get('window');
+      const isLandscape = width > height;
+      setSupportedOrientations(
+        isLandscape
+          ? ['landscape', 'landscape-left', 'landscape-right']
+          : ['portrait', 'portrait-upside-down']
+      );
+    }
+  }, [visible]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -61,13 +78,17 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
       transparent={true}
       animationType="slide"
       onRequestClose={onClose}
+      supportedOrientations={supportedOrientations}
     >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <View style={[styles.modalContent, { backgroundColor: colors.surface, height: screenWidth > 600 ? '80%' : '90%' }]}>
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View
+          style={[styles.modalContent, { backgroundColor: colors.surface, height: screenWidth > 600 ? '80%' : '90%' }]}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.onSurface, fontSize: p(20) }]}>
@@ -84,6 +105,7 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
             style={styles.scrollView}
             showsVerticalScrollIndicator={true}
             contentContainerStyle={styles.scrollContent}
+            nestedScrollEnabled={true}
           >
             {/* History Information */}
             <Card style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -256,36 +278,62 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
               </Card.Content>
             </Card>
 
-            {/* History Images */}
-            {gearHistoryItem.repair_images && gearHistoryItem.repair_images.length > 0 && (
-              <Card style={[styles.card, { backgroundColor: colors.surface }]}>
-                <Card.Content>
-                  <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
-                    History Images
-                  </Text>
-                  <Divider style={{ marginBottom: p(12) }} />
+            {/* Images Section - Repair or Inspection */}
+            {(() => {
+              const isRepair = gearHistoryItem.record_type === 'REPAIR';
+              const isInspection = gearHistoryItem.record_type === 'INSPECTION';
+              const repairImages = gearHistoryItem.repair_images || [];
+              const inspectionImages = gearHistoryItem.inspection_images || [];
+              const images = isRepair ? repairImages : isInspection ? inspectionImages : [];
+              const hasImages = images.length > 0;
+              const imageTitle = isRepair ? 'Repair Images' : isInspection ? 'Inspection Images' : 'History Images';
 
-                  <View style={styles.imagesContainer}>
-                    {gearHistoryItem.repair_images.map((image: any, index: number) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.imageWrapper}
-                        onPress={() => {
-                          // Handle image preview - you can implement image viewer here
-                          Alert.alert('Image Preview', 'Image preview functionality can be implemented here');
-                        }}
-                      >
-                        <Image
-                          source={{ uri: image.image_url || image.uri }}
-                          style={styles.image}
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </Card.Content>
-              </Card>
-            )}
+              return (
+                <Card style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <Card.Content>
+                    <Text style={[styles.cardTitle, { color: colors.onSurface, fontSize: p(18) }]}>
+                      {imageTitle}
+                    </Text>
+                    <Divider style={{ marginBottom: p(12) }} />
+
+                    {hasImages ? (
+                      <View style={styles.imagesContainer}>
+                        {images.map((imageUrl: string, index: number) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={styles.imageWrapper}
+                            onPress={() => {
+                              // Handle image preview - you can implement image viewer here
+                              Alert.alert('Image Preview', 'Image preview functionality can be implemented here');
+                            }}
+                          >
+                            <Image
+                              source={{ uri: imageUrl }}
+                              style={styles.image}
+                              resizeMode="cover"
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={styles.noImagesContainer}>
+                        <Icon source="image-off" size={p(48)} color={colors.onSurfaceVariant} />
+                        <Text style={[styles.noImagesText, { color: colors.onSurfaceVariant, fontSize: p(16) }]}>
+                          No images available
+                        </Text>
+                        <Text style={[styles.noImagesSubtext, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
+                          {isRepair 
+                            ? 'No repair images were captured for this record.' 
+                            : isInspection 
+                            ? 'No inspection images were captured for this record.'
+                            : 'No images are available for this record.'}
+                        </Text>
+                      </View>
+                    )}
+                  </Card.Content>
+                </Card>
+              );
+            })()}
           </ScrollView>
 
           {/* Close Button */}
@@ -301,7 +349,7 @@ const GearHistoryModal: React.FC<GearHistoryModalProps> = ({
             </Button>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
 };
@@ -316,10 +364,11 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    maxWidth: p(600),
+    maxWidth: p(800),
     borderRadius: p(12),
     elevation: 5,
-    flex: 1,
+    overflow: 'hidden',
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -367,6 +416,22 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  noImagesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: p(32),
+    paddingHorizontal: p(16),
+  },
+  noImagesText: {
+    marginTop: p(16),
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  noImagesSubtext: {
+    marginTop: p(8),
+    textAlign: 'center',
+    opacity: 0.7,
   },
   footer: {
     padding: p(16),
