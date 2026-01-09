@@ -783,6 +783,27 @@ const RepairDetailsScreen = () => {
     }
   };
 
+  // Handle roster update from RepairHeader - refreshes gear data after roster assignment/update
+  const handleRosterUpdate = useCallback(async () => {
+    if (!gearId) {
+      console.error('Cannot refresh gear: gearId is missing');
+      return;
+    }
+
+    try {
+      console.log('🔄 Refreshing gear data after roster update...');
+      const updatedGear = await fetchGearById(gearId);
+      
+      if (updatedGear) {
+        setGear(updatedGear);
+        console.log('✅ Gear data refreshed successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing gear data:', error);
+      Alert.alert('Error', 'Failed to refresh gear data. Please try again.');
+    }
+  }, [gearId, fetchGearById]);
+
   // Show loading state
   if (loading) {
     return (
@@ -871,6 +892,7 @@ const RepairDetailsScreen = () => {
             navigation.navigate('GearDetail', { gear_id: gear.gear_id });
           }
         }}
+        onRosterUpdate={handleRosterUpdate}
       />
 
       <ScrollView

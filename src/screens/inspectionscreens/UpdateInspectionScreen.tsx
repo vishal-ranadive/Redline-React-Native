@@ -202,24 +202,31 @@ export default function UpdateInspectionScreen() {
     return () => subscription.remove();
   }, []);
 
-  const resolvedRosterId = useMemo(() => {
-    if (!firefighter) {
-      return undefined;
-    }
-    return (
-      firefighter.roster_id ??
-      firefighter.rosterId ??
-      firefighter.id ??
-      firefighter.roster?.id
-    );
-  }, [firefighter]);
-
-  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, resolvedRosterId, colorLocked });
+  console.log("handleGearPress=ParamsGot", { gearId, inspectionId, mode, firefighter, colorLocked });
   
   // State for gear data
   const [gear, setGear] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resolvedRosterId = useMemo(() => {
+    // Priority 1: Use gear.roster from API (most reliable - single source of truth)
+    if (gear?.roster?.roster_id) {
+      return gear.roster.roster_id;
+    }
+    
+    // Priority 2: Fallback to firefighter param (for backward compatibility)
+    if (firefighter) {
+      return (
+        firefighter.roster_id ??
+        firefighter.rosterId ??
+        firefighter.id ??
+        firefighter.roster?.id
+      );
+    }
+    
+    return undefined;
+  }, [gear?.roster, firefighter]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -989,6 +996,33 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     return serviceMap[serviceType] || 3;
   };
 
+  // Handle roster update from InspectionHeader - refreshes gear data after roster assignment/update
+  const handleRosterUpdate = useCallback(async () => {
+    if (!gearId) {
+      console.error('Cannot refresh gear: gearId is missing');
+      return;
+    }
+
+    try {
+      console.log('🔄 Refreshing gear data after roster update...');
+      const updatedGear = await fetchGearById(gearId);
+      
+      if (updatedGear) {
+        setGear(updatedGear);
+        console.log('✅ Gear data refreshed successfully');
+        
+        // Update form data if needed (e.g., serial number might have changed)
+        setFormData(prev => ({
+          ...prev,
+          serialNumber: updatedGear.serial_number || prev.serialNumber,
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing gear data:', error);
+      Alert.alert('Error', 'Failed to refresh gear data. Please try again.');
+    }
+  }, [gearId, fetchGearById]);
+
   // Show loading state with skeleton
   if (loading || gearStatusLoading) {
     return (
@@ -1068,7 +1102,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
       {/* Sticky Gear Information */}
       <InspectionHeader
         gear={gear}
-        roster={firefighter}
+        roster={gear?.roster || firefighter}
         isCollapsed={isGearInfoCollapsed}
         onToggleCollapse={() => setIsGearInfoCollapsed(!isGearInfoCollapsed)}
         scrollY={scrollY}
@@ -1086,6 +1120,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
           }
         }}
         mode={mode}
+        onRosterUpdate={handleRosterUpdate}
       />
 
       <ScrollView 

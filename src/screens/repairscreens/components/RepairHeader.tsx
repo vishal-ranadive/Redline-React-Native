@@ -10,8 +10,13 @@ import {
   UIManager,
   Dimensions,
 } from "react-native";
-import { Text, Icon, IconButton, useTheme, Button } from "react-native-paper";
+import { Text, Icon, IconButton, useTheme, Button, Menu } from "react-native-paper";
 import Header from "../../../components/common/Header";
+import RosterModal from "../../../components/common/Modal/RosterModal";
+import AddFirefighterModal from "../../../components/common/Modal/AddFirefighterModal";
+import { useGearStore } from "../../../store/gearStore";
+import { useLeadStore } from "../../../store/leadStore";
+import { Alert } from "react-native";
 
 // Enable smooth animation for Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -25,6 +30,7 @@ interface RepairHeaderProps {
   onToggleCollapse: () => void;
   scrollY: any;
   onHistoryPress?: () => void;
+  onRosterUpdate?: () => void;
 }
 
 export const RepairHeader: React.FC<RepairHeaderProps> = ({
@@ -33,12 +39,18 @@ export const RepairHeader: React.FC<RepairHeaderProps> = ({
   isCollapsed,
   onToggleCollapse,
   scrollY,
-  onHistoryPress
+  onHistoryPress,
+  onRosterUpdate
 }) => {
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
   const isMobile = screenWidth < 600;
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [rosterModalVisible, setRosterModalVisible] = useState(false);
+  const [addFirefighterModalVisible, setAddFirefighterModalVisible] = useState(false);
+  const { updateGear } = useGearStore();
+  const { currentLead } = useLeadStore();
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
@@ -58,6 +70,101 @@ export const RepairHeader: React.FC<RepairHeaderProps> = ({
     } else if (gear?.gear_id) {
       navigation.navigate('GearDetail', { gear_id: gear.gear_id });
     }
+  };
+
+  // Roster update function - updates gear's roster_id
+  const performRosterUpdate = async (selectedRoster: any | null) => {
+    if (!gear?.gear_id) {
+      Alert.alert('Error', 'Gear information not available');
+      return;
+    }
+
+    try {
+      const rosterId = selectedRoster ? (selectedRoster.roster_id || selectedRoster.id) : null;
+      
+      // Build gearData with all current gear properties
+      const gearData: any = {
+        gear_name: gear.gear_name,
+        serial_number: gear.serial_number,
+        manufacturer_id: gear.manufacturer?.manufacturer_id,
+        firestation_id: gear.firestation?.id,
+        roster_id: rosterId, // null to remove, or roster ID to assign/update
+        active_status: gear.active_status,
+      };
+
+      // Add optional fields
+      if (gear.gear_type?.gear_type_id) {
+        gearData.gear_type_id = gear.gear_type.gear_type_id;
+      }
+      if (gear.franchise?.id) {
+        gearData.franchise_id = gear.franchise.id;
+      }
+      if (gear.gear_size) {
+        gearData.gear_size = gear.gear_size;
+      }
+      if (gear.manufacturing_date) {
+        gearData.manufacturing_date = gear.manufacturing_date;
+      }
+      if (gear.remarks) {
+        gearData.remarks = gear.remarks;
+      }
+
+      const updatedGear = await updateGear(gear.gear_id, gearData);
+      
+      if (updatedGear) {
+        // Call parent callback to refresh gear data
+        if (onRosterUpdate) {
+          await onRosterUpdate();
+        }
+        
+        const rosterName = selectedRoster 
+          ? (selectedRoster.roster_name || `${selectedRoster.first_name} ${selectedRoster.last_name}` || 'Firefighter')
+          : '';
+        const message = selectedRoster 
+          ? `${rosterName} ${roster ? 'updated' : 'assigned'} successfully`
+          : 'Firefighter assignment removed successfully';
+        
+        Alert.alert('Success', message);
+        setRosterModalVisible(false);
+        setMenuVisible(false);
+      } else {
+        Alert.alert('Error', 'Failed to update gear assignment');
+      }
+    } catch (error: any) {
+      console.error('performRosterUpdate error:', error);
+      Alert.alert('Error', error.message || 'Failed to update gear assignment');
+    }
+  };
+
+  const handleRosterSelect = async (selectedRoster: any) => {
+    setRosterModalVisible(false);
+    await performRosterUpdate(selectedRoster);
+  };
+
+  const handleUpdate = () => {
+    setMenuVisible(false);
+    setRosterModalVisible(true);
+  };
+
+  const handleRemove = () => {
+    setMenuVisible(false);
+    const currentRosterName = roster?.first_name && roster?.last_name
+      ? `${roster.first_name} ${roster.last_name}`
+      : 'this firefighter';
+    Alert.alert(
+      'Remove Firefighter',
+      `Are you sure you want to remove the firefighter assignment from this gear?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await performRosterUpdate(null);
+          },
+        },
+      ]
+    );
   };
 
   // Format manufacturing date
@@ -193,7 +300,44 @@ export const RepairHeader: React.FC<RepairHeaderProps> = ({
 
             {/* LEFT — ROSTER/FIREFIGHTER INFO */}
             <View style={styles.infoCard}>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Firefighter</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Firefighter</Text>
+
+                <View style={styles.headerActions}>
+                  <Button
+                    mode="text"
+                    onPress={handleUpdate}
+                    icon={roster ? "account-edit" : "account-plus"}
+                    textColor={colors.primary}
+                    labelStyle={{ fontSize: 12, fontWeight: '600' }}
+                    contentStyle={{ flexDirection: 'row-reverse' }}
+                    compact
+                  >
+                    {roster ? "Update Firefighter" : "Assign Firefighter"}
+                  </Button>
+                  
+                  {roster && (
+                    <Menu
+                      visible={menuVisible}
+                      onDismiss={() => setMenuVisible(false)}
+                      anchor={
+                        <IconButton
+                          icon="dots-vertical"
+                          size={22}
+                          iconColor={colors.primary}
+                          onPress={() => setMenuVisible(true)}
+                        />
+                      }
+                    >
+                      <Menu.Item
+                        onPress={handleRemove}
+                        title="Remove Firefighter"
+                        leadingIcon="delete"
+                      />
+                    </Menu>
+                  )}
+                </View>
+              </View>
 
               {roster ? (
                 <>
@@ -278,6 +422,25 @@ export const RepairHeader: React.FC<RepairHeaderProps> = ({
         </View>
       )}
 
+      {/* Roster Modals */}
+      <RosterModal
+        visible={rosterModalVisible}
+        onClose={() => setRosterModalVisible(false)}
+        onRosterSelect={handleRosterSelect}
+        onAddRosterManual={() => {
+          setRosterModalVisible(false);
+          setAddFirefighterModalVisible(true);
+        }}
+      />
+
+      <AddFirefighterModal
+        visible={addFirefighterModalVisible}
+        onClose={() => setAddFirefighterModalVisible(false)}
+        onSuccess={async (newRoster) => {
+          setAddFirefighterModalVisible(false);
+          await performRosterUpdate(newRoster);
+        }}
+      />
     </View>
   );
 };
@@ -360,10 +523,20 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: "48%",
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
-    marginBottom: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   rowItem: {
     flexDirection: "row",
