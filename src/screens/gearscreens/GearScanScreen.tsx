@@ -1,5 +1,5 @@
 // src/screens/gearscreens/GearScanScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Text, Button, Icon, Card, useTheme, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Camera } from 'react-native-camera-kit';
 import { p } from '../../utils/responsive';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -77,6 +77,13 @@ const GearScanScreen = () => {
   const [showInputModal, setShowInputModal] = useState(false);
   const [inputSerialNumber, setInputSerialNumber] = useState('');
 
+  const startScanning = () => {
+    setIsScanningActive(true);
+    setScannedData(null);
+    setScannedGears([]);
+    setShowNotFoundModal(false);
+  };
+
   // Request Camera Permission (Android)
   useEffect(() => {
     const requestPermission = async () => {
@@ -99,12 +106,14 @@ const GearScanScreen = () => {
     };
   }, []);
 
-  const startScanning = () => {
-    setIsScanningActive(true);
-    setScannedData(null);
-    setScannedGears([]);
-    setShowNotFoundModal(false);
-  };
+  // Reset state when screen comes back into focus (e.g., after creating inspection/repair)
+  useFocusEffect(
+    useCallback(() => {
+      // Reset scanning state when screen is focused
+      console.log('GearScanScreen focused - resetting state');
+      startScanning();
+    }, [])
+  );
 
 const stopScanning = () => {
   setIsScanningActive(false);
@@ -254,6 +263,11 @@ const stopScanning = () => {
   const handleSearchGear = () => {
     setShowNotFoundModal(false);
     navigation.navigate('GearSearch');
+  };
+
+  const handleGoBack = () => {
+    setShowNotFoundModal(false);
+    navigation.goBack();
   };
 
   const handleGearPress = (gear: any) => {
@@ -479,6 +493,16 @@ const stopScanning = () => {
                   icon="camera"
                 >
                   Scan Again
+                </Button>
+
+                <Button
+                  mode="outlined"
+                  style={styles.modalButton}
+                  onPress={handleGoBack}
+                  icon="arrow-left"
+                  textColor={colors.onSurface}
+                >
+                  Go Back
                 </Button>
               </View>
             </Card.Content>

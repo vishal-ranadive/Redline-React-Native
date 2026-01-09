@@ -16,6 +16,7 @@ import { p } from '../../utils/responsive';
 import { useGearStore } from '../../store/gearStore';
 import Pagination from '../../components/common/Pagination';
 import useDebounce from '../../hooks/useDebounce';
+import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'RepairDetails'>;
 
@@ -393,6 +394,7 @@ export default function AllGearRepairScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <LeadInfoBanner />
       <Header title="All Gear Repairs" showBackButton={true} />
 
       {/* Search */}

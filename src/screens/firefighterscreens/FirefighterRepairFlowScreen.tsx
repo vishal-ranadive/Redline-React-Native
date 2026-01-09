@@ -678,21 +678,21 @@ const getCategoryRepairSummary = (categoryId:string) => {
                           {gearStatus}
                         </Chip>
                       ) : (
-
-                      <Button
-                        mode="contained"
-                        onPress={() => handleDeleteGear(gear)}
-                        icon="delete"
-                        buttonColor="red"
-                        textColor="#fff"
-                        compact
-                        style={styles.deleteButton}
-                        labelStyle={{ fontSize: p(12), fontWeight: '600' }}
-                        contentStyle={{ paddingHorizontal: p(4) }}
-                      >
-                        Delete
-                      </Button>
-
+                        // Delete button commented out - not showing for now
+                        // <Button
+                        //   mode="contained"
+                        //   onPress={() => handleDeleteGear(gear)}
+                        //   icon="delete"
+                        //   buttonColor="red"
+                        //   textColor="#fff"
+                        //   compact
+                        //   style={styles.deleteButton}
+                        //   labelStyle={{ fontSize: p(12), fontWeight: '600' }}
+                        //   contentStyle={{ paddingHorizontal: p(4) }}
+                        // >
+                        //   Delete
+                        // </Button>
+                        null
                       )}
                     </View>
 
