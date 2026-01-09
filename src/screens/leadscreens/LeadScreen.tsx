@@ -25,6 +25,8 @@ import { useLeadStore } from '../../store/leadStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
+import { formatDateMMDDYYYY } from '../../utils/dateUtils';
+
 // Helper function to format dates
 const formatDate = (date?: string | Date | null, format: string = 'DD MMM YYYY', placeholder: string = 'Date not set'): string => {
   if (!date) return placeholder;
@@ -341,7 +343,7 @@ const LeadScreen = () => {
       technicianDetails: [],
       department: lead?.firestation?.name || 'Unknown Department',
       phWater: 5, // Placeholder - update with actual data if available
-      appointmentDate: formatDate(lead?.schedule_date, 'DD MMM YYYY', 'No date'),
+      appointmentDate: formatDateMMDDYYYY(lead?.schedule_date) || 'No date',
       schedule_date: lead?.schedule_date, // Keep raw date for filtering
       // Include the full lead object for navigation
       ...lead
@@ -386,14 +388,11 @@ const LeadScreen = () => {
 
   /**
    * Format date for display
-   * Parses date manually to avoid timezone issues (similar to CreateJobScreen)
+   * Uses global formatDateMMDDYYYY function for consistent MM/DD/YYYY format
    */
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return '';
-    // Parse the date parts manually to avoid timezone issues on iOS/Android
-    const [year, month, dayNum] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, dayNum);
-    return date.toLocaleDateString();
+    return formatDateMMDDYYYY(dateString);
   };
 
 

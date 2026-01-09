@@ -23,6 +23,7 @@ import { p } from '../../utils/responsive';
 import { useAuthStore } from '../../store/authStore';
 import { leadApi } from '../../services/leadApi';
 import useFormattedDate from '../../hooks/useFormattedDate';
+import { formatDateMMDDYYYY } from '../../utils/dateUtils';
 import { printTable } from '../../utils/printTable';
 import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
 import LeadDetailSkeleton from '../skeleton/LeadDetailSkeleton';
@@ -859,7 +860,7 @@ const LeadDetailScreen = () => {
 
             <View style={styles.tableContainer}>
               {[
-                { icon: 'calendar', label: 'Appointment Date', value: useFormattedDate(lead.schedule_date) },
+                { icon: 'calendar', label: 'Appointment Date', value: formatDateMMDDYYYY(lead.schedule_date) || 'N/A' },
                 { icon: 'office-building', label: 'Department', value: lead?.firestation?.name },
                 // { icon: 'office-building', label: 'Department', value:'Sarasota County Fire Department'},
                 { icon: normalizedLeadType === 'REPAIR' ? 'wrench' : 'magnify', label: 'Job Type', value: normalizedLeadType === 'REPAIR' ? 'Repair' : 'Inspection' },

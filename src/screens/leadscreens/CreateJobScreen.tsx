@@ -27,6 +27,7 @@ import { Firestation, firestationApi } from '../../services/firestationApi';
 import FranchiseSelectorModal from '../../components/common/Modal/FranchiseSelectorModal';
 import FirestationSelectorModal from '../../components/common/Modal/FirestationSelectorModal';
 import { Calendar } from 'react-native-calendars';
+import { formatDateMMDDYYYY } from '../../utils/dateUtils';
 
 const CreateJobScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -151,7 +152,7 @@ const CreateJobScreen: React.FC = () => {
 
   const formatDateForDisplay = (date: Date | null) => {
     if (!date) return '';
-    return date.toLocaleDateString();
+    return formatDateMMDDYYYY(date);
   };
 
   const validateForm = () => {

@@ -13,6 +13,7 @@ import { GEAR_IMAGE_URLS, getGearIconImage } from '../../constants/gearImages';
 import GearCardSkeleton from '../skeleton/GearCardSkeleton';
 import { getStatusColor } from '../../constants/inspection';
 import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
+import { formatDateMMDDYYYY } from '../../utils/dateUtils';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'UpadateInspection'>;
 
@@ -333,7 +334,7 @@ export default function FirefighterGearsScreen() {
       if (!inspection) return null;
 
       const sectionTitle = isPrevious ? 'Previous Inspection' : 'Current Inspection';
-      const inspectionDate = inspection.inspection_date || 'N/A';
+      const inspectionDate = formatDateMMDDYYYY(inspection.inspection_date) || 'N/A';
       const hydroTestResult = inspection.hydro_test_result || 'N/A';
       const hydroTestPerformed = inspection.hydro_test_performed !== null 
         ? (inspection.hydro_test_performed ? 'Yes' : 'No')
