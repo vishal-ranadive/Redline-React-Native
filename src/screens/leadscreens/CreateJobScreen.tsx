@@ -160,7 +160,7 @@ const CreateJobScreen: React.FC = () => {
       return false;
     }
     if (!selectedFirestation) {
-      Alert.alert('Error', 'Please select a fire station');
+      Alert.alert('Error', 'Please select a department');
       return false;
     }
     if (!scheduleDate) {
@@ -306,7 +306,7 @@ const CreateJobScreen: React.FC = () => {
           {/* Firestation Selection */}
           <View style={styles.fieldContainer}>
             <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>
-              Fire Station *
+              Department *
             </Text>
             {selectedFirestation ? (
               <View style={[styles.selectedFirestationContainer, { backgroundColor: colors.surface }]}>
@@ -360,7 +360,7 @@ const CreateJobScreen: React.FC = () => {
                     },
                   ]}
                 >
-                  Select Fire Station
+                  Select Department
                 </Text>
                 <Icon source="chevron-down" size={p(20)} color={colors.onSurfaceVariant} />
               </TouchableOpacity>

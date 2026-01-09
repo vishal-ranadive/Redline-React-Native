@@ -275,22 +275,9 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
   const toggleCategory = (category: string) => {
     const newSelected = new Set(selectedCategories);
     if (newSelected.has(category)) {
-      // Check if category has any items before allowing deselection
-      const categoryItemsCount = categoryItems[category] ? Object.keys(categoryItems[category]).length : 0;
-      if (categoryItemsCount > 0) {
-        // Show confirmation dialog if category has items
-        setDeleteDialog({
-          visible: true,
-          type: 'category',
-          category
-        });
-        return;
-      }
-      // If no items, proceed with deselection
-      newSelected.delete(category);
-      const newItems = { ...categoryItems };
-      delete newItems[category];
-      setCategoryItems(newItems);
+      // If category is already selected, open the item selection modal to add/manage items
+      showItemSelectionModal(category);
+      return;
     } else {
       // Category is being selected for the first time
       newSelected.add(category);
@@ -301,7 +288,6 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
       }, 0);
       return;
     }
-    setSelectedCategories(newSelected);
   };
 
   const showItemSelectionModal = (category: string) => {
