@@ -69,6 +69,17 @@ axiosInstance.interceptors.request.use(
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
     }
+    
+    // CRITICAL FIX FOR iOS: Remove Content-Type header for FormData uploads
+    // React Native MUST automatically set 'multipart/form-data' with boundary parameter
+    // Manually setting it (or leaving default 'application/json') prevents boundary from being added
+    // This causes "Network Error" on iOS before request even reaches server
+    if (config.data instanceof FormData) {
+      // Delete Content-Type header to let React Native handle it automatically
+      delete config.headers['Content-Type'];
+      console.log('🔧 Removed Content-Type header for FormData upload - React Native will set it with boundary');
+    }
+    
     console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`, config.data || '');
     return config;
   },

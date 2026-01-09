@@ -49,21 +49,15 @@ class ImageUploadApi {
     onProgress?: (progress: ImageUploadProgress) => void,
     retryCount: number = 0
   ): Promise<ImageUploadResponse> {
-    const maxRetries = Platform.OS === 'ios' ? 2 : 1; // iOS gets 2 retries, Android gets 1
+    const maxRetries = Platform.OS === 'ios' ? 3 : 2; // iOS gets 3 retries, Android gets 2
     const timeoutDuration = 2400000; // 40 minutes for both iOS and Android
     
     try {
-      // Fix Android file URI handling - ensure proper format
+      // Fix file URI handling - ensure proper format for FormData
+      // Both iOS and Android require file:// prefix for FormData uploads
       let fileUri = imageUri;
-      if (Platform.OS === 'android') {
-        // For Android, keep the file:// prefix as-is for FormData
-        // FormData on Android expects file:// URIs
-        if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-          fileUri = `file://${fileUri}`;
-        }
-      } else {
-        // For iOS, remove file:// prefix
-        fileUri = imageUri.replace('file://', '');
+      if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://') && !fileUri.startsWith('http')) {
+        fileUri = `file://${fileUri}`;
       }
 
       // Create FormData
@@ -84,8 +78,9 @@ class ImageUploadApi {
       } as any);
 
       console.log(`📤 Uploading image (attempt ${retryCount + 1}/${maxRetries + 1}):`, { 
-        imageUri, 
-        fileUri, 
+        originalUri: imageUri,
+        finalUri: fileUri, 
+        hasFilePrefix: fileUri.startsWith('file://'),
         gearId, 
         filename, 
         type,
@@ -100,6 +95,8 @@ class ImageUploadApi {
           'Content-Type': 'multipart/form-data',
         },
         timeout: timeoutDuration, // Platform-specific timeout
+        // Don't transform the request - let FormData handle it
+        transformRequest: (data: any) => data,
         onUploadProgress: (progressEvent: any) => {
           if (onProgress && progressEvent.total) {
             const progress: ImageUploadProgress = {
@@ -144,24 +141,34 @@ class ImageUploadApi {
         };
       }
     } catch (error: any) {
-      console.error(`❌ Error uploading image (attempt ${retryCount + 1}):`, {
+      console.error(`❌ Error uploading image (attempt ${retryCount + 1}/${maxRetries + 1}):`, {
         message: error.message,
         code: error.code,
         platform: Platform.OS,
-        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+        hasResponse: !!error.response,
+        responseStatus: error.response?.status,
       });
       
-      // Check if it's a timeout error and we can retry
+      // Check if it's a retryable error (timeout OR network error)
       const isTimeoutError = error.code === 'ECONNABORTED' || 
                             error.message?.includes('timeout') || 
                             error.message?.includes('TIMEOUT');
+      const isNetworkError = error.code === 'ERR_NETWORK' || 
+                            error.message?.includes('Network Error');
+      const isRetryableError = isTimeoutError || isNetworkError;
       
-      if (isTimeoutError && retryCount < maxRetries) {
-        console.log(`🔄 Retrying upload (${retryCount + 1}/${maxRetries}) after timeout...`);
+      if (isRetryableError && retryCount < maxRetries) {
+        const errorType = isTimeoutError ? 'timeout' : 'network error';
+        const delayMs = (retryCount + 1) * 2000; // Exponential backoff: 2s, 4s, 6s
+        console.log(`🔄 Retrying upload (attempt ${retryCount + 2}/${maxRetries + 1}) after ${errorType}...`);
+        console.log(`⏳ Waiting ${delayMs}ms before retry...`);
         // Wait a bit before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+        await new Promise(resolve => setTimeout(resolve, delayMs));
         return this.uploadInspectionImage(imageUri, gearId, onProgress, retryCount + 1);
       }
+      
+      console.error(`❌ All ${maxRetries + 1} upload attempts failed. Giving up.`);
       
       // Handle axios error
       if (error.response) {

@@ -574,22 +574,29 @@ const RepairDetailsScreen = () => {
       setUploadingImages(true);
 
       // Step 1: Upload new images (local file URIs) using repair-specific endpoint
+      // Create a Map to track which local image URI maps to which uploaded URL
+      // This handles cases where some uploads fail - we map by URI, not by array index
+      const imageUrlMap = new Map<string, string>();
+
+      // First, add already-uploaded images (HTTP/HTTPS URLs) to the map
+      images.forEach((img) => {
+        if (img.uri.startsWith('http://') || img.uri.startsWith('https://')) {
+          imageUrlMap.set(img.uri, img.uri); // Already uploaded, map to itself
+        }
+      });
+
       const localImages = images.filter(img =>
         img.uri.startsWith('file://') || img.uri.startsWith('content://')
-      ).map(img => img.uri);
-
-      const alreadyUploadedImages = images.filter(img =>
-        img.uri.startsWith('http://') || img.uri.startsWith('https://')
-      ).map(img => img.uri);
-
-      let uploadedImageUrls: string[] = [...alreadyUploadedImages];
+      );
 
       if (localImages.length > 0) {
         console.log(`📤 Uploading ${localImages.length} repair images...`);
+        console.log(`📤 Platform: ${Platform.OS}`);
 
         // Upload images sequentially using repair upload endpoint
         for (let i = 0; i < localImages.length; i++) {
-          const imageUri = localImages[i];
+          const imageObj = localImages[i];
+          const imageUri = imageObj.uri;
           const filename = imageUri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : 'image/jpeg';
@@ -597,17 +604,17 @@ const RepairDetailsScreen = () => {
           // Create FormData for each image
           const formData = new FormData();
           
-          // Fix Android file URI handling - ensure proper format for FormData
+          // Fix file URI handling - ensure proper format for FormData
+          // Both iOS and Android require file:// prefix for FormData uploads
           let fileUri = imageUri;
-          if (Platform.OS === 'android') {
-            // For Android, keep the file:// prefix as-is for FormData
-            // FormData on Android expects file:// URIs
-            if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-              fileUri = `file://${fileUri}`;
-            }
-          } else {
-            // For iOS, remove file:// prefix
-            fileUri = imageUri.replace('file://', '');
+          
+          // Log original URI for debugging
+          console.log(`📤 Original image URI: ${imageUri}`);
+          console.log(`📤 Has file:// prefix: ${imageUri.startsWith('file://')}`);
+          
+          if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://') && !fileUri.startsWith('http')) {
+            fileUri = `file://${fileUri}`;
+            console.log(`📤 Added file:// prefix: ${fileUri}`);
           }
 
           formData.append('image', {
@@ -618,6 +625,12 @@ const RepairDetailsScreen = () => {
           formData.append('gear_id', gearId.toString());
 
           try {
+            // Add a small delay between uploads to avoid overwhelming the network (especially on iOS)
+            if (i > 0) {
+              console.log(`⏳ Waiting 500ms before next upload...`);
+              await new Promise<void>(resolve => setTimeout(() => resolve(), 500));
+            }
+
             setUploadProgress({
               current: i + 1,
               total: localImages.length,
@@ -625,18 +638,21 @@ const RepairDetailsScreen = () => {
             });
 
             console.log(`📤 Uploading repair image ${i + 1}/${localImages.length}: ${filename}`);
-            console.log(`📤 Image URI: ${fileUri}, Type: ${type}`);
+            console.log(`📤 Final Image URI: ${fileUri}, Type: ${type}, Platform: ${Platform.OS}`);
 
             const uploadResult = await repairApi.uploadRepairImage(formData);
 
             // Handle different response formats from repair upload endpoint
             if (uploadResult.status && (uploadResult.data?.url || uploadResult.uploaded?.[0]?.public_image_url)) {
               const imageUrl = uploadResult.data?.url || uploadResult.uploaded?.[0]?.public_image_url;
-              uploadedImageUrls.push(imageUrl);
-              console.log(`✅ Repair image ${i + 1} uploaded:`, imageUrl);
+              // Map the original image URI to the uploaded URL
+              imageUrlMap.set(imageUri, imageUrl);
+              console.log(`✅ Repair image ${i + 1} uploaded: ${imageUrl}`);
+              console.log(`✅ Mapped ${imageUri} -> ${imageUrl}`);
             } else {
               const errorMessage = uploadResult.message || uploadResult.errors?.[0] || 'Upload failed';
               console.error(`❌ Failed to upload repair image ${i + 1}:`, errorMessage);
+              // Don't add to map - this image failed to upload
               Alert.alert('Upload Warning', `Failed to upload image ${i + 1}: ${errorMessage}`);
             }
           } catch (error: any) {
@@ -671,11 +687,15 @@ const RepairDetailsScreen = () => {
             } else {
               console.log(`⏳ Timeout error for image ${i + 1}, retry logic will handle it`);
             }
+            // Don't add to map - this image failed to upload
           }
         }
       }
 
+      // Create array of uploaded URLs for logging (all values in the map)
+      const uploadedImageUrls = Array.from(imageUrlMap.values());
       console.log('📷 Final repair image URLs:', uploadedImageUrls);
+      console.log('📷 Image URL mapping:', Array.from(imageUrlMap.entries()).map(([key, value]) => `${key.substring(key.length - 30)} -> ${value.substring(value.length - 50)}`));
 
       // Update state with uploaded image URLs
       setUploadedImageUrls(uploadedImageUrls);
@@ -684,20 +704,63 @@ const RepairDetailsScreen = () => {
       // Step 2: Get current repair items array and distribute uploaded image URLs
       const currentRepairItemsArray = [...repairItemsArray];
 
-      // Create mapping from local file URIs to uploaded URLs
-      const imageUrlMap = new Map<string, string>();
-      images.forEach((img, index) => {
-        if (uploadedImageUrls[index]) {
-          imageUrlMap.set(img.uri, uploadedImageUrls[index]);
-        }
-      });
-
       // Replace local file URIs with uploaded URLs in repair items
+      // Filter out images that failed to upload (still have local file URIs)
+      // CRITICAL: Remove ALL local file URIs - they should never be sent to the backend
       currentRepairItemsArray.forEach(item => {
         if (item.images && item.images.length > 0) {
-          item.images = item.images.map((imageUri: string) => {
-            return imageUrlMap.get(imageUri) || imageUri; // Use uploaded URL if available, otherwise keep original
+          console.log(`🔄 Processing images for item ${item.repair_finding_id}:`, item.images.map((uri: string) => uri.substring(uri.length - 50)));
+          
+          const mappedImages: string[] = [];
+          const failedImages: string[] = [];
+          const seenUrls = new Set<string>(); // Track URLs to avoid duplicates
+          
+          // Process each image
+          item.images.forEach((imageUri: string) => {
+            // Check if this is a local file URI
+            const isLocalUri = imageUri.startsWith('file://') || imageUri.startsWith('content://');
+            
+            if (isLocalUri) {
+              // This is a local file URI - check if we have an uploaded URL for it
+              const uploadedUrl = imageUrlMap.get(imageUri);
+              
+              if (uploadedUrl) {
+                // We have an uploaded URL for this local URI - use it
+                if (!seenUrls.has(uploadedUrl)) {
+                  mappedImages.push(uploadedUrl);
+                  seenUrls.add(uploadedUrl);
+                  console.log(`✅ Mapped local URI to uploaded URL: ${imageUri.substring(imageUri.length - 40)} -> ${uploadedUrl.substring(uploadedUrl.length - 50)}`);
+                } else {
+                  console.log(`⚠️ Duplicate uploaded URL skipped: ${uploadedUrl.substring(uploadedUrl.length - 50)}`);
+                }
+              } else {
+                // Local URI with no mapping - this image failed to upload or wasn't uploaded
+                failedImages.push(imageUri);
+                console.warn(`⚠️ Local file URI excluded (not uploaded): ${imageUri.substring(imageUri.length - 50)}`);
+              }
+            } else if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
+              // This is already an uploaded URL - include it (unless duplicate)
+              if (!seenUrls.has(imageUri)) {
+                mappedImages.push(imageUri);
+                seenUrls.add(imageUri);
+                console.log(`✅ Already uploaded URL: ${imageUri.substring(imageUri.length - 50)}`);
+              } else {
+                console.log(`⚠️ Duplicate URL skipped: ${imageUri.substring(imageUri.length - 50)}`);
+              }
+            } else {
+              // Unknown format - exclude it
+              failedImages.push(imageUri);
+              console.warn(`⚠️ Unknown image format excluded: ${imageUri.substring(imageUri.length - 50)}`);
+            }
           });
+          
+          item.images = mappedImages;
+          
+          if (failedImages.length > 0) {
+            console.warn(`⚠️ Item ${item.repair_finding_id} had ${failedImages.length} image(s) excluded (local URIs or unknown format)`);
+          }
+          
+          console.log(`✅ Final images for item ${item.repair_finding_id} (${item.images.length} URLs):`, item.images.map((uri: string) => uri.substring(uri.length - 50)));
         }
         // Remove the name field as it's not needed in the API payload
         delete item.name;
@@ -712,6 +775,31 @@ const RepairDetailsScreen = () => {
           });
         }
       });
+
+      // Final safety check: Ensure no local file URIs are in the payload
+      let hasLocalUris = false;
+      currentRepairItemsArray.forEach(item => {
+        if (item.images && item.images.length > 0) {
+          item.images.forEach((imgUrl: string) => {
+            if (imgUrl.startsWith('file://') || imgUrl.startsWith('content://')) {
+              console.error(`❌ CRITICAL: Local file URI found in final payload: ${imgUrl.substring(imgUrl.length - 50)}`);
+              hasLocalUris = true;
+            }
+          });
+        }
+      });
+      
+      if (hasLocalUris) {
+        console.error('❌ CRITICAL ERROR: Local file URIs detected in final payload! Filtering them out...');
+        // Last resort: Filter out any remaining local URIs
+        currentRepairItemsArray.forEach(item => {
+          if (item.images && item.images.length > 0) {
+            item.images = item.images.filter((imgUrl: string) => 
+              !imgUrl.startsWith('file://') && !imgUrl.startsWith('content://')
+            );
+          }
+        });
+      }
 
       // Step 3: Prepare repair data
       const repairData = {

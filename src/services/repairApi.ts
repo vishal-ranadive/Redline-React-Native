@@ -47,43 +47,69 @@ export const repairApi = {
 
   // Upload repair image to S3
   uploadRepairImage: async (formData: FormData, retryCount: number = 0): Promise<any> => {
-    const maxRetries = Platform.OS === 'ios' ? 2 : 1; // iOS gets 2 retries, Android gets 1
+    const maxRetries = Platform.OS === 'ios' ? 3 : 2; // iOS gets 3 retries, Android gets 2
     const timeoutDuration = 2400000; // 40 minutes for both iOS and Android
     
     try {
+      // Log FormData contents for debugging
+      if (formData && (formData as any)._parts) {
+        const parts = (formData as any)._parts;
+        console.log(`📦 FormData contents (${parts.length} parts):`);
+        parts.forEach((part: any[], index: number) => {
+          if (part[0] === 'image') {
+            console.log(`  Part ${index}: image - URI: ${part[1]?.uri}, Name: ${part[1]?.name}, Type: ${part[1]?.type}`);
+          } else {
+            console.log(`  Part ${index}: ${part[0]} = ${part[1]}`);
+          }
+        });
+      }
+
       console.log(`➡️ API CALL POST /upload-repair-image/ (attempt ${retryCount + 1}/${maxRetries + 1})`, {
         platform: Platform.OS,
         timeout: timeoutDuration
       });
 
+      // DO NOT manually set Content-Type header for FormData
+      // The request interceptor will automatically remove the default 'application/json' header
+      // React Native will then automatically set 'multipart/form-data' with the correct boundary
       const response = await axiosInstance.post(`/upload-repair-image/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         timeout: timeoutDuration, // Platform-specific timeout
+        // Don't transform the request - let FormData handle it
+        transformRequest: (data: any) => data,
       });
 
       console.log('✅ API Response POST /upload-repair-image/', response.data);
       return response.data;
     } catch (error: any) {
-      console.error(`❌ Error uploading repair image (attempt ${retryCount + 1}):`, {
+      console.error(`❌ Error uploading repair image (attempt ${retryCount + 1}/${maxRetries + 1}):`, {
         message: error.message,
         code: error.code,
         platform: Platform.OS,
-        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout')
+        timeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+        hasResponse: !!error.response,
+        responseStatus: error.response?.status,
       });
 
-      // Check if it's a timeout error and we can retry
+      // Check if it's a retryable error (timeout OR network error)
       const isTimeoutError = error.code === 'ECONNABORTED' || 
                             error.message?.includes('timeout') || 
                             error.message?.includes('TIMEOUT');
+      const isNetworkError = error.code === 'ERR_NETWORK' || 
+                            error.message?.includes('Network Error');
+      const isRetryableError = isTimeoutError || isNetworkError;
       
-      if (isTimeoutError && retryCount < maxRetries) {
-        console.log(`🔄 Retrying repair image upload (${retryCount + 1}/${maxRetries}) after timeout...`);
+      if (isRetryableError && retryCount < maxRetries) {
+        const errorType = isTimeoutError ? 'timeout' : 'network error';
+        const delayMs = (retryCount + 1) * 2000; // Exponential backoff: 2s, 4s, 6s
+        console.log(`🔄 Retrying repair image upload (attempt ${retryCount + 2}/${maxRetries + 1}) after ${errorType}...`);
+        console.log(`⏳ Waiting ${delayMs}ms before retry...`);
         // Wait a bit before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+        await new Promise<void>(resolve => setTimeout(() => resolve(), delayMs));
         return repairApi.uploadRepairImage(formData, retryCount + 1);
       }
 
       // Re-throw the error if we can't retry
+      console.error(`❌ All ${maxRetries + 1} upload attempts failed. Giving up.`);
       throw error;
     }
   },
