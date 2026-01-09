@@ -443,16 +443,6 @@ const RepairDetailsScreen = () => {
         selectionLimit: 1,
         includeBase64: false,
         quality: 0.8,
-        storageOptions: {
-          skipBackup: true,
-          path: 'images',
-        },
-        permissionDenied: {
-          title: 'Photo Library Permission',
-          text: 'This app needs access to your photo library to select images',
-          reTryTitle: 'Grant Permission',
-          okTitle: 'Cancel',
-        }
       });
 
       console.log('📸 Image library response:', response);
@@ -606,8 +596,22 @@ const RepairDetailsScreen = () => {
 
           // Create FormData for each image
           const formData = new FormData();
+          
+          // Fix Android file URI handling - ensure proper format for FormData
+          let fileUri = imageUri;
+          if (Platform.OS === 'android') {
+            // For Android, keep the file:// prefix as-is for FormData
+            // FormData on Android expects file:// URIs
+            if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+              fileUri = `file://${fileUri}`;
+            }
+          } else {
+            // For iOS, remove file:// prefix
+            fileUri = imageUri.replace('file://', '');
+          }
+
           formData.append('image', {
-            uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+            uri: fileUri,
             name: filename,
             type: type,
           } as any);
@@ -621,6 +625,7 @@ const RepairDetailsScreen = () => {
             });
 
             console.log(`📤 Uploading repair image ${i + 1}/${localImages.length}: ${filename}`);
+            console.log(`📤 Image URI: ${fileUri}, Type: ${type}`);
 
             const uploadResult = await repairApi.uploadRepairImage(formData);
 
@@ -636,7 +641,24 @@ const RepairDetailsScreen = () => {
             }
           } catch (error: any) {
             console.error(`❌ Error uploading repair image ${i + 1}:`, error);
-            Alert.alert('Upload Error', `Failed to upload image ${i + 1}: ${error.message || 'Network error'}`);
+            console.error(`❌ Error details:`, {
+              message: error.message,
+              code: error.code,
+              response: error.response?.data,
+              request: error.request,
+            });
+            
+            // Provide more specific error messages
+            let errorMessage = 'Network error';
+            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+              errorMessage = 'Upload timeout - please check your connection and try again.';
+            } else if (error.message?.includes('Network Error')) {
+              errorMessage = 'Network connection failed. Please check your internet connection.';
+            } else {
+              errorMessage = error.message || 'Failed to upload image';
+            }
+            
+            Alert.alert('Upload Error', `Failed to upload image ${i + 1}: ${errorMessage}`);
           }
         }
       }

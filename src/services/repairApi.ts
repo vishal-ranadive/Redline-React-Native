@@ -50,6 +50,7 @@ export const repairApi = {
 
     const response = await axiosInstance.post(`/upload-repair-image/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 2400000, // 40 minutes - allow enough time for large images to upload
     });
 
     console.log('✅ API Response POST /upload-repair-image/', response.data);

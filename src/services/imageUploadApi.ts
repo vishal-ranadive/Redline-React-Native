@@ -49,6 +49,19 @@ class ImageUploadApi {
     onProgress?: (progress: ImageUploadProgress) => void
   ): Promise<ImageUploadResponse> {
     try {
+      // Fix Android file URI handling - ensure proper format
+      let fileUri = imageUri;
+      if (Platform.OS === 'android') {
+        // For Android, keep the file:// prefix as-is for FormData
+        // FormData on Android expects file:// URIs
+        if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+          fileUri = `file://${fileUri}`;
+        }
+      } else {
+        // For iOS, remove file:// prefix
+        fileUri = imageUri.replace('file://', '');
+      }
+
       // Create FormData
       const formData = new FormData();
       
@@ -61,18 +74,19 @@ class ImageUploadApi {
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
       formData.append('image', {
-        uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+        uri: fileUri,
         name: filename,
         type: type,
       } as any);
 
-      console.log('📤 Uploading image:', { imageUri, gearId, filename, type });
+      console.log('📤 Uploading image:', { imageUri, fileUri, gearId, filename, type });
 
       // Use axiosInstance for upload with progress tracking
       const response = await axiosInstance.post('/upload-inspection-image/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 2400000, // 40 minutes - allow enough time for large images to upload
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
             const progress: ImageUploadProgress = {
