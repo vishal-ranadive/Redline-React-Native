@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -89,6 +90,19 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
 
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [categoryItems, setCategoryItems] = useState<{ [category: string]: CategoryItems }>({});
+  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
+  
+  // Clear loading state when categoryItems changes (e.g., when navigating back)
+  useEffect(() => {
+    // Clear all loading states when categoryItems changes
+    // This handles the case when user navigates back and images are already cached
+    const timeout = setTimeout(() => {
+      setLoadingImages(new Set());
+    }, 1000); // Give images 1 second to load, then clear loading state
+
+    return () => clearTimeout(timeout);
+  }, [categoryItems]);
+
   const [itemSelectionModal, setItemSelectionModal] = useState<{
     visible: boolean;
     category: string;
@@ -753,10 +767,41 @@ const RepairPricingCalculator: React.FC<RepairPricingCalculatorProps> = ({
                                         }
                                       }}
                                     >
+                                      {loadingImages.has(`${category}-${itemName}-${imgIndex}`) && (
+                                        <View style={styles.imageLoadingOverlay}>
+                                          <ActivityIndicator size="small" color="#fff" />
+                                        </View>
+                                      )}
                                       <Image
                                         source={{ uri: imageUri }}
                                         style={styles.itemImage}
                                         resizeMode="cover"
+                                        onLoadStart={() => {
+                                          setLoadingImages(prev => new Set(prev).add(`${category}-${itemName}-${imgIndex}`));
+                                        }}
+                                        onLoad={() => {
+                                          setLoadingImages(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.delete(`${category}-${itemName}-${imgIndex}`);
+                                            return newSet;
+                                          });
+                                        }}
+                                        onLoadEnd={() => {
+                                          // Fallback: Clear loading state even if onLoad didn't fire (cached images)
+                                          setLoadingImages(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.delete(`${category}-${itemName}-${imgIndex}`);
+                                            return newSet;
+                                          });
+                                        }}
+                                        onError={(error) => {
+                                          console.error('RepairPricingCalculator: Image load error:', error);
+                                          setLoadingImages(prev => {
+                                            const newSet = new Set(prev);
+                                            newSet.delete(`${category}-${itemName}-${imgIndex}`);
+                                            return newSet;
+                                          });
+                                        }}
                                       />
                                     </TouchableOpacity>
                                     <TouchableOpacity
@@ -1253,6 +1298,14 @@ const styles = StyleSheet.create({
   itemImage: {
     width: '100%',
     height: '100%',
+    borderRadius: p(6),
+  },
+  imageLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
     borderRadius: p(6),
   },
   removeItemImageButton: {

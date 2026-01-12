@@ -7,6 +7,7 @@ import {
   Dimensions,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Text, IconButton, Button, useTheme } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,6 +49,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const strokeWidth = 4; // Fixed stroke width
   const strokeColor = '#FF0000'; // Red color only
   const containerRef = useRef<View>(null);
@@ -61,6 +64,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
       setCurrentPath([]);
       setImageLoaded(false);
       setImageError(false);
+      setImageLoading(true);
+      setIsSaving(false);
     }
   }, [visible, imageUri]);
 
@@ -144,24 +149,33 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
 
   const handleSave = useCallback(async () => {
     if (!containerRef.current) {
+      console.error('❌ ImageEditor: containerRef is null');
       Alert.alert('Error', 'Unable to capture image');
       return;
     }
 
     if (!imageLoaded) {
+      console.warn('⚠️ ImageEditor: Image not loaded yet');
       Alert.alert('Please wait', 'Image is still loading. Please wait a moment and try again.');
       return;
     }
 
     try {
-      // Add a small delay to ensure everything is rendered
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 100));
+      setIsSaving(true);
+      console.log('💾 ImageEditor: Starting image capture...');
       
+      // Add a small delay to ensure everything is rendered
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 200));
+      
+      console.log('📸 ImageEditor: Capturing image with view-shot...');
       const uri = await captureRef(containerRef.current, {
         format: 'png',
         quality: 1,
         result: 'tmpfile',
       });
+
+      console.log('✅ ImageEditor: Image captured successfully:', uri);
+      console.log('📤 ImageEditor: Calling onSave with URI:', uri.substring(0, 50) + '...');
 
       // The captured URI should work directly, but we can use it as-is
       // react-native-view-shot already handles file paths correctly
@@ -173,10 +187,16 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
       setCurrentPath([]);
       setImageLoaded(false);
       setImageError(false);
+      setIsSaving(false);
       onClose();
-    } catch (error) {
-      console.error('Error saving image:', error);
-      Alert.alert('Error', 'Failed to save edited image');
+    } catch (error: any) {
+      console.error('❌ ImageEditor: Error saving image:', error);
+      console.error('❌ ImageEditor: Error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+      setIsSaving(false);
+      Alert.alert('Error', `Failed to save edited image: ${error.message || 'Unknown error'}`);
     }
   }, [onSave, onClose, imageLoaded]);
 
@@ -313,20 +333,42 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
                   <Text style={styles.errorSubtext}>Please try again</Text>
                 </View>
               ) : (
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.imagePlaceholder}
-                  resizeMode="contain"
-                  onLoad={() => {
-                    setImageLoaded(true);
-                    setImageError(false);
-                  }}
-                  onError={(error) => {
-                    console.error('Image load error:', error);
-                    setImageLoaded(false);
-                    setImageError(true);
-                  }}
-                />
+                <>
+                  {imageLoading && (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color="#fff" />
+                      <Text style={styles.loadingText}>Loading image...</Text>
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: imageUri }}
+                    style={styles.imagePlaceholder}
+                    resizeMode="contain"
+                    onLoadStart={() => {
+                      setImageLoading(true);
+                    }}
+                    onLoad={() => {
+                      console.log('✅ ImageEditor: Image loaded successfully');
+                      setImageLoaded(true);
+                      setImageError(false);
+                      setImageLoading(false);
+                    }}
+                    onLoadEnd={() => {
+                      // Fallback: Clear loading state even if onLoad didn't fire (cached images)
+                      if (imageLoading) {
+                        console.log('✅ ImageEditor: Image load ended (cached image)');
+                        setImageLoading(false);
+                        setImageLoaded(true);
+                      }
+                    }}
+                    onError={(error) => {
+                      console.error('❌ ImageEditor: Image load error:', error);
+                      setImageLoaded(false);
+                      setImageError(true);
+                      setImageLoading(false);
+                    }}
+                  />
+                </>
               )}
             </View>
             <Svg
@@ -392,8 +434,10 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
               mode="contained"
               onPress={handleSave}
               style={styles.footerButton}
+              disabled={isSaving || !imageLoaded}
+              loading={isSaving}
             >
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </View>
         </View>
@@ -479,6 +523,19 @@ const styles = StyleSheet.create({
   errorSubtext: {
     fontSize: 14,
     color: '#999',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#fff',
     textAlign: 'center',
   },
   footer: {

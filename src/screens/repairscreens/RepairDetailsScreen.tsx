@@ -100,6 +100,7 @@ const RepairDetailsScreen = () => {
   const [selectedImage, setSelectedImage] = useState('');
   const [imageEditorVisible, setImageEditorVisible] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string>('');
+  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
 
   // Image upload state
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -371,27 +372,50 @@ const RepairDetailsScreen = () => {
   }, []);
 
   const handleImageEditorSave = (editedImageUri: string) => {
+    console.log('💾 RepairDetailsScreen: Image editor save called');
+    console.log('📸 Original URI:', imageToEdit);
+    console.log('📸 Edited URI:', editedImageUri);
+    console.log('📸 Editing context:', editingImageContext);
+    
     // Update main images array
     setImages((prev: Array<{ id: string; uri: string }>) => {
       const index = prev.findIndex(img => img.uri === imageToEdit);
       if (index !== -1) {
         const newImages = [...prev];
         newImages[index] = { ...newImages[index], uri: editedImageUri };
+        console.log('✅ RepairDetailsScreen: Image replaced in main images array');
+        console.log('📋 Updated images array:', newImages.map(img => ({
+          id: img.id,
+          uri: img.uri.substring(0, 50) + '...',
+          isLocal: img.uri.startsWith('file://') || img.uri.startsWith('content://')
+        })));
         return newImages;
       }
+      console.warn('⚠️ RepairDetailsScreen: Image not found in main images array');
       return prev;
     });
 
     // If editing a repair item image, update it in repairItems
     if (editingImageContext) {
       const { category, itemName, originalUri } = editingImageContext;
+      console.log('🔄 RepairDetailsScreen: Updating repair item image');
+      console.log('📦 Category:', category, 'Item:', itemName);
       setRepairItems((prev: any) => {
         const newItems = { ...prev };
         if (newItems[category] && newItems[category][itemName] && newItems[category][itemName].images) {
           // Replace the original URI with the edited URI
           newItems[category][itemName].images = newItems[category][itemName].images.map(
-            (uri: string) => (uri === originalUri ? editedImageUri : uri)
+            (uri: string) => {
+              if (uri === originalUri) {
+                console.log('✅ RepairDetailsScreen: Replaced image in repair item:', uri.substring(0, 50) + '...', '->', editedImageUri.substring(0, 50) + '...');
+                return editedImageUri;
+              }
+              return uri;
+            }
           );
+          console.log('📋 Updated repair item images:', newItems[category][itemName].images.map((uri: string) => uri.substring(0, 50) + '...'));
+        } else {
+          console.warn('⚠️ RepairDetailsScreen: Repair item not found:', category, itemName);
         }
         return newItems;
       });
@@ -574,6 +598,14 @@ const RepairDetailsScreen = () => {
       setUploadingImages(true);
 
       // Step 1: Upload new images (local file URIs) using repair-specific endpoint
+      console.log('💾 RepairDetailsScreen: Starting save process');
+      console.log('📋 Total images:', images.length);
+      console.log('📋 Images:', images.map(img => ({
+        id: img.id,
+        uri: img.uri.substring(0, 50) + '...',
+        isLocal: img.uri.startsWith('file://') || img.uri.startsWith('content://')
+      })));
+      
       // Create a Map to track which local image URI maps to which uploaded URL
       // This handles cases where some uploads fail - we map by URI, not by array index
       const imageUrlMap = new Map<string, string>();
