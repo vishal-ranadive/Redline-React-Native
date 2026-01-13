@@ -188,7 +188,7 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
         try {
-          const res = await axios.post(`${BASE_URL}/refresh/`, { refresh_token: refreshToken });
+          const res = await axios.post(`${BASE_URL}/token/refresh/`, { refresh_token: refreshToken });
           const { access_token, refresh_token } = res.data;
           set({ accessToken: access_token, refreshToken: refresh_token });
         } catch (error) {
