@@ -18,6 +18,14 @@ export const axiosInstance = axios.create({
 let authStore: any = null;
 // Store reference to navigation
 let navigationRef: any = null;
+// Track if we're currently refreshing the token to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+// Queue of failed requests to retry after token refresh
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+  config: any;
+}> = [];
 
 // Function to set auth store after it's created
 export const setAuthStore = (store: any) => {
@@ -29,42 +37,29 @@ export const setNavigationRef = (ref: any) => {
   navigationRef = ref;
 };
 
-// Request interceptor to add auth token and check expiration
+// Process the queue of failed requests after token refresh
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.config.headers.Authorization = `Bearer ${token}`;
+      axiosInstance(prom.config).then(prom.resolve).catch(prom.reject);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+// Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
   (config) => {
     if (authStore) {
       const accessToken = authStore.getState().accessToken;
       
-      // Check if token is expired before making the request
-      if (accessToken && isTokenExpired(accessToken)) {
-        console.warn('⚠️ Token expired before request, logging out...');
-        
-        // Logout and clear all stores
-        authStore.getState().logout().catch(err => {
-          console.error('Error during logout:', err);
-        });
-        
-        // Show toast message
-        Toast.show({
-          type: 'error',
-          text1: 'Session Expired',
-          text2: 'Your session has expired. Please login again.',
-          visibilityTime: 4000,
-        });
-        
-        // Navigate to login screen
-        if (navigationRef) {
-          navigationRef.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
-        }
-        
-        // Reject the request to prevent it from being made
-        return Promise.reject(new Error('Token expired'));
-      }
-      
-      // Add token to request if valid
+      // Add token to request if available
+      // Note: We let the response interceptor handle token expiration
+      // to allow for automatic token refresh
       if (accessToken) {
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
@@ -96,56 +91,107 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error) => {
+    const originalRequest = error.config;
+
     console.error('❌ API Response Error:', {
-      url: error.config?.url,
+      url: originalRequest?.url,
       status: error.response?.status,
       data: error.response?.data,
       message: error.message,
     });
 
-    // Handle 401 unauthorized errors
-    if (error.response?.status === 401 && authStore) {
-      authStore.getState().logout().catch(err => {
-        console.error('Error during logout:', err);
-      });
-      if (navigationRef) {
-        navigationRef.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
-      }
-    }
+    // Check if this is a token expiration error
+    const isTokenExpiredError = 
+      error.response?.status === 401 ||
+      error.response?.status === 403 ||
+      (error.response?.data?.detail?.toLowerCase().includes('token') && 
+       error.response?.data?.detail?.toLowerCase().includes('expired')) ||
+      (error.response?.data?.message?.toLowerCase().includes('token') && 
+       error.response?.data?.message?.toLowerCase().includes('expired')) ||
+      error.message?.toLowerCase().includes('token is expired') ||
+      error.message?.toLowerCase().includes('token has expired');
 
-    // Handle 403 forbidden errors with expired token
-    if (
-      error.response?.status === 403 &&
+    // Don't attempt refresh if:
+    // 1. This is the refresh token endpoint itself (would cause infinite loop)
+    // 2. We don't have auth store
+    // 3. We've already attempted a retry (prevent infinite loops)
+    // 4. This is not a token expiration error
+    const isRefreshEndpoint = originalRequest?.url?.includes('/token/refresh/');
+    const shouldAttemptRefresh = 
+      isTokenExpiredError &&
       authStore &&
-      (error.response?.data?.detail === 'Token has expired' ||
-        error.response?.data?.message === 'Token has expired' ||
-        error.message?.includes('Token has expired'))
-    ) {
-      // Logout the user
-      authStore.getState().logout().catch(err => {
-        console.error('Error during logout:', err);
-      });
-      
-      // Show toast message
-      Toast.show({
-        type: 'error',
-        text1: 'Session Expired',
-        text2: 'Your session has expired. Please login again.',
-        visibilityTime: 4000,
-      });
+      !isRefreshEndpoint &&
+      !originalRequest._retry;
 
-      // Navigate to login screen
-      if (navigationRef) {
-        navigationRef.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
+    if (shouldAttemptRefresh) {
+      // If we're already refreshing, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject, config: originalRequest });
         });
+      }
+
+      // Mark that we're attempting a refresh
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        console.log('🔄 Access token expired, attempting to refresh...');
+        
+        // Attempt to refresh the token
+        await authStore.getState().refreshTokens();
+        
+        // Get the new access token
+        const newAccessToken = authStore.getState().accessToken;
+        
+        if (newAccessToken) {
+          console.log('✅ Token refreshed successfully, retrying original request');
+          
+          // Update the original request with the new token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          
+          // Process any queued requests
+          processQueue(null, newAccessToken);
+          isRefreshing = false;
+          
+          // Retry the original request
+          return axiosInstance(originalRequest);
+        } else {
+          throw new Error('Failed to get new access token after refresh');
+        }
+      } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError);
+        isRefreshing = false;
+        
+        // Process queue with error (this will reject all queued requests)
+        processQueue(refreshError, null);
+        
+        // Logout the user
+        authStore.getState().logout().catch((err: any) => {
+          console.error('Error during logout:', err);
+        });
+        
+        // Show toast message
+        Toast.show({
+          type: 'error',
+          text1: 'Session Expired',
+          text2: 'Your session has expired. Please login again.',
+          visibilityTime: 4000,
+        });
+
+        // Navigate to login screen
+        if (navigationRef) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }
+        
+        return Promise.reject(refreshError);
       }
     }
 
+    // For other errors or if refresh was not attempted, reject normally
     return Promise.reject(error);
   }
 );

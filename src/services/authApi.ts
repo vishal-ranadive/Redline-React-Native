@@ -17,7 +17,7 @@ export const authApi = {
   },
 
   refreshToken: async (refreshToken: string) => {
-    const response = await axios.post(`${BASE_URL}/refresh`, {
+    const response = await axios.post(`${BASE_URL}/token/refresh/`, {
       refresh_token: refreshToken,
     });
     
