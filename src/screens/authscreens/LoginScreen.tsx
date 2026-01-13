@@ -21,7 +21,7 @@ const LoginScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Login'>>();
   const { theme, toggleTheme } = useThemeStore();
   const paperTheme = useTheme();
-  const { login, isLoading, clearError } = useAuthStore();
+  const { login, isLoading, clearError, user, accessToken } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +65,28 @@ const LoginScreen = () => {
     return () => clearError();
   }, [clearError]);
 
+  // Prevent authenticated users from accessing login screen
+  useEffect(() => {
+    if (user && accessToken) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LeadScreen' }],
+      });
+    }
+  }, [user, accessToken, navigation]);
+
+  // Disable back gesture on Login screen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Prevent going back if user is authenticated
+      if (user && accessToken) {
+        e.preventDefault();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, user, accessToken]);
+
 
   const handleLogin = async () => {
     console.log('🎯 Login button pressed');
@@ -102,7 +124,11 @@ const LoginScreen = () => {
         text1: 'Login successful 👏',
         text2: 'Welcome back to RedLine Gear',
       });
-      navigation.navigate('LeadScreen');
+      // Reset navigation stack to prevent going back to Login screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'LeadScreen' }],
+      });
     } catch (loginError) {
       console.error('❌ Login error caught in component:', loginError);
 
