@@ -96,7 +96,14 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
       <Stack.Screen name="Splash" component={SplashScreen} />
       {/* Auth Screens */}
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{
+          gestureEnabled: false, // Disable swipe back gesture
+          headerBackVisible: false, // Hide back button
+        }}
+      />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="Unauthorized" component={UnauthorizedScreen} />
