@@ -23,7 +23,7 @@ export type RepairStatus =
   | 'RecievedByFranchies'
   | 'OngoingPreRepair'
   | 'OngoingPostRepair'
-  | 'RepairComplete'
+  | 'complete'
   | 'IntransitPostRepair';
 
 // Combined type for all possible lead statuses
@@ -44,7 +44,7 @@ export const REPAIR_STATUSES: { status: RepairStatus; icon: string; label: strin
   { status: 'RecievedByFranchies', icon: 'store', label: 'Recieved By Franchies' },
   { status: 'OngoingPreRepair', icon: 'hammer-wrench', label: 'Ongoing Pre Repair' },
   { status: 'OngoingPostRepair', icon: 'hammer', label: 'Ongoing Post Repair' },
-  { status: 'RepairComplete', icon: 'check-all', label: 'Complete' },
+  { status: 'complete', icon: 'check-all', label: 'Complete' },
   { status: 'IntransitPostRepair', icon: 'truck-check', label: 'Intransit Post Repair' },
 ];
 
@@ -128,7 +128,7 @@ export const getStatusColor = (status: LeadStatus | string): string => {
     'RecievedByFranchies': '#2196F3',
     'OngoingPreRepair': '#FFC107',
     'OngoingPostRepair': '#FFC107',
-    'RepairComplete': '#34A853',
+    'complete': '#34A853',
     'IntransitPostRepair': '#4CAF50',
   };
 
