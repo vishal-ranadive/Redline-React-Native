@@ -38,7 +38,7 @@ import {
 } from '../../constants/leadStatuses';
 import { useLeadStore } from '../../store/leadStore';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview' | 'FirefighterFlow' | 'FirefighterRepairFlow'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'GearScan' | 'PPEReportPreview' | 'PPERepairReportPreview' | 'FirefighterFlow' | 'FirefighterRepairFlow'>;
 
 interface Technician {
   id: number;
@@ -330,15 +330,27 @@ const LeadDetailScreen = () => {
   };
 
   /**
-   * Handle Complete Inspection button click
-   * Navigates to preview screen
+   * Handle Complete Inspection/Repair button click
+   * Navigates to appropriate preview screen based on lead type
    */
   const handleCompleteInspection = () => {
-    // Navigate to PPE Report Preview screen
-    navigation.navigate('PPEReportPreview', {
-      leadId: lead.lead_id,
-      leadData: lead
-    });
+    // Determine lead type and navigate to appropriate screen
+    const leadType = lead?.type?.toUpperCase() || lead?.lead?.type?.toUpperCase() || 'INSPECTION';
+    const isRepair = leadType === 'REPAIR';
+    
+    if (isRepair) {
+      // Navigate to Repair Report Preview screen
+      navigation.navigate('PPERepairReportPreview', {
+        leadId: lead.lead_id,
+        leadData: lead
+      });
+    } else {
+      // Navigate to Inspection Report Preview screen
+      navigation.navigate('PPEReportPreview', {
+        leadId: lead.lead_id,
+        leadData: lead
+      });
+    }
   };
 
   /**

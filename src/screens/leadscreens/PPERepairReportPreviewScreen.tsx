@@ -1,4 +1,4 @@
-// src/screens/leadscreens/PPEReportPreviewScreen.tsx
+// src/screens/leadscreens/PPERepairReportPreviewScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -6,6 +6,8 @@ import {
   ScrollView,
   useWindowDimensions,
   Image,
+  TouchableOpacity,
+  Modal,
 } from 'react-native';
 
 import {
@@ -16,6 +18,7 @@ import {
   Card,
   Divider,
   ActivityIndicator,
+  Chip,
 } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -23,15 +26,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { p } from '../../utils/responsive';
 import { leadApi } from '../../services/leadApi';
-import { generateReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
+import { generateRepairReportHTML, generatePDF, downloadPDF, sharePDFOnIOS } from '../../utils/pdfGenerator';
 import { requestStoragePermission } from '../../utils/permissions';
 import { useThemeStore } from '../../store/themeStore';
 import { Alert, Platform } from 'react-native';
 import { GEAR_IMAGE_URLS } from '../../constants/gearImages';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PPEReportPreview'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PPERepairReportPreview'>;
 
-const PPEReportPreviewScreen: React.FC = () => {
+const PPERepairReportPreviewScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const { colors } = useTheme();
@@ -45,6 +48,8 @@ const PPEReportPreviewScreen: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
 
   // Fetch data on mount
   useEffect(() => {
@@ -55,24 +60,24 @@ const PPEReportPreviewScreen: React.FC = () => {
     try {
       setLoading(true);
 
-      // Call inspection endpoints
-      console.log('Calling PPE Inspection API...');
-      const ppeInspectionData = await leadApi.getPpeInspection(leadId);
-      setPpeData(ppeInspectionData);
+      // Call repair endpoints
+      console.log('Calling PPE Repair API...');
+      const ppeRepairData = await leadApi.getPpeRepair(leadId);
+      setPpeData(ppeRepairData);
 
-      // Call Inspection Analytics (optional)
-      console.log('Calling Inspection Analytics API...');
+      // Call Repair Analytics (optional)
+      console.log('Calling Repair Analytics API...');
       try {
-        const analyticsResult = await leadApi.getInspectionAnalytics(leadId);
+        const analyticsResult = await leadApi.getRepairAnalytics(leadId);
         setAnalyticsData(analyticsResult);
       } catch (analyticsError: any) {
-        console.warn('Analytics data not available:', analyticsError?.message);
-        setAnalyticsData(null); // Explicitly set to null to indicate no analytics data
+        console.warn('Repair analytics data not available:', analyticsError?.message);
+        setAnalyticsData(null);
       }
 
     } catch (error) {
-      console.error('Error fetching PPE inspection data:', error);
-      Alert.alert('Error', 'Failed to fetch PPE inspection data. Please try again.');
+      console.error('Error fetching PPE repair data:', error);
+      Alert.alert('Error', 'Failed to fetch PPE repair data. Please try again.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -81,7 +86,7 @@ const PPEReportPreviewScreen: React.FC = () => {
 
   const handleDownloadPDF = async () => {
     if (!ppeData) {
-      Alert.alert('Error', 'PPE inspection data is not available. Please try again.');
+      Alert.alert('Error', 'PPE repair data is not available. Please try again.');
       return;
     }
 
@@ -102,17 +107,17 @@ const PPEReportPreviewScreen: React.FC = () => {
       setIsGeneratingPDF(true);
       
       // Generate HTML from template and data
-      console.log('Generating HTML report...');
-      const htmlContent = generateReportHTML(ppeData, analyticsData, leadData);
+      console.log('Generating HTML repair report...');
+      const htmlContent = generateRepairReportHTML(ppeData, analyticsData, leadData);
       
       // Generate PDF from HTML
       console.log('Generating PDF...');
-      const fileName = `PPE_Inspection_Report_${leadId}_${Date.now()}`;
+      const fileName = `PPE_Repair_Report_${leadId}_${Date.now()}`;
       const pdfPath = await generatePDF(htmlContent, fileName);
       
       // Download PDF (saves to appropriate location based on platform)
       console.log('Downloading PDF...');
-      const downloadFileName = `PPE_Inspection_Report_${leadId}_${Date.now()}.pdf`;
+      const downloadFileName = `PPE_Repair_Report_${leadId}_${Date.now()}.pdf`;
       const downloadedPath = await downloadPDF(pdfPath, downloadFileName);
       
       // On iOS, open share sheet so user can save to Files app or iCloud Drive
@@ -167,7 +172,7 @@ const PPEReportPreviewScreen: React.FC = () => {
         <View style={styles.loadingContainer}>
           <Icon source="alert-circle" size={p(48)} color={colors.error} />
           <Text style={{ marginTop: 16, color: colors.error, fontSize: p(16) }}>
-            No PPE inspection data available
+            No PPE repair data available
           </Text>
           <Button
             mode="outlined"
@@ -221,7 +226,7 @@ const PPEReportPreviewScreen: React.FC = () => {
           <Icon source="arrow-left" size={p(22)} color={colors.onSurface} />
         </Button>
         <Text style={[styles.headerTitle, { color: colors.onSurface, fontSize: p(18) }]}>
-          PPE Inspection Report
+          PPE Repair Report
         </Text>
         <Button
           mode="text"
@@ -259,20 +264,20 @@ const PPEReportPreviewScreen: React.FC = () => {
         </View>
 
         {/* Report Header */}
-        <View style={styles.reportHeader}>
+        {/* <View style={styles.reportHeader}>
           <Text style={[styles.reportTitle, { color: colors.onSurface, fontSize: p(18) }]}>
-            PPE INSPECTION REPORT
+            PPE REPAIR REPORT
           </Text>
           <Text style={[styles.reportSubtitle, { color: colors.onSurfaceVariant, fontSize: p(14) }]}>
-            Appointment Information
+            Lead Information
           </Text>
-        </View>
+        </View> */}
 
-        {/* Appointment Details */}
+        {/* Lead Details */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-              Appointment Details
+              Lead Information
             </Text>
             <Divider style={{ marginVertical: p(10) }} />
             
@@ -296,7 +301,6 @@ const PPEReportPreviewScreen: React.FC = () => {
                 </View>
               </View>
               {[
-                { label: 'MEU', value: leadData?.lead?.meu || (ppeData?.meu?.name || 'N/A') },
                 { label: 'Department Name', value: firestation?.name || firestation?.fire_station_name || 'N/A' },
                 { label: 'Street', value: addressParts[0] || firestation?.address || 'N/A' },
                 { label: 'City', value: addressParts[1] || firestation?.city || 'N/A' },
@@ -305,7 +309,7 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { label: 'Contact Name (Chief)', value: firestation?.contact || 'N/A' },
                 { label: 'Phone', value: firestation?.phone || firestation?.contact || 'N/A' },
                 { label: 'Email', value: firestationEmail || 'N/A' },
-                { label: 'Inspection Date', value: firestation?.inspectionDate || 
+                { label: 'Repair Date', value: firestation?.inspectionDate || 
                   (leadData?.schedule_date ? new Date(leadData.schedule_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -337,8 +341,8 @@ const PPEReportPreviewScreen: React.FC = () => {
                     Limited Report Data
                   </Text>
                   <Text style={[styles.warningText, { color: '#856404', fontSize: p(14) }]}>
-                    Inspection analytics are not available for this lead. The report will show basic information only.
-                    You can still download the report, but it will not include inspection statistics or gear breakdowns.
+                    Repair analytics are not available for this lead. The report will show basic information only.
+                    You can still download the report, but it will not include repair statistics or gear breakdowns.
                   </Text>
                 </View>
               </View>
@@ -351,7 +355,7 @@ const PPEReportPreviewScreen: React.FC = () => {
           <Card style={[styles.card, { backgroundColor: colors.surface }]}>
             <Card.Content>
               <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-                Inspection Summary
+                Repair Summary
               </Text>
               <Divider style={{ marginVertical: p(10) }} />
             
@@ -367,15 +371,14 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#fff5f5',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '23%',
                 }
               ]}>
                 <View style={styles.iconContainer}>
                   <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>👥</Text>
                 </View>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total_fireFighters_Serviced'] || analytics['Total fireFighters Serviced'] || analytics.total_firefighters_serviced || 0}
+                  {analytics.total_firefighters_serviced || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Total Firefighters
@@ -388,15 +391,14 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#fff5f5',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '23%',
                 }
               ]}>
                 <View style={styles.iconContainer}>
                   <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>🧰</Text>
                 </View>
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics['Total_Number_of_Gears'] || analytics['Total Number of Gears'] || analytics.total_gears || 0}
+                  {analytics.total_gears || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Total Gears
@@ -409,18 +411,17 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#10b981', 
                   backgroundColor: '#d1fae5',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '23%',
                 }
               ]}>
                 <View style={styles.iconContainer}>
                   <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✓</Text>
                 </View>
                 <Text style={[styles.summaryValue, { color: '#059669', fontSize: p(22) }]}>
-                  {analytics['Total_Gear_Passed'] || analytics['Total Gear Passed'] || analytics.total_passed || 0}
+                  {analytics.total_completed || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#065f46', fontSize: p(11) }]}>
-                  Passed
+                  Completed
                 </Text>
               </View>
 
@@ -430,81 +431,17 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ef4444', 
                   backgroundColor: '#fee2e2',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
-                }
-              ]}>
-                <View style={styles.iconContainer}>
-                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>✗</Text>
-                </View>
-                <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(22) }]}>
-                  {analytics['Total_Gear_Fail'] || analytics['Total Gear Fail'] || analytics.total_failed || 0}
-                </Text>
-                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
-                  Failed
-                </Text>
-              </View>
-
-              <View style={[
-                styles.summaryCard, 
-                styles.statusCard, 
-                { 
-                  borderColor: '#6b7280', 
-                  backgroundColor: '#f3f4f6',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
-                }
-              ]}>
-                <View style={styles.iconContainer}>
-                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⊗</Text>
-                </View>
-                <Text style={[styles.summaryValue, { color: '#4b5563', fontSize: p(22) }]}>
-                  {analytics['Total_Gear_OOS'] || analytics['Total Gear OOS'] || analytics.total_oos || 0}
-                </Text>
-                <Text style={[styles.summaryLabel, { color: '#374151', fontSize: p(11) }]}>
-                  Out of Service
-                </Text>
-              </View>
-
-              <View style={[
-                styles.summaryCard, 
-                styles.statusCard, 
-                { 
-                  borderColor: '#f97316', 
-                  backgroundColor: '#fed7aa',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
-                }
-              ]}>
-                <View style={styles.iconContainer}>
-                  <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⏰</Text>
-                </View>
-                <Text style={[styles.summaryValue, { color: '#ea580c', fontSize: p(22) }]}>
-                  {analytics['Total_Gear_Expired'] || analytics['Total Gear Expired'] || analytics.total_expired || 0}
-                </Text>
-                <Text style={[styles.summaryLabel, { color: '#c2410c', fontSize: p(11) }]}>
-                  Expired
-                </Text>
-              </View>
-
-              <View style={[
-                styles.summaryCard, 
-                styles.statusCard, 
-                { 
-                  borderColor: '#eab308', 
-                  backgroundColor: '#fef3c7',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '23%',
                 }
               ]}>
                 <View style={styles.iconContainer}>
                   <Text style={[styles.summaryIcon, { fontSize: p(32) }]}>⚠</Text>
                 </View>
-                <Text style={[styles.summaryValue, { color: '#ca8a04', fontSize: p(22) }]}>
-                  {analytics['Total_Gear_ActionRequired'] || analytics['Total Gear ActionRequired'] || analytics.total_action_required || 0}
+                <Text style={[styles.summaryValue, { color: '#dc2626', fontSize: p(22) }]}>
+                  {analytics.total_incompetent || 0}
                 </Text>
-                <Text style={[styles.summaryLabel, { color: '#854d0e', fontSize: p(11) }]}>
-                  Action Required
+                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
+                  Incomplete
                 </Text>
               </View>
             </View>
@@ -522,13 +459,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.jacket }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {(analytics.jacket_shell || 0) + (analytics.jacket_liner || 0) || analytics['Total jackets'] || analytics.total_jackets || 0}
+                  {(analytics.jacket_shell || 0) + (analytics.jacket_liner || 0)}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Jackets
@@ -541,13 +477,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.pants }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {(analytics.pant_shell || 0) + (analytics.pant_liner || 0) || analytics['Total pants'] || analytics.total_pants || 0}
+                  {(analytics.pant_shell || 0) + (analytics.pant_liner || 0)}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Pants
@@ -560,13 +495,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.helmet }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics.total_helmet || analytics['Total helmet'] || analytics.total_helmet || 0}
+                  {analytics.total_helmet || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Helmets
@@ -579,32 +513,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
-                }
-              ]}>
-                <Image source={{ uri: GEAR_IMAGE_URLS.hood }} style={styles.gearImage} resizeMode="contain" />
-                <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics.total_hoods || analytics['Total hoods'] || analytics.total_hoods || 0}
-                </Text>
-                <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
-                  Hoods
-                </Text>
-              </View>
-
-              <View style={[
-                styles.summaryCard, 
-                styles.gearCard, 
-                { 
-                  borderColor: '#ed2c2a', 
-                  backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.gloves }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics.total_gloves || analytics['Total gloves'] || analytics.total_gloves || 0}
+                  {analytics.total_gloves || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Gloves
@@ -617,13 +531,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.boots }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics.total_boots || analytics['Total boots'] || analytics.total_boots || 0}
+                  {analytics.total_boots || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Boots
@@ -636,13 +549,12 @@ const PPEReportPreviewScreen: React.FC = () => {
                 { 
                   borderColor: '#ed2c2a', 
                   backgroundColor: '#ffffff',
-                  width: isPortrait ? '48%' : '13.5%',
-                  maxWidth: isPortrait ? '48%' : p(120),
+                  width: isPortrait ? '48%' : '15%',
                 }
               ]}>
                 <Image source={{ uri: GEAR_IMAGE_URLS.other }} style={styles.gearImage} resizeMode="contain" />
                 <Text style={[styles.summaryValue, { color: '#ed2c2a', fontSize: p(22) }]}>
-                  {analytics.total_other || analytics['Total other'] || analytics.total_other || 0}
+                  {analytics.total_other || 0}
                 </Text>
                 <Text style={[styles.summaryLabel, { color: '#991b1b', fontSize: p(11) }]}>
                   Other Gear
@@ -654,11 +566,11 @@ const PPEReportPreviewScreen: React.FC = () => {
           </Card>
         )}
 
-        {/* Firefighter & Gear Assignments Section */}
+        {/* Firefighter & Gear Repairs Section */}
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <Card.Content>
             <Text style={[styles.sectionTitle, { color: colors.primary, fontSize: p(18) }]}>
-              Firefighter & Gear Assignments
+              Firefighter & Gear Repairs
             </Text>
             <Divider style={{ marginVertical: p(10) }} />
             
@@ -675,22 +587,24 @@ const PPEReportPreviewScreen: React.FC = () => {
                 
                 return (
                   <View key={rosterIndex} style={styles.rosterSection}>
-                    <View style={[styles.rosterHeader, { backgroundColor: '#fee2e2', borderLeftColor: '#ed2c2a' }]}>
-                      <View style={styles.rosterHeaderContent}>
-                        <Text style={[styles.rosterNameLabel, { color: '#991b1b', fontSize: p(11) }]}>
-                          FIREFIGHTER NAME:
-                        </Text>
-                        <Text style={[styles.rosterName, { color: "#222222", fontSize: p(15), fontWeight: '700' }]}>
-                          {roster.name || 'N/A'}
-                        </Text>
-                      </View>
-                      {roster.operation_type && (
-                        <View style={[styles.operationBadge, { backgroundColor: '#fee2e2' }]}>
-                          <Text style={[styles.operationBadgeText, { color: '#991b1b', fontSize: p(10) }]}>
-                            {roster.operation_type.toUpperCase()}
+                    <View style={[styles.rosterHeaderWrapper]}>
+                      <View style={[styles.rosterHeader, { backgroundColor: '#fee2e2', borderLeftColor: '#ed2c2a' }]}>
+                        <View style={styles.rosterHeaderContent}>
+                          <Text style={[styles.rosterNameLabel, { color: '#991b1b', fontSize: p(11) }]}>
+                            FIREFIGHTER NAME:
+                          </Text>
+                          <Text style={[styles.rosterName, { color: "#222222", fontSize: p(15), fontWeight: '700' }]}>
+                            {roster.name || 'N/A'}
                           </Text>
                         </View>
-                      )}
+                        {roster.operation_type && (
+                          <View style={[styles.operationBadge, { backgroundColor: '#fee2e2' }]}>
+                            <Text style={[styles.operationBadgeText, { color: '#991b1b', fontSize: p(10) }]}>
+                              {roster.operation_type.toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                     
                     {gears.length === 0 ? (
@@ -700,93 +614,155 @@ const PPEReportPreviewScreen: React.FC = () => {
                         </Text>
                       </View>
                     ) : (
-                      <View style={styles.gearsTableContainer}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                          <View style={styles.gearsTable}>
-                            {/* Table Header */}
-                            <View style={[styles.gearsTableHeader, { backgroundColor: '#ed2c2a' }]}>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnName]}>Name</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnSerial]}>Serial #</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnManufacturer]}>Manufacturer</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnDate]}>Date of Mfg.</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnStatus]}>Status</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnService]}>Service Type</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnHydroPerformed]}>HydroTest Performed</Text>
-                              <Text style={[styles.gearsTableHeaderText, styles.columnHydroStatus]}>HydroTest Status</Text>
-                            </View>
-                            
-                            {/* Table Rows */}
-                            {gears.map((gear: any, gearIndex: number) => (
-                              <View 
-                                key={gearIndex} 
-                                style={[
-                                  styles.gearsTableRow, 
-                                  { 
-                                    backgroundColor: gearIndex % 2 === 0 ? '#fef2f2' : '#ffffff',
-                                    borderBottomColor: colors.outline 
-                                  }
-                                ]}
-                              >
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnName]}
-                                  numberOfLines={2}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.name || gear.gear_name || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnSerial]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.serial_number || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnManufacturer]}
-                                  numberOfLines={2}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.manufacturer || gear.manufacturer_name || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnDate]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.date_of_mfg || gear.manufacturing_date || gear.date_of_manufacture || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnStatus]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.gear_status || gear.status || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnService]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.service_type || gear.serviceType || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnHydroPerformed]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.hydrotest_performed || gear.hydrotestPerformed || gear.hydro_test_performed || 'N/A'}
-                                </Text>
-                                <Text 
-                                  style={[styles.gearsTableCell, styles.columnHydroStatus]}
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {gear.hydrotest_status || gear.hydrotestStatus || gear.hydro_test_status || 'N/A'}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        </ScrollView>
+                      // Card-based layout for repairs
+                      <View style={styles.gearsCardContainer}>
+                        {gears.map((gear: any, gearIndex: number) => {
+                          const repair = gear.repair || {};
+                          const repairFindings = repair.repair_findings || [];
+                          
+                          // Calculate total cost
+                          const totalCost = repairFindings.reduce((sum: number, finding: any) => {
+                            return sum + (parseFloat(finding.repair_subtotal_cost) || 0);
+                          }, 0);
+                          
+                          return (
+                            <Card key={gearIndex} style={[styles.gearRepairCard, { backgroundColor: colors.surface, marginTop: gearIndex === 0 ? p(0) : p(12) }]}>
+                              <Card.Content>
+                                {/* Gear Header */}
+                                <View style={styles.gearCardHeader}>
+                                  <View style={styles.gearInfo}>
+                                    <Text style={[styles.gearCardName, { color: colors.onSurface, fontSize: p(16) }]}>
+                                      {gear.gear_name || gear.name || 'N/A'}
+                                    </Text>
+                                    <Text style={[styles.gearCardSerial, { color: colors.onSurfaceVariant, fontSize: p(12) }]}>
+                                      Serial #: {gear.serial_number || 'N/A'}
+                                    </Text>
+                                  </View>
+                                  <Chip 
+                                    style={{
+                                      backgroundColor: repair.repair_status === 'complete' ? '#d1fae5' : '#fee2e2',
+                                    }}
+                                    textStyle={{
+                                      color: repair.repair_status === 'complete' ? '#059669' : '#dc2626',
+                                      fontSize: p(11),
+                                      fontWeight: '700',
+                                    }}
+                                  >
+                                    {repair.repair_status || 'N/A'}
+                                  </Chip>
+                                </View>
+                                
+                                {/* Repair Findings */}
+                                <View style={styles.repairFindingsSection}>
+                                  <Text style={[styles.findingsTitle, { color: colors.primary, fontSize: p(14) }]}>
+                                    Repair Findings
+                                  </Text>
+                                  
+                                  {repairFindings.length > 0 ? (
+                                    repairFindings.map((finding: any, findingIndex: number) => {
+                                      const master = finding.repair_finding_master || {};
+                                      const findingImages = finding.images || [];
+                                      const displayImages = findingImages.filter((img: string) => img && !img.startsWith('file://'));
+                                      
+                                      return (
+                                        <View key={findingIndex} style={[styles.repairFindingItem, { backgroundColor: '#f8fafc' }]}>
+                                          <View style={styles.findingHeader}>
+                                            <View style={styles.findingNameGroup}>
+                                              <Text style={[styles.findingName, { color: colors.onSurface, fontSize: p(13) }]}>
+                                                {master.repair_finding_name || 'N/A'}
+                                              </Text>
+                                              {/* {master.repair_group && (
+                                                <Chip 
+                                                  style={[styles.findingGroupChip, { backgroundColor: colors.surface }]}
+                                                  textStyle={{ fontSize: p(9), color: colors.onSurfaceVariant }}
+                                                >
+                                                  {master.repair_group}
+                                                </Chip>
+                                              )} */}
+                                            </View>
+                                            <View style={styles.findingCostInfo}>
+                                              <Text style={[styles.findingQuantity, { color: colors.onSurfaceVariant, fontSize: p(11) }]}>
+                                                Qty: {finding.repair_quantity || 0}
+                                              </Text>
+                                              <Text style={[styles.findingCost, { color: colors.primary, fontSize: p(13), fontWeight: '700' }]}>
+                                                ${(finding.repair_subtotal_cost || 0).toFixed(2)}
+                                              </Text>
+                                            </View>
+                                          </View>
+                                          
+                                          {/* Images for this finding */}
+                                          {displayImages.length > 0 ? (
+                                            <ScrollView 
+                                              horizontal 
+                                              showsHorizontalScrollIndicator={false}
+                                              style={styles.findingImagesContainer}
+                                            >
+                                              <View style={styles.findingImagesRow}>
+                                                {displayImages.map((img: string, imgIndex: number) => (
+                                                  <TouchableOpacity
+                                                    key={imgIndex}
+                                                    onPress={() => {
+                                                      setSelectedImage(img);
+                                                      setImagePreviewVisible(true);
+                                                    }}
+                                                  >
+                                                    <Image
+                                                      source={{ uri: img }}
+                                                      style={styles.findingImageThumbnail}
+                                                      resizeMode="cover"
+                                                    />
+                                                  </TouchableOpacity>
+                                                ))}
+                                              </View>
+                                            </ScrollView>
+                                          ) : (
+                                            <Text style={[styles.noImagesText, { color: colors.onSurfaceVariant, fontSize: p(11) }]}>
+                                              No images for this finding
+                                            </Text>
+                                          )}
+                                        </View>
+                                      );
+                                    })
+                                  ) : (
+                                    <Text style={[styles.noFindingsText, { color: colors.onSurfaceVariant, fontSize: p(12) }]}>
+                                      No repair findings recorded
+                                    </Text>
+                                  )}
+                                </View>
+                                
+                                {/* Gear Footer */}
+                                <View style={styles.gearCardFooter}>
+                                  <View style={[styles.gearTotalCost, { backgroundColor: '#fff5f5' }]}>
+                                    <Text style={[styles.totalLabel, { color: '#991b1b', fontSize: p(12) }]}>
+                                      Repair Subtotal (USD):
+                                    </Text>
+                                    <Text style={[styles.totalValue, { color: '#ed2c2a', fontSize: p(18) }]}>
+                                      ${totalCost.toFixed(2)}
+                                    </Text>
+                                  </View>
+                                  <View style={[styles.gearTotalCost, { backgroundColor: '#f8fafc', marginTop: p(8) }]}>
+                                    <Text style={[styles.totalLabel, { color: '#64748b', fontSize: p(12) }]}>
+                                      Spare Gear:
+                                    </Text>
+                                    <Text style={[styles.totalValue, { color: repair.spare_gear ? '#059669' : '#64748b', fontSize: p(14) }]}>
+                                      {repair.spare_gear ? 'Yes' : 'No'}
+                                    </Text>
+                                  </View>
+                                  {repair.remarks && (
+                                    <View style={[styles.gearRemarks, { backgroundColor: colors.surfaceVariant }]}>
+                                      <Text style={[styles.remarksLabel, { color: colors.onSurfaceVariant, fontSize: p(10) }]}>
+                                        Remarks:
+                                      </Text>
+                                      <Text style={[styles.remarksText, { color: colors.onSurface, fontSize: p(12) }]}>
+                                        {repair.remarks}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </Card.Content>
+                            </Card>
+                          );
+                        })}
                       </View>
                     )}
                   </View>
@@ -799,6 +775,30 @@ const PPEReportPreviewScreen: React.FC = () => {
         {/* Footer Spacing */}
         <View style={{ height: p(100) }} />
       </ScrollView>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={imagePreviewVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImagePreviewVisible(false)}
+      >
+        <View style={styles.imagePreviewModal}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setImagePreviewVisible(false)}
+          >
+            <Icon source="close" size={p(24)} color={colors.onSurface} />
+          </TouchableOpacity>
+          <View style={styles.imagePreviewContainer}>
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.imagePreview}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -833,7 +833,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    // paddingVertical: p(15),
   },
   logoImage: {
     width: p(200),
@@ -930,7 +929,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryCard: {
-    minWidth: p(95),
     padding: p(14),
     borderRadius: p(10),
     borderWidth: 2,
@@ -985,12 +983,20 @@ const styles = StyleSheet.create({
   },
   rosterSection: {
     marginBottom: p(24),
+    backgroundColor: '#ffffff',
+    borderRadius: p(12),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  rosterHeaderWrapper: {
+    marginBottom: p(0),
   },
   rosterHeader: {
     padding: p(12),
     borderLeftWidth: 4,
-    marginBottom: p(12),
-    borderRadius: p(6),
+    marginBottom: p(0),
+    borderRadius: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1045,94 +1051,179 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  gearsTableContainer: {
-    marginTop: p(8),
-    borderRadius: p(6),
-    overflow: 'hidden',
+  // Card-based repair layout styles
+  gearsCardContainer: {
+    paddingHorizontal: p(12),
+    paddingBottom: p(12),
+    paddingTop: p(8),
+  },
+  gearRepairCard: {
+    marginBottom: p(0),
+    borderRadius: p(8),
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    paddingHorizontal: p(8),
   },
-  gearsTable: {
-    width: 'auto',
-  },
-  gearsTableHeader: {
+  gearCardHeader: {
     flexDirection: 'row',
-    paddingVertical: p(10),
-    paddingHorizontal: 0,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: p(16),
+    paddingBottom: p(12),
+    borderBottomWidth: 2,
+    borderBottomColor: '#f1f5f9',
+  },
+  gearInfo: {
+    flex: 1,
+    marginRight: p(12),
+  },
+  gearCardName: {
+    fontSize: p(16),
+    fontWeight: '700',
+    marginBottom: p(6),
+  },
+  gearCardSerial: {
+    fontSize: p(12),
+    fontWeight: '500',
+  },
+  repairFindingsSection: {
+    marginVertical: p(16),
+  },
+  findingsTitle: {
+    fontSize: p(14),
+    fontWeight: '700',
+    marginBottom: p(12),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  repairFindingItem: {
+    borderRadius: p(8),
+    padding: p(12),
+    marginBottom: p(12),
+    borderLeftWidth: 4,
+    borderLeftColor: '#ed2c2a',
+    backgroundColor: '#fafbfc',
+  },
+  findingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: p(10),
+    flexWrap: 'wrap',
+    gap: p(8),
+  },
+  findingNameGroup: {
+    flex: 1,
+    minWidth: p(200),
+  },
+  findingName: {
+    fontSize: p(13),
+    fontWeight: '600',
+    marginBottom: p(4),
+  },
+  findingGroupChip: {
+    height: p(20),
+    marginTop: p(4),
+  },
+  findingCostInfo: {
+    flexDirection: 'row',
+    gap: p(12),
     alignItems: 'center',
   },
-  gearsTableHeaderText: {
-    color: '#ffffff',
+  findingQuantity: {
+    fontSize: p(11),
+    fontWeight: '500',
+  },
+  findingCost: {
+    fontSize: p(13),
     fontWeight: '700',
+  },
+  findingImagesContainer: {
+    marginTop: p(10),
+    paddingTop: p(10),
+    borderTopWidth: 1,
+    borderTopColor: '#cbd5e0',
+    borderStyle: 'dashed',
+  },
+  findingImagesRow: {
+    flexDirection: 'row',
+    gap: p(8),
+  },
+  findingImageThumbnail: {
+    width: p(100),
+    height: p(100),
+    borderRadius: p(6),
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+  },
+  noFindingsText: {
+    textAlign: 'center',
+    padding: p(20),
+    fontStyle: 'italic',
+    fontSize: p(12),
+  },
+  gearCardFooter: {
+    marginTop: p(16),
+    paddingTop: p(12),
+    borderTopWidth: 2,
+    borderTopColor: '#f1f5f9',
+  },
+  gearTotalCost: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: p(10),
+    borderRadius: p(6),
+    marginBottom: p(8),
+  },
+  totalLabel: {
+    fontSize: p(12),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  totalValue: {
+    fontSize: p(18),
+    fontWeight: '700',
+  },
+  gearSpareGear: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: p(10),
+    borderRadius: p(6),
+    marginBottom: p(8),
+  },
+  spareGearLabel: {
+    fontSize: p(12),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  spareGearValue: {
+    fontSize: p(14),
+    fontWeight: '600',
+  },
+  gearRemarks: {
+    padding: p(10),
+    borderRadius: p(6),
+    borderLeftWidth: 3,
+    borderLeftColor: '#cbd5e0',
+  },
+  remarksLabel: {
+    fontSize: p(10),
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-    paddingHorizontal: p(8),
-    fontSize: p(11),
-    flexShrink: 1,
+    marginBottom: p(4),
   },
-  gearsTableRow: {
-    flexDirection: 'row',
-    paddingVertical: p(9),
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  gearsTableCell: {
-    color: '#2d3748',
-    paddingHorizontal: p(8),
-    textAlign: 'left',
+  remarksText: {
     fontSize: p(12),
-    flexShrink: 1,
-  },
-  // Column widths based on content
-  columnName: {
-    width: p(140),
-    minWidth: p(140),
-    maxWidth: p(140),
-    flexShrink: 0,
-  },
-  columnSerial: {
-    width: p(120),
-    minWidth: p(120),
-    maxWidth: p(120),
-    flexShrink: 0,
-  },
-  columnManufacturer: {
-    width: p(130),
-    minWidth: p(130),
-    maxWidth: p(130),
-    flexShrink: 0,
-  },
-  columnDate: {
-    width: p(110),
-    minWidth: p(110),
-    maxWidth: p(110),
-    flexShrink: 0,
-  },
-  columnStatus: {
-    width: p(100),
-    minWidth: p(100),
-    maxWidth: p(100),
-    flexShrink: 0,
-  },
-  columnService: {
-    width: p(120),
-    minWidth: p(120),
-    maxWidth: p(120),
-    flexShrink: 0,
-  },
-  columnHydroPerformed: {
-    width: p(150),
-    minWidth: p(150),
-    maxWidth: p(150),
-    flexShrink: 0,
-  },
-  columnHydroStatus: {
-    width: p(140),
-    minWidth: p(140),
-    maxWidth: p(140),
-    flexShrink: 0,
+    lineHeight: p(18),
   },
   warningTitle: {
     fontWeight: '700',
@@ -1141,7 +1232,35 @@ const styles = StyleSheet.create({
   warningText: {
     lineHeight: p(20),
   },
+  imagePreviewModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    width: '90%',
+    height: '90%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  noImagesText: {
+    fontSize: p(11),
+    fontStyle: 'italic',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: p(40),
+    right: p(20),
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: p(20),
+    padding: p(8),
+  },
 });
 
-export default PPEReportPreviewScreen;
-
+export default PPERepairReportPreviewScreen;

@@ -25,6 +25,7 @@ import FirefighterGearsScreen from '../screens/inspectionscreens/FirefighterGear
 import FirefighterFlowScreen from '../screens/firefighterscreens/FirefighterFlowScreen';
 import FirefighterRepairFlowScreen from '../screens/firefighterscreens/FirefighterRepairFlowScreen';
 import PPEReportPreviewScreen from '../screens/leadscreens/PPEReportPreviewScreen';
+import PPERepairReportPreviewScreen from '../screens/leadscreens/PPERepairReportPreviewScreen';
 import RepairDetailsScreen from '../screens/repairscreens/RepairDetailsScreen';
 import FirefighterListRepairScreen from '../screens/repairscreens/FirefighterListRepairScreen';
 import FirefighterRepairGearScreen from '../screens/repairscreens/FirefighterRepairGearScreen';
@@ -77,6 +78,7 @@ export type RootStackParamList = {
 
   //PPE Report Preview
   PPEReportPreview: { leadId: number; leadData: any };
+  PPERepairReportPreview: { leadId: number; leadData: any };
 
   //Repair Details
   RepairDetails: { gearId: number; leadId?: number; leadData?: any; repairId?: number; loadId?: number; loadData?: any };
@@ -139,8 +141,9 @@ export default function AppNavigator() {
       <Stack.Screen name="FirefighterListScreen" component={withMainLayout(FirefighterListScreen)} />
       <Stack.Screen name="ViewInspectionScreen" component={withMainLayout(ViewInspectionScreen)} />
       
-      {/* PPE Report Preview Screen */}
+      {/* PPE Report Preview Screens */}
       <Stack.Screen name="PPEReportPreview" component={withMainLayout(PPEReportPreviewScreen)} />
+      <Stack.Screen name="PPERepairReportPreview" component={withMainLayout(PPERepairReportPreviewScreen)} />
 
       {/* Repair Details Screen */}
       <Stack.Screen name="RepairDetails" component={withMainLayout(RepairDetailsScreen)} />

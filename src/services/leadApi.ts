@@ -74,4 +74,20 @@ export const leadApi = {
     console.log(`✅ API Response /inspection-pdf/${leadId}/`, pdfUrl);
     return pdfUrl;
   },
+
+  // Get PPE repair data
+  getPpeRepair: async (leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL /ppe-repair/${leadId}/`);
+    const response = await axiosInstance.get(`/ppe-repair/${leadId}/`);
+    console.log(`✅ API Response /ppe-repair/${leadId}/`, response.data);
+    return response.data;
+  },
+
+  // Get repair analytics data
+  getRepairAnalytics: async (leadId: number): Promise<any> => {
+    console.log(`➡️ API CALL /repair-analytics/${leadId}/`);
+    const response = await axiosInstance.get(`/repair-analytics/${leadId}/`);
+    console.log(`✅ API Response /repair-analytics/${leadId}/`, response.data);
+    return response.data;
+  },
 };
