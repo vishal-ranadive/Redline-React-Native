@@ -52,6 +52,7 @@ import InspectionFormSkeleton from '../skeleton/InspectionFormSkeleton';
 import { imageUploadApi } from '../../services/imageUploadApi';
 import { LeadInfoBanner } from '../../components/common/LeadInfoBanner';
 import { requestGalleryPermission, requestCameraPermission } from '../../utils/permissions';
+import { formatDateYYYYMMDD } from '../../utils/dateUtils';
 
 const TAG_COLOR_STORAGE_KEY = '@firefighter_tag_color';
 
@@ -988,7 +989,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         gear_id: gear.gear_id,
         roster_id: resolvedRosterId,
         
-        inspection_date: new Date().toISOString().split('T')[0],
+        inspection_date: formatDateYYYYMMDD(new Date()),
         inspection_status: !inspectionId ? 'PRE-INSPECTION' : 'ONGOING-INSPECTION',
         
         hydro_test_result: formData.hydroPerformed ? formData.hydroResult?.toUpperCase() : null,

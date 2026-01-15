@@ -4,6 +4,7 @@ import { Button, useTheme } from 'react-native-paper';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { p } from '../../utils/responsive';
 import { useThemeStore } from '../../store/themeStore';
+import { formatDateYYYYMMDD } from '../../utils/dateUtils';
 
 interface CommonDatePickerProps {
   label?: string;
@@ -45,7 +46,7 @@ const CommonDatePicker: React.FC<CommonDatePickerProps> = ({
     const formatted =
       mode === 'time'
         ? date.toTimeString()
-        : date.toISOString().split('T')[0];
+        : formatDateYYYYMMDD(date);
 
     onChange(formatted);
     setVisible(false);

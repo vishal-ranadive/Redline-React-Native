@@ -27,7 +27,7 @@ import { Firestation, firestationApi } from '../../services/firestationApi';
 import FranchiseSelectorModal from '../../components/common/Modal/FranchiseSelectorModal';
 import FirestationSelectorModal from '../../components/common/Modal/FirestationSelectorModal';
 import { Calendar } from 'react-native-calendars';
-import { formatDateMMDDYYYY } from '../../utils/dateUtils';
+import { formatDateMMDDYYYY, formatDateYYYYMMDD } from '../../utils/dateUtils';
 
 const CreateJobScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -180,7 +180,7 @@ const CreateJobScreen: React.FC = () => {
       const jobData = {
         franchise_id: selectedFranchise!.franchise_id,
         firestation_id: selectedFirestation!.firestation_id,
-        schedule_date: scheduleDate!.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        schedule_date: formatDateYYYYMMDD(scheduleDate), // Format as YYYY-MM-DD using local timezone
         type: jobType,
       };
 
@@ -198,7 +198,7 @@ const CreateJobScreen: React.FC = () => {
                   lead_id: response.lead_id,
                   // Add other required fields for LeadDetailScreen
                   type: jobType,
-                  schedule_date: scheduleDate!.toISOString().split('T')[0],
+                  schedule_date: formatDateYYYYMMDD(scheduleDate),
                   franchies: {
                     id: selectedFranchise!.franchise_id,
                     name: selectedFranchise!.franchise_name,
@@ -507,9 +507,9 @@ const CreateJobScreen: React.FC = () => {
             {/* Calendar */}
             <View style={styles.datePickerCalendarContainer}>
               <Calendar
-                current={scheduleDate ? scheduleDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                current={scheduleDate ? formatDateYYYYMMDD(scheduleDate) : formatDateYYYYMMDD(new Date())}
                 markedDates={scheduleDate ? {
-                  [scheduleDate.toISOString().split('T')[0]]: {
+                  [formatDateYYYYMMDD(scheduleDate)]: {
                     selected: true,
                     selectedColor: colors.primary,
                     selectedTextColor: colors.onPrimary,

@@ -25,7 +25,7 @@ import { useLeadStore } from '../../store/leadStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useAuthStore } from '../../store/authStore';
 import LeadCardSkeleton from '../skeleton/LeadSkeleton';
-import { formatDateMMDDYYYY } from '../../utils/dateUtils';
+import { formatDateMMDDYYYY, formatDateYYYYMMDD } from '../../utils/dateUtils';
 
 // Helper function to format dates
 const formatDate = (date?: string | Date | null, format: string = 'DD MMM YYYY', placeholder: string = 'Date not set'): string => {
@@ -1007,7 +1007,7 @@ const LeadScreen = () => {
             {/* Calendar */}
             <View style={styles.calendarContainer}>
               <Calendar
-                current={dateFilter || new Date().toISOString().split('T')[0]}
+                current={dateFilter || formatDateYYYYMMDD(new Date())}
                 markedDates={dateFilter ? {
                   [dateFilter]: {
                     selected: true,
