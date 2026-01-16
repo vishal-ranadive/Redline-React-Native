@@ -27,7 +27,7 @@ import { Firestation, firestationApi } from '../../services/firestationApi';
 import FranchiseSelectorModal from '../../components/common/Modal/FranchiseSelectorModal';
 import FirestationSelectorModal from '../../components/common/Modal/FirestationSelectorModal';
 import { Calendar } from 'react-native-calendars';
-import { formatDateMMDDYYYY, formatDateYYYYMMDD } from '../../utils/dateUtils';
+import { formatDateMMDDYYYY, formatDateYYYYMMDD, formatDateForAPI } from '../../utils/dateUtils';
 
 const CreateJobScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -180,7 +180,7 @@ const CreateJobScreen: React.FC = () => {
       const jobData = {
         franchise_id: selectedFranchise!.franchise_id,
         firestation_id: selectedFirestation!.firestation_id,
-        schedule_date: formatDateYYYYMMDD(scheduleDate), // Format as YYYY-MM-DD using local timezone
+        schedule_date: formatDateForAPI(scheduleDate), // Send exact date with local time to prevent timezone conversion
         type: jobType,
       };
 
@@ -198,7 +198,7 @@ const CreateJobScreen: React.FC = () => {
                   lead_id: response.lead_id,
                   // Add other required fields for LeadDetailScreen
                   type: jobType,
-                  schedule_date: formatDateYYYYMMDD(scheduleDate),
+                  schedule_date: formatDateForAPI(scheduleDate),
                   franchies: {
                     id: selectedFranchise!.franchise_id,
                     name: selectedFranchise!.franchise_name,
@@ -516,9 +516,10 @@ const CreateJobScreen: React.FC = () => {
                   }
                 } : {}}
                 onDayPress={(day) => {
-                  // Parse the date parts to avoid timezone issues on iOS
+                  // Parse the date parts and create date at noon to avoid timezone boundary issues
                   const [year, month, dayNum] = day.dateString.split('-').map(Number);
-                  const selectedDate = new Date(year, month - 1, dayNum);
+                  // Create date at noon local time to prevent timezone conversion issues
+                  const selectedDate = new Date(year, month - 1, dayNum, 12, 0, 0, 0);
                   setScheduleDate(selectedDate);
                   // Don't auto-close - let user confirm with Done button
                 }}
