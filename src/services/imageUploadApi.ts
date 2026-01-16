@@ -71,21 +71,31 @@ class ImageUploadApi {
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
 
+      // Verify file URI format
+      console.log(`🔍 File details:`, {
+        originalUri: imageUri,
+        processedUri: fileUri,
+        filename,
+        type,
+        extension: match ? match[1] : 'unknown'
+      });
+
       formData.append('image', {
         uri: fileUri,
         name: filename,
         type: type,
       } as any);
 
-      console.log(`📤 Uploading image (attempt ${retryCount + 1}/${maxRetries + 1}):`, { 
+      console.log(`📤 Uploading image (attempt ${retryCount + 1}/${maxRetries + 1}):`, {
         originalUri: imageUri,
-        finalUri: fileUri, 
+        finalUri: fileUri,
         hasFilePrefix: fileUri.startsWith('file://'),
-        gearId, 
-        filename, 
+        isEditedImage: imageUri.includes('/tmp/ReactNative/'),
+        gearId,
+        filename,
         type,
         platform: Platform.OS,
-        timeout: timeoutDuration 
+        timeout: timeoutDuration
       });
 
       // Use axiosInstance for upload with progress tracking
@@ -164,10 +174,10 @@ class ImageUploadApi {
         console.log(`🔄 Retrying upload (attempt ${retryCount + 2}/${maxRetries + 1}) after ${errorType}...`);
         console.log(`⏳ Waiting ${delayMs}ms before retry...`);
         // Wait a bit before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await new Promise<void>(resolve => setTimeout(resolve, delayMs));
         return this.uploadInspectionImage(imageUri, gearId, onProgress, retryCount + 1);
       }
-      
+
       console.error(`❌ All ${maxRetries + 1} upload attempts failed. Giving up.`);
       
       // Handle axios error

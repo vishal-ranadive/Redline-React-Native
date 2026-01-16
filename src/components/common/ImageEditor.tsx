@@ -50,7 +50,6 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
   const strokeWidth = 4; // Fixed stroke width
   const strokeColor = '#FF0000'; // Red color only
   const containerRef = useRef<View>(null);
@@ -58,13 +57,13 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
+      console.log('🎨 ImageEditor: Modal opened for image:', imageUri.substring(0, 50) + '...');
       // Reset all state
       setPaths([]);
       setHistory([]);
       setCurrentPath([]);
       setImageLoaded(false);
       setImageError(false);
-      setImageLoading(true);
       setIsSaving(false);
     }
   }, [visible, imageUri]);
@@ -175,6 +174,8 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
       });
 
       console.log('✅ ImageEditor: Image captured successfully:', uri);
+      console.log('📤 ImageEditor: URI starts with file://:', uri.startsWith('file://'));
+      console.log('📤 ImageEditor: URI starts with content://:', uri.startsWith('content://'));
       console.log('📤 ImageEditor: Calling onSave with URI:', uri.substring(0, 50) + '...');
 
       // The captured URI should work directly, but we can use it as-is
@@ -201,6 +202,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
   }, [onSave, onClose, imageLoaded]);
 
   const handleClose = useCallback(() => {
+    console.log('🎨 ImageEditor: Close requested by user');
     Alert.alert(
       'Discard Changes?',
       'Are you sure you want to close without saving?',
@@ -210,6 +212,7 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
           text: 'Discard',
           style: 'destructive',
           onPress: () => {
+            console.log('🎨 ImageEditor: User discarded changes, closing modal');
             setPaths([]);
             setHistory([]);
             setCurrentPath([]);
@@ -334,38 +337,19 @@ const ImageEditor: React.FC<ImageEditorProps> = ({
                 </View>
               ) : (
                 <>
-                  {imageLoading && (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="large" color="#fff" />
-                      <Text style={styles.loadingText}>Loading image...</Text>
-                    </View>
-                  )}
                   <Image
                     source={{ uri: imageUri }}
                     style={styles.imagePlaceholder}
                     resizeMode="contain"
-                    onLoadStart={() => {
-                      setImageLoading(true);
-                    }}
                     onLoad={() => {
                       console.log('✅ ImageEditor: Image loaded successfully');
                       setImageLoaded(true);
                       setImageError(false);
-                      setImageLoading(false);
-                    }}
-                    onLoadEnd={() => {
-                      // Fallback: Clear loading state even if onLoad didn't fire (cached images)
-                      if (imageLoading) {
-                        console.log('✅ ImageEditor: Image load ended (cached image)');
-                        setImageLoading(false);
-                        setImageLoaded(true);
-                      }
                     }}
                     onError={(error) => {
                       console.error('❌ ImageEditor: Image load error:', error);
                       setImageLoaded(false);
                       setImageError(true);
-                      setImageLoading(false);
                     }}
                   />
                 </>
@@ -523,19 +507,6 @@ const styles = StyleSheet.create({
   errorSubtext: {
     fontSize: 14,
     color: '#999',
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 1,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#fff',
     textAlign: 'center',
   },
   footer: {

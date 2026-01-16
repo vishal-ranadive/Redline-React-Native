@@ -296,18 +296,7 @@ export default function UpdateInspectionScreen() {
   const [selectedImage, setSelectedImage] = useState('');
   const [imageEditorVisible, setImageEditorVisible] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string>('');
-  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
 
-  // Clear loading state when images change (e.g., when navigating back)
-  useEffect(() => {
-    // Clear all loading states when images array changes
-    // This handles the case when user navigates back and images are already cached
-    const timeout = setTimeout(() => {
-      setLoadingImages(new Set());
-    }, 1000); // Give images 1 second to load, then clear loading state
-
-    return () => clearTimeout(timeout);
-  }, [images]);
   
   // Image upload state
   const [uploadingImages, setUploadingImages] = useState(false);
@@ -770,6 +759,7 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
   // Image handling functions
   const handleImagePress = (imageUri: string) => {
+    console.log('🖼️ UpdateInspectionScreen: Opening image editor for:', imageUri.substring(0, 50) + '...');
     // Open image editor instead of just preview
     setImageToEdit(imageUri);
     setImageEditorVisible(true);
@@ -779,14 +769,19 @@ const handleFieldChange = useCallback((field: string, value: any) => {
     console.log('💾 UpdateInspectionScreen: Image editor save called');
     console.log('📸 Original URI:', imageToEdit);
     console.log('📸 Edited URI:', editedImageUri);
-    
+    console.log('📸 Edited URI starts with file://:', editedImageUri.startsWith('file://'));
+    console.log('📸 Edited URI starts with content://:', editedImageUri.startsWith('content://'));
+
     // Replace the original image with the edited one
     setImages(prev => {
       const index = prev.findIndex(img => img.uri === imageToEdit);
       if (index !== -1) {
         const newImages = [...prev];
-        newImages[index] = { ...newImages[index], uri: editedImageUri };
+        // Generate a new ID for the edited image to avoid conflicts
+        const newId = `edited-${Date.now()}`;
+        newImages[index] = { id: newId, uri: editedImageUri };
         console.log('✅ UpdateInspectionScreen: Image replaced in array');
+        console.log('🆔 New image ID:', newId);
         console.log('📋 Updated images array:', newImages.map(img => ({
           id: img.id,
           uri: img.uri.substring(0, 50) + '...',
@@ -807,7 +802,9 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
   const handleCameraCaptured = (uri: string) => {
     if (uri) {
-      setImages(prev => [...prev, { id: `camera-${Date.now()}`, uri }]);
+      const newId = `camera-${Date.now()}`;
+      console.log('📷 UpdateInspectionScreen: Camera image captured:', uri.substring(0, 50) + '...', 'ID:', newId);
+      setImages(prev => [...prev, { id: newId, uri }]);
     }
   };
 
@@ -841,7 +838,9 @@ const handleFieldChange = useCallback((field: string, value: any) => {
 
       const uri = response.assets?.[0]?.uri;
       if (uri) {
-        setImages(prev => [...prev, { id: `gallery-${Date.now()}`, uri }]);
+        const newId = `gallery-${Date.now()}`;
+        console.log('🖼️ UpdateInspectionScreen: Gallery image selected:', uri.substring(0, 50) + '...', 'ID:', newId);
+        setImages(prev => [...prev, { id: newId, uri }]);
       } else {
         Alert.alert('Error', 'No image was selected.');
       }
@@ -893,19 +892,40 @@ const handleFieldChange = useCallback((field: string, value: any) => {
       console.log('📋 Images:', images.map(img => ({
         id: img.id,
         uri: img.uri.substring(0, 50) + '...',
-        isLocal: img.uri.startsWith('file://') || img.uri.startsWith('content://')
+        isLocal: img.uri.startsWith('file://') || img.uri.startsWith('content://'),
+        isEdited: img.id.startsWith('edited-'),
+        fileExists: img.uri.startsWith('file://') || img.uri.startsWith('content://')
       })));
       
-      const localImages = images.filter(img => 
-        img.uri.startsWith('file://') || img.uri.startsWith('content://')
+      const localImages = images.filter(img =>
+        img.uri.startsWith('file://') ||
+        img.uri.startsWith('content://') ||
+        img.uri.includes('/tmp/ReactNative/') || // For edited images from react-native-view-shot
+        img.uri.startsWith('/') // For absolute paths from simulator
       ).map(img => img.uri);
-      
-      const alreadyUploadedImages = images.filter(img => 
-        img.uri.startsWith('http://') || img.uri.startsWith('https://')
+
+      const alreadyUploadedImages = images.filter(img =>
+        (img.uri.startsWith('http://') || img.uri.startsWith('https://')) &&
+        !(img.uri.includes('/tmp/ReactNative/') || img.uri.startsWith('/')) // Exclude local temp files
       ).map(img => img.uri);
 
       console.log('📤 Local images to upload:', localImages.length);
+      console.log('📤 Local image URIs:', localImages.map(uri => ({
+        uri: uri.substring(0, 50) + '...',
+        startsWithFile: uri.startsWith('file://'),
+        startsWithContent: uri.startsWith('content://'),
+        startsWithHttp: uri.startsWith('http'),
+        startsWithSlash: uri.startsWith('/'),
+        includesTmp: uri.includes('/tmp/ReactNative/')
+      })));
       console.log('✅ Already uploaded images:', alreadyUploadedImages.length);
+      console.log('✅ Already uploaded URIs:', alreadyUploadedImages.map(uri => uri.substring(0, 50) + '...'));
+
+      // Log edited vs non-edited images
+      const editedImages = images.filter(img => img.id.startsWith('edited-'));
+      const nonEditedImages = images.filter(img => !img.id.startsWith('edited-'));
+      console.log('🎨 Edited images:', editedImages.length);
+      console.log('📷 Non-edited images:', nonEditedImages.length);
 
       let uploadedImageUrls: string[] = [...alreadyUploadedImages];
 
@@ -928,19 +948,22 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         // Collect successfully uploaded image URLs
         uploadResults.forEach((result, index) => {
           const originalUri = localImages[index];
+          const imageInfo = images.find(img => img.uri === originalUri);
           console.log(`📊 Upload result ${index + 1}:`, {
+            imageId: imageInfo?.id,
+            isEdited: imageInfo?.id?.startsWith('edited-'),
             originalUri: originalUri.substring(0, 50) + '...',
             status: result.status,
             url: result.data?.url?.substring(0, 50) + '...',
             message: result.message,
             error: result.error
           });
-          
+
           if (result.status && result.data?.url) {
             uploadedImageUrls.push(result.data.url);
-            console.log(`✅ Image ${index + 1} uploaded successfully:`, result.data.url);
+            console.log(`✅ Image ${index + 1} (${imageInfo?.id}) uploaded successfully:`, result.data.url);
           } else {
-            console.error(`❌ Failed to upload image ${index + 1}:`, result.message);
+            console.error(`❌ Failed to upload image ${index + 1} (${imageInfo?.id}):`, result.message);
             console.error(`❌ Original URI was:`, originalUri);
             // Only show alert for non-timeout errors (timeout errors are handled by retry logic)
             if (result.error !== 'TIMEOUT_ERROR') {
@@ -963,7 +986,8 @@ const handleFieldChange = useCallback((field: string, value: any) => {
         }
       }
 
-      console.log('📷 Final image URLs to save:', uploadedImageUrls);
+      console.log('📷 Final image URLs to save:', uploadedImageUrls.length);
+      console.log('📷 Image URLs:', uploadedImageUrls.map((url, index) => `${index + 1}: ${url.substring(0, 50)}...`));
       
       setUploadingImages(false);
 
@@ -1400,44 +1424,22 @@ const handleFieldChange = useCallback((field: string, value: any) => {
               <View style={styles.imagesContainer}>
                 {images.map((image) => (
                   <View key={image.id} style={styles.imageWrapper}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.imageBox}
                       onPress={() => handleImagePress(image.uri)}
                     >
-                      {loadingImages.has(image.id) && (
-                        <View style={styles.imageLoadingOverlay}>
-                          <ActivityIndicator size="small" color="#fff" />
-                        </View>
-                      )}
-                      <Image 
-                        source={{ uri: image.uri }} 
+                      <Image
+                        source={{ uri: image.uri }}
                         style={styles.previewImage}
                         resizeMode="cover"
                         onLoadStart={() => {
-                          setLoadingImages(prev => new Set(prev).add(image.id));
+                          console.log(`🖼️ Loading image: ${image.uri.substring(0, 50)}...`);
                         }}
                         onLoad={() => {
-                          setLoadingImages(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(image.id);
-                            return newSet;
-                          });
-                        }}
-                        onLoadEnd={() => {
-                          // Fallback: Clear loading state even if onLoad didn't fire (cached images)
-                          setLoadingImages(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(image.id);
-                            return newSet;
-                          });
+                          console.log(`✅ Image loaded successfully: ${image.uri.substring(0, 50)}...`);
                         }}
                         onError={(error) => {
-                          console.error('Image load error:', error);
-                          setLoadingImages(prev => {
-                            const newSet = new Set(prev);
-                            newSet.delete(image.id);
-                            return newSet;
-                          });
+                          console.error('❌ Image load error:', error, 'URI:', image.uri.substring(0, 50) + '...');
                         }}
                       />
                     </TouchableOpacity>
@@ -1475,40 +1477,18 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                     {deletedImages.map((image) => (
                       <View key={image.id} style={styles.imageWrapper}>
                         <View style={styles.imageBox}>
-                          {loadingImages.has(image.id) && (
-                            <View style={styles.imageLoadingOverlay}>
-                              <ActivityIndicator size="small" color="#fff" />
-                            </View>
-                          )}
-                          <Image 
-                            source={{ uri: image.uri }} 
+                          <Image
+                            source={{ uri: image.uri }}
                             style={styles.previewImage}
                             resizeMode="cover"
                             onLoadStart={() => {
-                              setLoadingImages(prev => new Set(prev).add(image.id));
+                              console.log(`🖼️ Loading deleted image: ${image.uri.substring(0, 50)}...`);
                             }}
                             onLoad={() => {
-                              setLoadingImages(prev => {
-                                const newSet = new Set(prev);
-                                newSet.delete(image.id);
-                                return newSet;
-                              });
-                            }}
-                            onLoadEnd={() => {
-                              // Fallback: Clear loading state even if onLoad didn't fire (cached images)
-                              setLoadingImages(prev => {
-                                const newSet = new Set(prev);
-                                newSet.delete(image.id);
-                                return newSet;
-                              });
+                              console.log(`✅ Deleted image loaded successfully: ${image.uri.substring(0, 50)}...`);
                             }}
                             onError={(error) => {
-                              console.error('Image load error:', error);
-                              setLoadingImages(prev => {
-                                const newSet = new Set(prev);
-                                newSet.delete(image.id);
-                                return newSet;
-                              });
+                              console.error('❌ Deleted image load error:', error, 'URI:', image.uri.substring(0, 50) + '...');
                             }}
                           />
                         </View>
@@ -1794,40 +1774,18 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                         style={styles.imageBox}
                         onPress={() => handleImagePress(image.uri)}
                       >
-                        {loadingImages.has(image.id) && (
-                          <View style={styles.imageLoadingOverlay}>
-                            <ActivityIndicator size="small" color="#fff" />
-                          </View>
-                        )}
                         <Image 
                           source={{ uri: image.uri }} 
                           style={styles.previewImage}
                           resizeMode="cover"
                           onLoadStart={() => {
-                            setLoadingImages(prev => new Set(prev).add(image.id));
+                            console.log(`🖼️ Loading image: ${image.uri.substring(0, 50)}...`);
                           }}
                           onLoad={() => {
-                            setLoadingImages(prev => {
-                              const newSet = new Set(prev);
-                              newSet.delete(image.id);
-                              return newSet;
-                            });
-                          }}
-                          onLoadEnd={() => {
-                            // Fallback: Clear loading state even if onLoad didn't fire (cached images)
-                            setLoadingImages(prev => {
-                              const newSet = new Set(prev);
-                              newSet.delete(image.id);
-                              return newSet;
-                            });
+                            console.log(`✅ Image loaded successfully: ${image.uri.substring(0, 50)}...`);
                           }}
                           onError={(error) => {
-                            console.error('Image load error:', error);
-                            setLoadingImages(prev => {
-                              const newSet = new Set(prev);
-                              newSet.delete(image.id);
-                              return newSet;
-                            });
+                            console.error('❌ Image load error:', error, 'URI:', image.uri.substring(0, 50) + '...');
                           }}
                         />
                       </TouchableOpacity>
@@ -1865,40 +1823,18 @@ const handleFieldChange = useCallback((field: string, value: any) => {
                       {deletedImages.map((image) => (
                         <View key={image.id} style={styles.imageWrapper}>
                           <View style={styles.imageBox}>
-                            {loadingImages.has(image.id) && (
-                              <View style={styles.imageLoadingOverlay}>
-                                <ActivityIndicator size="small" color="#fff" />
-                              </View>
-                            )}
                             <Image 
                               source={{ uri: image.uri }} 
                               style={styles.previewImage}
                               resizeMode="cover"
                               onLoadStart={() => {
-                                setLoadingImages(prev => new Set(prev).add(image.id));
+                                console.log(`🖼️ Loading deleted image: ${image.uri.substring(0, 50)}...`);
                               }}
                               onLoad={() => {
-                                setLoadingImages(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(image.id);
-                                  return newSet;
-                                });
-                              }}
-                              onLoadEnd={() => {
-                                // Fallback: Clear loading state even if onLoad didn't fire (cached images)
-                                setLoadingImages(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(image.id);
-                                  return newSet;
-                                });
+                                console.log(`✅ Deleted image loaded successfully: ${image.uri.substring(0, 50)}...`);
                               }}
                               onError={(error) => {
-                                console.error('Image load error:', error);
-                                setLoadingImages(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(image.id);
-                                  return newSet;
-                                });
+                                console.error('❌ Deleted image load error:', error, 'URI:', image.uri.substring(0, 50) + '...');
                               }}
                             />
                           </View>
@@ -2276,13 +2212,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-  },
-  imageLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
   },
   removeImageButton: {
     position: 'absolute',
